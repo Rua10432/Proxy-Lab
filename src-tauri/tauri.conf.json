@@ -1,0 +1,31 @@
+{
+  "productName": "Proxy Tester",
+  "version": "1.0.0",
+  "identifier": "jp.rua.proxylab",
+  "build": {
+    "frontendDist": "../src"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "title": "Proxy Test v1.0",
+        "width": 700,
+        "height": 560,
+        "minWidth": 400,
+        "minHeight": 420,
+        "resizable": true,
+        "decorations": false,
+        "transparent": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": []
+  }
+}

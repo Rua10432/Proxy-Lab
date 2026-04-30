@@ -1,0 +1,113 @@
+/* ── Custom Window Titlebar (Material 3) ──────────────────────────────── */
+#titlebar {
+  height: 48px; /* Slightly taller for M3 M-sized buttons */
+  background: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  user-select: none;
+  flex-shrink: 0;
+  box-shadow: inset 0 -1px 0 var(--md-sys-color-outline-variant);
+  transition: background 0.3s, color 0.3s, opacity 0.3s;
+  z-index: 9999;
+  overflow: hidden;
+}
+
+/* 窗口失去焦点时的状态 */
+#titlebar.unfocused {
+  opacity: 0.7;
+  background: var(--md-sys-color-surface-container-low);
+}
+
+.titlebar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-left: 14px;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  position: relative;
+  z-index: 9999;
+  -webkit-app-region: drag;
+}
+
+/* macOS 交通灯间隙处理 */
+.is-macos .titlebar-left {
+  padding-left: 80px;
+}
+
+.titlebar-icon {
+  width: 20px;
+  height: 20px;
+  pointer-events: none;
+}
+
+.titlebar-title {
+  font-family: var(--md-sys-typescale-label-large-font);
+  font-size: var(--md-sys-typescale-label-large-size);
+  font-weight: 500;
+  letter-spacing: 0.1px;
+  margin-left: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.titlebar-right {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  flex-shrink: 0;
+  padding-right: 4px; /* Give some space on the right */
+  pointer-events: auto;
+  -webkit-app-region: no-drag;
+}
+
+/* 统一图标按钮样式 */
+.titlebar-right md-icon-button {
+  --md-icon-size: 20px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0 2px;
+  padding: 0;
+  border-radius: 8px; /* 统一圆角矩形形状 */
+  transition: background 0.2s, color 0.2s;
+  /* 彻底禁用内部默认涟漪和状态层，避免出现形状重叠 */
+  --md-icon-button-hover-state-layer-opacity: 0;
+  --md-icon-button-pressed-state-layer-opacity: 0;
+  --md-icon-button-focus-state-layer-opacity: 0;
+  --md-icon-button-state-layer-shape: 8px;
+}
+
+.titlebar-right md-icon-button:hover {
+  background: var(--md-sys-color-surface-variant);
+}
+
+.titlebar-right md-icon-button md-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+/* 关闭按钮特殊颜色，但形状和行为保持统一 */
+#titlebar-close:hover {
+  background: var(--md-sys-color-error-container);
+  --md-sys-color-on-surface-variant: var(--md-sys-color-error);
+}
+
+#titlebar-close:active {
+  background: var(--md-sys-color-error);
+  color: var(--md-sys-color-on-error);
+}
+
+
+/* 针对全屏模式或其他平台的隐藏处理 */
+.is-macos .titlebar-right {
+  display: none;
+}

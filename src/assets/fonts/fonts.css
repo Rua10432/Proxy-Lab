@@ -1,0 +1,53 @@
+/* Roboto Regular */
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 400;
+  src: url('./roboto-400.ttf') format('truetype');
+}
+
+/* Roboto Medium */
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 500;
+  src: url('./roboto-500.ttf') format('truetype');
+}
+
+/* Roboto Mono Regular */
+@font-face {
+  font-family: 'Roboto Mono';
+  font-style: normal;
+  font-weight: 400;
+  src: url('./robotomono-400.ttf') format('truetype');
+}
+
+/* Roboto Mono Medium */
+@font-face {
+  font-family: 'Roboto Mono';
+  font-style: normal;
+  font-weight: 500;
+  src: url('./robotomono-500.ttf') format('truetype');
+}
+
+/* Material Symbols Outlined */
+@font-face {
+  font-family: 'Material Symbols Outlined';
+  font-style: normal;
+  font-weight: 100 700;
+  src: url('./material-symbols-outlined.ttf') format('truetype');
+}
+
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+}

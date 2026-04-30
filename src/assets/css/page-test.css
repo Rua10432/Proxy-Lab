@@ -1,0 +1,28 @@
+/* ── Params Panel ─────────────────────────────────────────────────────── */
+.params-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex-shrink: 0;
+  margin-bottom: 24px; /* Major section spacing */
+  width: 100%;
+}
+
+.field-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px; /* 16px components gap */
+}
+
+/* ── Action Row ───────────────────────────────────────────────────────── */
+.action-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.action-row .status-chip {
+  margin-left: auto;
+  flex-shrink: 0;
+}

@@ -1,0 +1,6 @@
+[target.x86_64-pc-windows-gnu]
+linker = "rust-lld"
+
+[build]
+rustc-wrapper = "sccache"
+incremental = true

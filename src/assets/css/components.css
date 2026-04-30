@@ -1,0 +1,322 @@
+/* ── Status Chip ───────────────────────────────────────────────────────── */
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  transition: background 0.2s, color 0.2s;
+}
+
+.status-chip .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.status-chip.ready {
+  background: color-mix(in srgb, var(--md-sys-color-primary) 12%, transparent);
+  color: var(--md-sys-color-primary);
+}
+
+.status-chip.ready .dot {
+  background: var(--md-sys-color-primary);
+}
+
+.status-chip.testing {
+  background: color-mix(in srgb, var(--md-sys-color-tertiary) 12%, transparent);
+  color: var(--md-sys-color-tertiary);
+}
+
+.status-chip.testing .dot {
+  background: var(--md-sys-color-tertiary);
+  animation: pulse 1s infinite;
+}
+
+[data-theme="dark"] .status-chip.ready {
+  color: #81C784;
+}
+
+[data-theme="dark"] .status-chip.testing {
+  color: #FFB74D;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .status-chip.ready {
+    color: var(--md-sys-color-primary);
+  }
+
+  :root:not([data-theme]) .status-chip.testing {
+    color: var(--md-sys-color-tertiary);
+  }
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.3;
+  }
+}
+
+/* ── Log Area ─────────────────────────────────────────────────────────── */
+.log-area {
+  flex: 1;
+  overflow-y: auto;
+  font-family: 'Roboto Mono', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  padding: 10px 4px;
+  background: transparent;
+}
+
+.log-line {
+  white-space: pre;
+}
+
+.log-default {
+  color: var(--md-sys-color-outline);
+}
+
+.log-ok {
+  color: var(--md-sys-color-on-surface);
+}
+
+.log-error {
+  color: var(--md-sys-color-error);
+}
+
+.log-header {
+  color: var(--md-sys-color-primary);
+}
+
+/* ── Stats Bar ────────────────────────────────────────────────────────── */
+.stats-bar {
+  flex-shrink: 0;
+  padding: 8px 4px;
+  border-top: 1px solid var(--md-sys-color-outline-variant);
+  font-family: 'Roboto Mono', monospace;
+  font-size: 12px;
+  color: var(--md-sys-color-outline);
+}
+
+/* ── Protocol chips ────────────────────────────────────────────────────── */
+.proto-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.proto-chip.socks5 {
+  background: color-mix(in srgb, var(--md-sys-color-tertiary) 12%, transparent);
+  color: var(--md-sys-color-tertiary);
+}
+
+.proto-chip.http {
+  background: color-mix(in srgb, var(--md-sys-color-primary) 12%, transparent);
+  color: var(--md-sys-color-primary);
+}
+
+/* ── Latency colors ───────────────────────────────────────────────────── */
+.latency-fast {
+  color: var(--md-sys-color-primary);
+}
+
+.latency-medium {
+  color: var(--md-sys-color-tertiary);
+}
+
+.latency-slow {
+  color: var(--md-sys-color-error);
+}
+
+/* ── Button Overrides ─────────────────────────────────────────────────── */
+md-filled-button,
+md-filled-tonal-button,
+md-outlined-button,
+md-text-button {
+  min-width: 160px;
+  white-space: nowrap;
+  --md-sys-typescale-label-large-weight: 600;
+  --md-filled-button-container-height: 42px;
+  --md-filled-tonal-button-container-height: 42px;
+  --md-outlined-button-container-height: 42px;
+  --md-text-button-container-height: 42px;
+  /* Force M3 text color logic */
+}
+
+md-filled-button {
+  --md-filled-button-label-text-color: var(--md-sys-color-on-primary);
+  --md-filled-button-icon-color: var(--md-sys-color-on-primary);
+}
+
+md-filled-tonal-button {
+  --md-filled-tonal-button-label-text-color: var(--md-sys-color-on-secondary-container);
+  --md-filled-tonal-button-icon-color: var(--md-sys-color-on-secondary-container);
+}
+
+md-icon-button {
+  --md-icon-button-icon-color: var(--md-sys-color-on-surface-variant);
+}
+
+md-filled-button::part(button),
+md-filled-tonal-button::part(button),
+md-outlined-button::part(button),
+md-text-button::part(button) {
+  justify-content: center !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+md-filled-button md-icon,
+md-filled-tonal-button md-icon,
+md-outlined-button md-icon,
+md-text-button md-icon {
+  --md-icon-size: 18px;
+  margin: 0 !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+}
+
+md-icon {
+  font-family: 'Material Symbols Outlined' !important;
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block !important;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 修复组件未定义时显示双排图标的问题 */
+md-navigation-tab:not(:defined) md-icon[slot="active-icon"],
+md-navigation-rail-tab:not(:defined) md-icon[slot="active-icon"] {
+  /* display: none !important; */
+}
+
+md-icon-button md-icon {
+  --md-icon-size: 22px;
+}
+
+/* Disabled state normalization */
+md-filled-button[disabled],
+md-filled-tonal-button[disabled],
+md-outlined-button[disabled],
+md-text-button[disabled] {
+  pointer-events: none;
+}
+
+/* ── M3 Component Normalization ── */
+md-filled-tonal-button[disabled] {
+  opacity: 0.4;
+  --md-filled-tonal-button-container-color: var(--md-sys-color-surface-container-highest);
+}
+
+/* Tonal Consistency for Input Fields */
+md-outlined-text-field,
+md-filled-select {
+  --md-outlined-text-field-label-text-color: var(--md-sys-color-on-surface-variant);
+  --md-outlined-text-field-focus-label-text-color: var(--md-sys-color-primary);
+  --md-outlined-text-field-input-text-color: var(--md-sys-color-on-surface);
+  --md-filled-select-label-text-color: var(--md-sys-color-on-surface-variant);
+  --md-filled-select-focus-label-text-color: var(--md-sys-color-primary);
+  --md-filled-select-text-field-input-text-color: var(--md-sys-color-on-surface);
+}
+
+/* Fix leading/trailing icon vertical alignment inside text fields */
+md-outlined-text-field md-icon[slot="leading-icon"],
+md-outlined-text-field md-icon[slot="trailing-icon"],
+md-filled-select md-icon[slot="leading-icon"],
+md-filled-select md-icon[slot="trailing-icon"] {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+}
+
+/* Force-hide inactive slots in rail tabs if component is buggy */
+md-navigation-rail-tab:not([active]) [slot="active-icon"],
+md-navigation-rail-tab[active] [slot="inactive-icon"] {
+  display: none !important;
+}
+
+md-navigation-rail-tab .md-navigation-rail-tab__label {
+  margin-top: 4px;
+}
+
+/* ── MTR Diagnostic Elements ──────────────────────────────────────────── */
+.pulse-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--md-sys-color-primary);
+  margin-right: 4px;
+  vertical-align: middle;
+  animation: pulseDot 1.2s infinite;
+}
+
+.pulse-dot.timeout {
+  background: #EF5350;
+  animation: none;
+}
+
+@keyframes pulseDot {
+
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.4;
+    transform: scale(0.7);
+  }
+}
+
+/* ── Route Badges ─────────────────────────────────────────────────────── */
+.route-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.route-badge.gateway {
+  background: color-mix(in srgb, #42A5F5 18%, transparent);
+  color: #42A5F5;
+}
+
+.route-badge.transit {
+  background: color-mix(in srgb, var(--md-sys-color-tertiary) 18%, transparent);
+  color: var(--md-sys-color-tertiary);
+}
+
+.route-badge.target {
+  background: color-mix(in srgb, var(--md-sys-color-primary) 12%, transparent);
+  color: var(--md-sys-color-primary);
+}

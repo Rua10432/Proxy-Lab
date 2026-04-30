@@ -1,0 +1,13 @@
+{
+  "name": "proxy-tester-frontend",
+  "version": "1.0.0",
+  "description": "Localizing Material Web Components",
+  "private": true,
+  "devDependencies": {
+    "esbuild": "^0.20.0"
+  },
+  "dependencies": {
+    "@material/web": "^1.4.1",
+    "@material/material-color-utilities": "^0.3.0"
+  }
+}
