@@ -24,7 +24,7 @@ Thumbs.db
 # Build artifacts
 target/
 src-tauri/target/
-/成品
+成品/
 
 # Local env files
 .env
