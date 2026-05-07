@@ -59,6 +59,13 @@
   min-width: 0;
 }
 
+@media (max-width: 600px) {
+  .scan-params .field-row > * {
+    flex: none;
+    width: 100%;
+  }
+}
+
 .scan-content-row {
   display: flex;
   flex-direction: column;
@@ -77,43 +84,46 @@
   gap: 12px;
 }
 
+/* ── Scan Table Toolbar (Filter + Count) ──────────────────────────────── */
+.scan-table-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.scan-filter-field {
+  flex: 1;
+  height: 48px;
+  --md-outlined-text-field-container-shape: 24px;
+}
+
+.scan-count-badge {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface-variant);
+  background: var(--md-sys-color-surface-container);
+  padding: 4px 12px;
+  border-radius: 20px;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+
+/* ── Scan Table Container (Specific adjustments) ── */
 .scan-table-container {
   flex: 1;
-  background-color: transparent !important;
-  border-radius: 16px;
-  padding: 8px;
-  overflow: hidden;
-  border: none !important;
-  overflow-y: auto;
-  position: relative;
+  min-height: 120px;
 }
 
-.scan-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-}
+/* Specific Scan Table column behaviors if any */
+.scan-table .col-apply { text-align: center; }
 
-.scan-table thead th {
-  background: transparent;
-  color: var(--md-sys-color-on-surface-variant);
-  font-weight: 600;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 10px 16px;
-  text-align: left;
-  border-bottom: 1px solid var(--md-sys-color-outline-variant);
-  position: sticky;
-  top: 0;
-  z-index: 2;
-}
+/* Table row/cell specifics move to tables.css */
 
-.scan-table td {
-  padding: 8px 16px;
-  border-bottom: 1px solid var(--md-sys-color-outline-variant);
-  color: var(--md-sys-color-on-surface);
-  font-size: 13px;
+/* Hidden rows (filtered out) */
+.scan-table tbody tr.hidden-row {
+  display: none;
 }
 
 /* ── Progress Area ─────────────────────────────────────────────────────── */
@@ -162,9 +172,27 @@ md-linear-progress {
 /* ── Stats Grid ───────────────────────────────────────────────────────── */
 .scan-stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(5, 1fr); /* Default 5 columns */
   gap: 12px;
   flex: none;
+}
+
+@media (max-width: 1024px) {
+  .scan-stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .scan-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 400px) {
+  .scan-stats-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .scan-stat-card {
@@ -201,47 +229,7 @@ md-linear-progress {
   }
 }
 
-/* ── Empty State ──────────────────────────────────────────────────────── */
-.scan-empty-state {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  color: var(--md-sys-color-on-surface-variant);
-  padding: 40px;
-  text-align: center;
-}
-
-.empty-icon-wrap {
-  width: 56px;
-  height: 56px;
-  border-radius: 16px;
-  background: transparent;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.empty-icon-wrap md-icon {
-  --md-icon-size: 28px;
-  opacity: 0.5;
-}
-
-.empty-text {
-  font-weight: 600;
-  font-size: 15px;
-  color: var(--md-sys-color-on-surface);
-}
-
-.empty-sub {
-  font-size: 12px;
-  max-width: 240px;
-  line-height: 1.4;
-  opacity: 0.7;
-}
+/* Table row/cell specifics move to tables.css */
 
 /* ── Extended FAB & Hidden ────────────────────────────────────────────── */
 .extended-fab {

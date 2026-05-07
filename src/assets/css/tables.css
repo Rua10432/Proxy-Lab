@@ -1,0 +1,215 @@
+/* Material 3 Data Table Styles */
+:root {
+  --m3-table-header-height: 56px;
+  --m3-table-row-height: 52px;
+  --md-sys-color-hover-state: rgba(103, 80, 164, 0.08); /* Fallback */
+}
+
+/* Table Container Card */
+.m3-table-card {
+  background-color: var(--md-sys-color-surface);
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--md-sys-elevation-level1);
+  position: relative; /* Ensure children can be positioned absolutely */
+  min-height: 200px; /* Ensure enough space for empty state */
+}
+
+.table-header-area {
+  padding: 16px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.table-title {
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Core Table Wrapper */
+.table-wrapper {
+  overflow-x: auto;
+  position: relative;
+  flex: 1;
+}
+
+/* Custom Scrollbar for premium look */
+.table-wrapper::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.table-wrapper::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb {
+  background: var(--md-sys-color-outline-variant);
+  border-radius: 4px;
+  border: 2px solid var(--md-sys-color-surface);
+}
+
+.table-wrapper:hover::-webkit-scrollbar-thumb {
+  background: var(--md-sys-color-outline);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed; /* Supports resizing */
+}
+
+th {
+  height: var(--m3-table-header-height);
+  padding: 0 16px;
+  text-align: left;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface-variant);
+  background-color: var(--md-sys-color-surface-container-low);
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  user-select: none;
+}
+
+.th-content {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  width: fit-content;
+  padding: 8px 4px;
+  border-radius: 8px;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.th-content:hover {
+  background-color: var(--md-sys-color-hover-state);
+  color: var(--md-sys-color-on-surface);
+}
+
+.sort-icon {
+  font-size: 18px;
+  opacity: 0.3;
+  transition: transform 0.2s, opacity 0.2s;
+  --md-icon-size: 18px;
+}
+
+th[aria-sort="ascending"] .sort-icon,
+th[aria-sort="descending"] .sort-icon,
+th.active-sort .sort-icon {
+  opacity: 1;
+  color: var(--md-sys-color-primary);
+}
+
+th[aria-sort="descending"] .sort-icon,
+th.desc .sort-icon {
+  transform: rotate(180deg);
+}
+
+/* Resizer handle */
+.resizer {
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100%;
+  width: 4px;
+  cursor: col-resize;
+  transition: background-color 0.2s;
+  z-index: 11;
+}
+
+.resizer:hover, .resizing {
+  background-color: var(--md-sys-color-primary);
+}
+
+td {
+  height: var(--m3-table-row-height);
+  padding: 0 16px;
+  font-size: 14px;
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--md-sys-color-on-surface);
+}
+
+tbody tr {
+  transition: background-color 0.15s;
+}
+
+tbody tr:hover {
+  background-color: var(--md-sys-color-surface-container-high);
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Pagination */
+.pagination-container {
+  padding: 8px 16px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 24px;
+  font-size: 12px;
+  color: var(--md-sys-color-on-surface-variant);
+  border-top: 1px solid var(--md-sys-color-outline-variant);
+  background-color: var(--md-sys-color-surface-container-low);
+}
+
+.pagination-actions {
+  display: flex;
+  gap: 4px;
+}
+
+/* Empty state */
+.table-empty-state {
+  position: absolute;
+  top: var(--m3-table-header-height);
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  text-align: center;
+  color: var(--md-sys-color-on-surface-variant);
+  background-color: var(--md-sys-color-surface);
+  z-index: 5;
+  pointer-events: none; /* Allow clicks through to table if needed, though usually hidden when data exists */
+}
+
+.table-empty-state md-icon {
+  --md-icon-size: 48px;
+  opacity: 0.5;
+  margin-bottom: 12px;
+}
+
+.empty-text {
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--md-sys-color-on-surface);
+  margin-bottom: 4px;
+}
+
+.empty-sub {
+  font-size: 12px;
+  max-width: 260px;
+  line-height: 1.4;
+  opacity: 0.7;
+}

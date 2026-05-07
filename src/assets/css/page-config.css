@@ -51,6 +51,23 @@
   min-width: 100px;
 }
 
+@media (max-width: 600px) {
+  .config-form-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .config-form-row > * {
+    flex: none !important;
+    width: 100% !important;
+  }
+  .config-action-row {
+    justify-content: center;
+  }
+  .config-action-row md-filled-button {
+    width: 100%;
+  }
+}
+
 .config-action-row {
   display: flex;
   justify-content: flex-end;
@@ -71,10 +88,11 @@
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 8px 16px;
-  background: var(--md-sys-color-surface);
-  border-bottom: 1px solid var(--md-sys-color-surface-variant);
-  flex-wrap: wrap;
+  padding: 12px 16px; /* Slightly more vertical padding */
+  background: var(--md-sys-color-surface-container-low); /* Better contrast */
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+  flex-wrap: nowrap; /* Prevent wrapping for a cleaner desktop feel */
+  min-height: 72px; /* Ensure space for M3 text field */
 }
 
 .filter-wrap {
@@ -83,10 +101,10 @@
 }
 
 .filter-input {
-  --md-outlined-text-field-container-shape: 4px;
-  --md-outlined-text-field-bottom-space: 4px;
-  --md-outlined-text-field-top-space: 4px;
+  --md-outlined-text-field-container-shape: 12px; /* Standard M3 shape */
   width: 100%;
+  height: 56px; /* Explicit height to prevent layout shifts */
+  flex: 1;
 }
 
 .action-icons {
@@ -100,6 +118,22 @@
   gap: 20px;
 }
 
+@media (max-width: 600px) {
+  .log-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .toolbar-switches {
+    justify-content: space-between;
+    width: 100%;
+    gap: 8px;
+  }
+  .filter-wrap {
+    min-width: 0;
+  }
+}
+
 .switch-item {
   display: flex;
   align-items: center;
@@ -109,9 +143,6 @@
   cursor: pointer;
 }
 
-.switch-item md-switch {
-  /* Restore standard M3 switch appearance */
-}
 
 .console-titlebar {
   padding: 8px 16px;
@@ -179,86 +210,21 @@
   min-height: 200px;
 }
 
+@media (max-width: 800px) {
+  .mtr-content-row {
+    flex-direction: column;
+  }
+}
+
 .mtr-table-wrap {
   flex: 1;
-  overflow: auto;
-  border: 1px solid var(--md-sys-color-outline-variant);
-  border-radius: 12px;
   max-height: 400px;
 }
 
+/* MTR table row/cell specifics move to tables.css */
 .mtr-table {
-  width: 100%;
-  border-collapse: collapse;
   font-family: 'Roboto Mono', monospace;
   font-size: 12px;
-}
-
-.mtr-table thead {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-}
-
-.mtr-table thead th {
-  background: transparent;
-  color: var(--md-sys-color-on-surface);
-  font-weight: 500;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  padding: 8px 10px;
-  text-align: left;
-  cursor: pointer;
-  user-select: none;
-  border-bottom: 2px solid var(--md-sys-color-outline-variant);
-  position: relative;
-  white-space: nowrap;
-}
-
-.mtr-table thead th .sort-arrow {
-  font-size: 14px;
-  vertical-align: middle;
-  opacity: 0.4;
-}
-
-.mtr-table thead th.sorted .sort-arrow {
-  opacity: 1;
-  color: var(--md-sys-color-primary);
-}
-
-.mtr-table thead th .resize-handle {
-  position: absolute;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  cursor: col-resize;
-  background: transparent;
-}
-
-.mtr-table thead th .resize-handle:hover,
-.mtr-table thead th .resize-handle.active {
-  background: var(--md-sys-color-primary);
-}
-
-.mtr-table tbody tr {
-  transition: background 0.3s;
-}
-
-.mtr-table tbody tr:nth-child(even) {
-  background: transparent;
-}
-
-.mtr-table tbody tr:hover {
-  background: color-mix(in srgb, var(--md-sys-color-primary) 8%, transparent);
-}
-
-.mtr-table td {
-  padding: 6px 10px;
-  border-bottom: 1px solid var(--md-sys-color-outline-variant);
-  color: var(--md-sys-color-on-surface);
-  white-space: nowrap;
 }
 
 @keyframes mtrFlash {
@@ -288,6 +254,13 @@
   background: transparent;
 }
 
+@media (max-width: 800px) {
+  .mtr-sparkline-col {
+    width: 100%;
+    max-height: 150px;
+  }
+}
+
 .mtr-sparkline-col .spark-label {
   font-size: 10px;
   color: var(--md-sys-color-outline);
@@ -304,7 +277,14 @@
   gap: 10px;
 }
 
-/* ── Route Card ──────────────────────────────────────────────────────────── */
+/* ── Route Card & Table ────────────────────────────────────────────────── */
+.route-table-wrap {
+  overflow: auto;
+}
+
+.route-table th, .route-table td {
+  white-space: nowrap;
+}
 .route-card {
   padding: 16px;
   display: flex;
@@ -333,28 +313,7 @@
   font-family: 'Roboto Mono', monospace;
 }
 
-.route-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-}
-
-.route-table th {
-  text-align: left;
-  padding: 8px 12px;
-  font-size: 11px;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--md-sys-color-outline);
-  border-bottom: 1px solid var(--md-sys-color-outline-variant);
-}
-
-.route-table td {
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--md-sys-color-outline-variant);
-  color: var(--md-sys-color-on-surface);
-}
+/* Route table specifics move to tables.css */
 
 .route-empty {
   text-align: center;

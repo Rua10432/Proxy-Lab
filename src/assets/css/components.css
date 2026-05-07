@@ -209,10 +209,6 @@ md-icon {
 }
 
 /* 修复组件未定义时显示双排图标的问题 */
-md-navigation-tab:not(:defined) md-icon[slot="active-icon"],
-md-navigation-rail-tab:not(:defined) md-icon[slot="active-icon"] {
-  /* display: none !important; */
-}
 
 md-icon-button md-icon {
   --md-icon-size: 22px;
@@ -241,6 +237,13 @@ md-filled-select {
   --md-filled-select-label-text-color: var(--md-sys-color-on-surface-variant);
   --md-filled-select-focus-label-text-color: var(--md-sys-color-primary);
   --md-filled-select-text-field-input-text-color: var(--md-sys-color-on-surface);
+  height: 56px; /* Standard M3 height */
+}
+
+@media (max-width: 600px) {
+  md-outlined-text-field, md-filled-select {
+    width: 100%;
+  }
 }
 
 /* Fix leading/trailing icon vertical alignment inside text fields */

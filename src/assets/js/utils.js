@@ -14,8 +14,8 @@ export function classifyTestLine(text) {
 }
 
 export function classifyConfigLine(text) {
-  if (text.includes("[Error]")) return "log-error";
-  if (text.includes("[info]") || text.includes("[INFO]")) return "log-info";
+  if (text.includes("[ERROR]") || text.includes("[Error]")) return "log-error";
+  if (text.includes("[INFO]") || text.includes("[info]")) return "log-info";
   return "log-default";
 }
 

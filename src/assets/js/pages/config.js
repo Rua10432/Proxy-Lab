@@ -49,7 +49,7 @@ export async function configProxy() {
   try {
     const protocol = protoEl.value.trim();
 
-    // 1. SILENT TEST BEFORE APPLY (With Protocol Context)
+    // 1. SILENT TEST BEFORE APPLY
     appendLog(configLog, `[Verification] probing ${protocol} proxy at ${host}:${port}...`, "log-info");
     const ok = await runSilentPing(host, port, protocol, 3000);
 
@@ -63,10 +63,8 @@ export async function configProxy() {
     const msg = await invoke("config_proxy", { host, port: String(port), protocol });
     appendLog(configLog, msg, classifyConfigLine(msg));
     showSnackbar("代理配置已应用", 3000, "default");
-
-    // Update Global Status (optional enhancement)
-    const globalStatus = document.getElementById("global-status-text");
-    if (globalStatus) globalStatus.textContent = "Connected";
+    
+    await checkProxyStatus();
 
   } catch (err) {
     appendLog(configLog, err, "log-error");
@@ -75,12 +73,61 @@ export async function configProxy() {
     // Exit Loading State
     if (btnConfig) {
       btnConfig.classList.remove("btn-loading");
-      btnConfig.disabled = false;
     }
-    ["config-host", "config-port", "config-proto"].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.disabled = false;
-    });
+  }
+}
+
+export async function checkProxyStatus() {
+  const hostEl = document.getElementById("config-host");
+  const portEl = document.getElementById("config-port");
+  const protoEl = document.getElementById("config-proto");
+  const btnConfig = document.getElementById("btn-config");
+  const btnDisconnect = document.getElementById("btn-config-disconnect");
+
+  try {
+    const status = await invoke("get_proxy_status");
+    
+    if (status.is_active) {
+      if (hostEl) { hostEl.value = status.host; hostEl.disabled = true; }
+      if (portEl) { portEl.value = status.port; portEl.disabled = true; }
+      if (protoEl) { protoEl.value = status.protocol; protoEl.disabled = true; }
+      if (btnConfig) btnConfig.disabled = true;
+      if (btnDisconnect) btnDisconnect.disabled = false;
+      
+      const globalStatus = document.getElementById("global-status-text");
+      if (globalStatus) globalStatus.textContent = "Connected";
+    } else {
+      if (hostEl) hostEl.disabled = false;
+      if (portEl) portEl.disabled = false;
+      if (protoEl) protoEl.disabled = false;
+      if (btnConfig) btnConfig.disabled = false;
+      if (btnDisconnect) btnDisconnect.disabled = true;
+
+      const globalStatus = document.getElementById("global-status-text");
+      if (globalStatus) globalStatus.textContent = "Ready";
+    }
+  } catch (err) {
+    console.error("Failed to check proxy status:", err);
+  }
+}
+
+export async function disconnectProxy() {
+  const btnDisconnect = document.getElementById("btn-config-disconnect");
+  if (btnDisconnect) {
+    btnDisconnect.classList.add("btn-loading");
+    btnDisconnect.disabled = true;
+  }
+
+  try {
+    const msg = await invoke("disconnect_proxy");
+    appendLog(configLog, msg, classifyConfigLine(msg));
+    showSnackbar("代理已断开", 3000, "default");
+    await checkProxyStatus();
+  } catch (err) {
+    appendLog(configLog, err, "log-error");
+    showSnackbar(`断开失败: ${err}`, 4000, "error");
+  } finally {
+    if (btnDisconnect) btnDisconnect.classList.remove("btn-loading");
   }
 }
 
@@ -203,31 +250,21 @@ export function initMtrSorting() {
       const key = th.dataset.key;
       if (mtrSortKey === key) { mtrSortAsc = !mtrSortAsc; }
       else { mtrSortKey = key; mtrSortAsc = true; }
-      document.querySelectorAll('#mtr-table thead th').forEach(t => t.classList.remove('sorted'));
-      th.classList.add('sorted');
-      th.querySelector('.sort-arrow').textContent = mtrSortAsc ? '▲' : '▼';
-      if (mtrHopsData.length) renderMtrTable(mtrHopsData);
-    });
-  });
-}
+      
+      // Reset all headers
+      document.querySelectorAll('#mtr-table thead th').forEach(t => {
+        t.classList.remove('active-sort', 'desc');
+        t.removeAttribute('aria-sort');
+      });
 
-export function initMtrResizing() {
-  document.querySelectorAll('#mtr-table .resize-handle').forEach(handle => {
-    let startX, startW, th;
-    handle.addEventListener('mousedown', e => {
-      e.preventDefault(); e.stopPropagation();
-      th = handle.parentElement;
-      startX = e.clientX;
-      startW = th.offsetWidth;
-      handle.classList.add('active');
-      const onMove = ev => { th.style.width = Math.max(40, startW + ev.clientX - startX) + 'px'; };
-      const onUp = () => {
-        handle.classList.remove('active');
-        document.removeEventListener('mousemove', onMove);
-        document.removeEventListener('mouseup', onUp);
-      };
-      document.addEventListener('mousemove', onMove);
-      document.addEventListener('mouseup', onUp);
+      th.classList.add('active-sort');
+      if (!mtrSortAsc) th.classList.add('desc');
+      th.setAttribute('aria-sort', mtrSortAsc ? 'ascending' : 'descending');
+      
+      const icon = th.querySelector('.sort-icon');
+      if (icon) icon.textContent = 'arrow_upward';
+
+      if (mtrHopsData.length) renderMtrTable(mtrHopsData);
     });
   });
 }

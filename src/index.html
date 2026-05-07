@@ -17,6 +17,7 @@
   <link rel="stylesheet" href="./assets/css/page-config.css" />
   <link rel="stylesheet" href="./assets/css/page-settings.css" />
   <link rel="stylesheet" href="./assets/css/titlebar.css" />
+  <link rel="stylesheet" href="./assets/css/tables.css" />
 
   <script type="importmap">
     {
@@ -224,24 +225,53 @@
 
             <div class="scan-content-row">
               <div class="scan-main-col">
-                <div class="scan-table-container surface-container-low" id="scan-table-container">
-                  <table class="scan-table">
-                    <thead>
-                      <tr>
-                        <th style="width: 48px">#</th>
-                        <th>IP Address</th>
-                        <th>Port</th>
-                        <th>Protocol</th>
-                        <th>Latency</th>
-                        <th style="width: 64px">Apply</th>
-                      </tr>
-                    </thead>
-                    <tbody id="scan-table-body"></tbody>
-                  </table>
-                  <div class="scan-empty-state" id="scan-empty-state">
-                    <div class="empty-icon-wrap">
-                      <md-icon>radar</md-icon>
-                    </div>
+
+                <!-- Table Filter Bar -->
+                <div class="scan-table-toolbar">
+                  <md-outlined-text-field id="scan-filter" label="Filter results" placeholder="IP, Port, Protocol..."
+                    class="scan-filter-field">
+                    <md-icon slot="leading-icon">search</md-icon>
+                  </md-outlined-text-field>
+                  <span class="scan-count-badge" id="scan-count-badge">0 results</span>
+                </div>
+
+                <!-- Scan Results Table -->
+                <div class="m3-table-card scan-table-container" id="scan-table-container">
+                  <div class="table-wrapper">
+                    <table class="scan-table" id="scan-table">
+                      <thead>
+                        <tr>
+                          <th class="col-num" data-col="num" style="width: 60px;">
+                            <div class="th-content">#</div>
+                            <div class="resizer"></div>
+                          </th>
+                          <th data-col="ip" class="sortable" aria-sort="none" style="width: 180px;">
+                            <div class="th-content">IP Address <md-icon class="sort-icon">arrow_upward</md-icon></div>
+                            <div class="resizer"></div>
+                          </th>
+                          <th data-col="port" class="sortable" aria-sort="none" style="width: 100px;">
+                            <div class="th-content">Port <md-icon class="sort-icon">arrow_upward</md-icon></div>
+                            <div class="resizer"></div>
+                          </th>
+                          <th data-col="protocol" class="sortable" aria-sort="none" style="width: 120px;">
+                            <div class="th-content">Protocol <md-icon class="sort-icon">arrow_upward</md-icon></div>
+                            <div class="resizer"></div>
+                          </th>
+                          <th data-col="latency" class="sortable" aria-sort="none" style="width: 120px;">
+                            <div class="th-content">Latency <md-icon class="sort-icon">arrow_upward</md-icon></div>
+                            <div class="resizer"></div>
+                          </th>
+                          <th class="col-apply" style="width: 80px;">
+                            <div class="th-content">Apply</div>
+                            <div class="resizer"></div>
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody id="scan-table-body"></tbody>
+                    </table>
+                  </div>
+                  <div class="table-empty-state scan-empty-state" id="scan-empty-state">
+                    <md-icon>radar</md-icon>
                     <div class="empty-text">No proxies found yet</div>
                     <div class="empty-sub">Start a scan to discover active proxies on your network</div>
                   </div>
@@ -323,202 +353,114 @@
                   <md-select-option value="SOCKS5">SOCKS5</md-select-option>
                 </md-filled-select>
               </div>
-              <div class="config-action-row">
-                <md-filled-button id="btn-config" style="min-width: 140px;">
+              <div class="config-action-row" style="display: flex; gap: 12px; margin-top: 16px;">
+                <md-filled-tonal-button id="btn-config-disconnect" disabled style="flex: 1;">
+                  <md-icon slot="icon">link_off</md-icon> Disconnect Proxy
+                </md-filled-tonal-button>
+                <md-filled-button id="btn-config" style="flex: 1;">
                   <md-icon slot="icon">check_circle</md-icon> Apply Proxy
                 </md-filled-button>
               </div>
             </div>
-
-            <div class="mtr-panel surface-container-low">
-              <div class="config-card-header"><md-icon>timeline</md-icon> MTR Diagnostics</div>
-              <div class="mtr-input-row">
-                <md-outlined-text-field class="f-address" id="mtr-host" label="Target Host" placeholder="8.8.8.8">
-                  <md-icon slot="leading-icon">travel_explore</md-icon>
-                </md-outlined-text-field>
-                <md-outlined-text-field style="width:100px" id="mtr-max-hops" label="Max Hops" value="30" type="number"
-                  min="1" max="64">
-                  <md-icon slot="leading-icon">fork_right</md-icon>
-                </md-outlined-text-field>
-                <div class="spacer"></div>
-                <md-filled-button id="btn-mtr-start"><md-icon slot="icon">play_arrow</md-icon>Start
-                  Diagnostics</md-filled-button>
-                <md-filled-tonal-button id="btn-mtr-stop" disabled><md-icon
-                    slot="icon">stop</md-icon>Stop</md-filled-tonal-button>
-              </div>
-              <div class="mtr-content-row">
-                <div class="mtr-table-wrap">
-                  <table class="mtr-table" id="mtr-table">
-                    <thead>
-                      <tr>
-                        <th data-key="hop" style="width:50px">Hop <span class="sort-arrow">↕</span>
-                          <div class="resize-handle"></div>
-                        </th>
-                        <th data-key="ip">Host / IP <span class="sort-arrow">↕</span>
-                          <div class="resize-handle"></div>
-                        </th>
-                        <th data-key="loss_pct" style="width:70px">Loss% <span class="sort-arrow">↕</span>
-                          <div class="resize-handle"></div>
-                        </th>
-                        <th data-key="sent" style="width:55px">Sent <span class="sort-arrow">↕</span>
-                          <div class="resize-handle"></div>
-                        </th>
-                        <th data-key="last" style="width:70px">Last <span class="sort-arrow">↕</span>
-                          <div class="resize-handle"></div>
-                        </th>
-                        <th data-key="avg" style="width:70px">Avg <span class="sort-arrow">↕</span>
-                          <div class="resize-handle"></div>
-                        </th>
-                        <th data-key="best" style="width:70px">Best <span class="sort-arrow">↕</span>
-                          <div class="resize-handle"></div>
-                        </th>
-                        <th data-key="worst" style="width:70px">Worst <span class="sort-arrow">↕</span>
-                          <div class="resize-handle"></div>
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody id="mtr-table-body"></tbody>
-                  </table>
-                  <div class="route-empty" id="mtr-empty">Enter a host and click "Start Diagnostics" to begin MTR
-                    analysis.
-                  </div>
-                </div>
-                <div class="mtr-sparkline-col" id="mtr-sparklines">
-                  <div class="spark-label">Latency History</div>
-                </div>
-              </div>
-            </div>
-
-            <div class="route-card surface-container-low">
-              <div class="route-card-header">
-                <div class="route-card-title"><md-icon>alt_route</md-icon> Route Information</div>
-                <span class="route-card-time" id="route-timestamp">--</span>
-              </div>
-              <div class="mtr-input-row">
-                <md-outlined-text-field class="f-address" id="route-host" label="Target Host" placeholder="1.1.1.1">
-                  <md-icon slot="leading-icon">travel_explore</md-icon>
-                </md-outlined-text-field>
-                <md-filled-tonal-button id="btn-route-trace"><md-icon slot="icon">route</md-icon>Trace
-                  Route</md-filled-tonal-button>
-              </div>
-              <table class="route-table">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Host</th>
-                    <th>Route Chain</th>
-                    <th>Network</th>
-                    <th>Time</th>
-                  </tr>
-                </thead>
-                <tbody id="route-table-body"></tbody>
-              </table>
-              <div class="route-empty" id="route-empty">Click "Trace Route" to capture a route snapshot.</div>
-            </div>
           </div>
 
-          <!-- ── Page: Logs ─────────────────────────────────────────────────────── -->
-          <div class="page" id="page-logs" hidden>
-            <div class="console-wrap m3-log-container" style="flex: 1; display: flex; flex-direction: column;">
+            <!-- ── Page: Logs ─────────────────────────────────────────────────────── -->
+            <div class="page" id="page-logs" hidden>
+              <div class="console-wrap m3-log-container" style="flex: 1; display: flex; flex-direction: column;">
 
-              <!-- Log Toolbar derived from screenshot -->
-              <div class="log-toolbar">
-                <div class="filter-wrap">
-                  <md-outlined-text-field label="过滤器 (支持正则)" id="log-filter" class="filter-input">
-                    <md-icon slot="trailing-icon">arrow_drop_down</md-icon>
-                  </md-outlined-text-field>
-                </div>
-
-                <div class="action-icons">
-                  <md-icon-button id="btn-copy-log" title="Copy Log"><md-icon>content_copy</md-icon></md-icon-button>
-                  <md-icon-button id="btn-clear-global-log" title="Clear Log"><md-icon>delete</md-icon></md-icon-button>
-                </div>
-
-                <div class="toolbar-switches">
-                  <div class="switch-item">
-                    <label for="switch-auto-refresh">自动刷新</label>
-                    <md-switch id="switch-auto-refresh" selected></md-switch>
+                <!-- Log Toolbar derived from screenshot -->
+                <div class="log-toolbar">
+                  <div class="filter-wrap">
+                    <md-outlined-text-field label="过滤器 (支持正则)" id="log-filter" class="filter-input">
+                      <md-icon slot="trailing-icon">arrow_drop_down</md-icon>
+                    </md-outlined-text-field>
                   </div>
-                  <div class="switch-item">
-                    <label for="switch-auto-scroll">自动滚动到末尾</label>
-                    <md-switch id="switch-auto-scroll" selected></md-switch>
+
+                  <div class="action-icons">
+                    <md-icon-button id="btn-copy-log" title="Copy Log"><md-icon>content_copy</md-icon></md-icon-button>
+                    <md-icon-button id="btn-clear-global-log"
+                      title="Clear Log"><md-icon>delete</md-icon></md-icon-button>
+                  </div>
+
+                  <div class="toolbar-switches">
+                    <div class="switch-item">
+                      <label for="switch-auto-refresh">自动刷新</label>
+                      <md-switch id="switch-auto-refresh" selected></md-switch>
+                    </div>
+                    <div class="switch-item">
+                      <label for="switch-auto-scroll">自动滚动到末尾</label>
+                      <md-switch id="switch-auto-scroll" selected></md-switch>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <!-- Main Log Display Area -->
-              <div class="console-log" id="global-log"
-                style="flex: 1; background: #1e1e1e; color: #d0d0d0; padding: 12px; font-family: 'Roboto Mono', monospace; font-size: 13px;">
+                <!-- Main Log Display Area -->
+                <div class="console-log" id="global-log"
+                  style="flex: 1; background: #1e1e1e; color: #d0d0d0; padding: 12px; font-family: 'Roboto Mono', monospace; font-size: 13px;">
+                </div>
               </div>
             </div>
-          </div>
 
-          <!-- ── Page: Settings ────────────────────────────────────────────────── -->
-          <div class="page" id="page-settings" hidden>
-            <div class="settings-section surface-container-high">
-              <div class="settings-card">
-                <div>
-                  <div class="settings-card-label">Theme</div>
-                  <div class="settings-card-desc">Choose your preferred color scheme</div>
+            <!-- ── Page: Settings ────────────────────────────────────────────────── -->
+            <div class="page" id="page-settings" hidden>
+              <div class="settings-section surface-container-high">
+                <div class="settings-card">
+                  <div>
+                    <div class="settings-card-label">Theme</div>
+                    <div class="settings-card-desc">Choose your preferred color scheme</div>
+                  </div>
+                  <md-filled-select id="theme-select" style="width:140px">
+                    <md-select-option value="system" selected>System</md-select-option>
+                    <md-select-option value="light">Light</md-select-option>
+                    <md-select-option value="dark">Dark</md-select-option>
+                  </md-filled-select>
                 </div>
-                <md-filled-select id="theme-select" style="width:140px">
-                  <md-select-option value="system" selected>System</md-select-option>
-                  <md-select-option value="light">Light</md-select-option>
-                  <md-select-option value="dark">Dark</md-select-option>
-                </md-filled-select>
-              </div>
 
-              <div class="settings-card">
-                <div>
-                  <div class="settings-card-label">Primary Color</div>
-                  <div class="settings-card-desc">Customize the application's accent color</div>
-                </div>
-                <input type="color" id="primary-color-picker" value="#6750A4"
-                  style="cursor: pointer; width: 48px; height: 36px; padding: 0; border: none; border-radius: 8px; background: transparent;">
-              </div>
+                <div class="settings-card">
+                  <div>
+                    <div class="settings-card-label">Primary Color</div>
+                    <div class="settings-card-desc">Customize the application's accent color</div>
+                  </div>
+                  <input type="color" id="primary-color-picker" value="#6750A4"
+                    style="cursor: pointer; width: 48px; height: 36px; padding: 0; border: none; border-radius: 8px; background: transparent;">
             </div>
           </div>
+        </div><!-- End #page-settings -->
 
-        </div><!-- End #pages-container -->
+      </div><!-- End #pages-container -->
+    </div><!-- End #main-content -->
+  </div><!-- End #app-root -->
 
-        <!-- Fixed Bottom Status Line -->
-        <div id="bottom-status-line">
-          <md-icon style="font-size: 14px; margin-right: 8px;">info</md-icon>
-          <span id="global-status-text">Ready</span>
-          <div class="spacer"></div>
-          <span id="footer-stats-text">-- ms</span>
-        </div>
+    <!-- Mobile Navigation Bar -->
+    <md-navigation-bar id="main-nav-bar">
+      <md-navigation-tab id="bar-test" label="Test" active>
+        <md-icon slot="active-icon">network_check</md-icon>
+      </md-navigation-tab>
+      <md-navigation-tab id="bar-scan" label="Scan">
+        <md-icon slot="active-icon">radar</md-icon>
+      </md-navigation-tab>
+      <md-navigation-tab id="bar-config" label="Config">
+        <md-icon slot="active-icon">settings_input_component</md-icon>
+      </md-navigation-tab>
+      <md-navigation-tab id="bar-logs" label="Logs">
+        <md-icon slot="active-icon">terminal</md-icon>
+      </md-navigation-tab>
+      <md-navigation-tab id="bar-settings" label="Settings">
+        <md-icon slot="active-icon">settings</md-icon>
+      </md-navigation-tab>
+    </md-navigation-bar>
+      
+      <!-- Fixed Bottom Status Line -->
+      <div id="bottom-status-line">
+        <md-icon style="font-size: 14px; margin-right: 8px;">info</md-icon>
+        <span id="global-status-text">Ready</span>
+        <div class="spacer"></div>
+        <span id="footer-stats-text">-- ms</span>
+      </div>
 
-      </div><!-- End #main-content -->
-
-      <!-- Mobile Navigation Bar -->
-      <md-navigation-bar id="main-nav-bar">
-        <md-navigation-tab id="bar-test" label="Test" active>
-          <md-icon slot="active-icon">network_check</md-icon>
-          <!-- <md-icon slot="inactive-icon">network_check</md-icon> -->
-        </md-navigation-tab>
-        <md-navigation-tab id="bar-scan" label="Scan">
-          <md-icon slot="active-icon">radar</md-icon>
-          <!-- <md-icon slot="inactive-icon">radar</md-icon> -->
-        </md-navigation-tab>
-        <md-navigation-tab id="bar-config" label="Config">
-          <md-icon slot="active-icon">settings_input_component</md-icon>
-          <!-- <md-icon slot="inactive-icon">settings_input_component</md-icon> -->
-        </md-navigation-tab>
-        <md-navigation-tab id="bar-logs" label="Logs">
-          <md-icon slot="active-icon">terminal</md-icon>
-          <!-- <md-icon slot="inactive-icon">terminal</md-icon> -->
-        </md-navigation-tab>
-        <md-navigation-tab id="bar-settings" label="Settings">
-          <md-icon slot="active-icon">settings</md-icon>
-          <!-- <md-icon slot="inactive-icon">settings</md-icon> -->
-        </md-navigation-tab>
-      </md-navigation-bar>
-    </div><!-- End #app-root -->
-
-    <!-- Main Application Entry -->
-    <script type="module" src="./assets/js/main.js"></script>
-  </div><!-- End #app-wrapper -->
+      <!-- Main Application Entry -->
+      <script type="module" src="./assets/js/main.js"></script>
+    </div><!-- End #app-wrapper -->
 </body>
 
 </html>

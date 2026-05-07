@@ -151,6 +151,14 @@ struct ScanProgressPayload {
     found: u64,
 }
 
+#[derive(Serialize)]
+struct ProxyStatus {
+    is_active: bool,
+    host: String,
+    port: String,
+    protocol: String,
+}
+
 // ─── Tauri Commands ───────────────────────────────────────────────────────────
 
 /// 代理协议级探测逻辑 (真正判断是否为代理)
@@ -271,36 +279,38 @@ fn stop_ping_test(state: tauri::State<'_, AppState>) {
 #[tauri::command]
 fn config_proxy(host: String, port: String, protocol: String) -> Result<String, String> {
     if host.trim().is_empty() {
-        return Err("[Error] Address must be filled".into());
+        let ts = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
+        return Err(format!("[{}] [ERROR] Address must be filled", ts));
     }
     if port.trim().is_empty() {
-        return Err("[Error] Invalid port".into());
+        let ts = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
+        return Err(format!("[{}] [ERROR] Invalid port", ts));
     }
-    let timestamp = Local::now().format("%:z %Y-%m-%d %H:%M:%S").to_string();
+    let timestamp = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
 
     #[cfg(windows)]
     {
         set_windows_proxy(host.trim(), port.trim(), true, &protocol)
             .map(|_| {
                 format!(
-                    "{}-[info]system proxy changed-[{}]-{}:{}",
+                    "[{}] [INFO] System proxy configured [{}] {}:{}",
                     timestamp,
                     protocol,
                     host.trim(),
                     port.trim()
                 )
             })
-            .map_err(|e| format!("{}-[Error]system proxy fail-{}", timestamp, e))
+            .map_err(|e| format!("[{}] [ERROR] System proxy configuration failed: {}", timestamp, e))
     }
 
     #[cfg(target_os = "linux")]
     {
-        let port_u16: u16 = port.trim().parse().map_err(|_| format!("{}-[Error]Invalid port", timestamp))?;
+        let port_u16: u16 = port.trim().parse().map_err(|_| format!("[{}] [ERROR] Invalid port", timestamp))?;
         set_linux_proxy(&protocol, host.trim(), port_u16);
-        Ok(format!("{} - [info] Linux proxy ({}) configured", timestamp, protocol))
+        Ok(format!("[{}] [INFO] System proxy configured [{}] {}:{}", timestamp, protocol, host.trim(), port.trim()))
     }
     #[cfg(not(any(windows, target_os = "linux")))]
-    Err(format!("{} - [Error] Unsupported platform", timestamp))
+    Err(format!("[{}] [ERROR] Unsupported platform", timestamp))
 }
 
 // ─── Proxy Scan ───────────────────────────────────────────────────────────────
@@ -773,6 +783,62 @@ fn win_is_maximized(window: tauri::Window) -> bool {
     window.is_maximized().unwrap_or(false)
 }
 
+#[tauri::command]
+async fn get_proxy_status() -> Result<ProxyStatus, String> {
+    #[cfg(windows)]
+    {
+        use winreg::{enums::*, RegKey};
+        let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+        let cur_ver = hkcu.open_subkey("Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings")
+            .map_err(|e| e.to_string())?;
+
+        let enabled: u32 = cur_ver.get_value("ProxyEnable").unwrap_or(0);
+        let server: String = cur_ver.get_value("ProxyServer").unwrap_or_default();
+
+        if enabled == 1 && !server.is_empty() {
+            let mut protocol = "HTTP".to_string();
+            let mut host_port = server.clone();
+
+            if server.to_lowercase().starts_with("socks=") {
+                protocol = "SOCKS5".to_string();
+                host_port = server[6..].to_string();
+            }
+
+            let parts: Vec<&str> = host_port.split(':').collect();
+            if parts.len() == 2 {
+                return Ok(ProxyStatus {
+                    is_active: true,
+                    host: parts[0].to_string(),
+                    port: parts[1].to_string(),
+                    protocol,
+                });
+            }
+        }
+    }
+    
+    Ok(ProxyStatus {
+        is_active: false,
+        host: "".into(),
+        port: "".into(),
+        protocol: "HTTP".into(),
+    })
+}
+
+#[tauri::command]
+fn disconnect_proxy() -> Result<String, String> {
+    let timestamp = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
+    #[cfg(windows)]
+    {
+        set_windows_proxy("", "", false, "HTTP")
+            .map(|_| format!("[{}] [INFO] System proxy disconnected", timestamp))
+            .map_err(|e| format!("[{}] [ERROR] Disconnect failed: {}", timestamp, e))
+    }
+    #[cfg(not(windows))]
+    {
+       Ok(format!("[{}] [INFO] System proxy disconnected (no-op on this platform)", timestamp))
+    }
+}
+
 // ─── Entry ────────────────────────────────────────────────────────────────────
 
 pub fn run() {
@@ -806,6 +872,8 @@ pub fn run() {
             win_close,
             win_start_drag,
             win_is_maximized,
+            get_proxy_status,
+            disconnect_proxy,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

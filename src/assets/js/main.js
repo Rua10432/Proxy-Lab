@@ -3,17 +3,32 @@ import { clearFieldError } from './utils.js';
 import { restoreTheme, initThemeListeners } from './theme.js';
 import { startTest, stopTest, renderStats } from './pages/test.js';
 import { startScan, stopScan, resetScanStats } from './pages/scan.js';
-import { configProxy, startMtr, stopMtr, initMtrSorting, initMtrResizing, runRouteTrace } from './pages/config.js';
+import { 
+  configProxy, 
+  checkProxyStatus, 
+  disconnectProxy, 
+  startMtr, 
+  stopMtr, 
+  initMtrSorting, 
+  runRouteTrace 
+} from './pages/config.js';
 import { initTitlebar } from './titlebar.js';
 
 // ── Disable Browser Context Menu (native app feel) ────────────────────
 document.addEventListener('contextmenu', (e) => {
-  // Allow right-click in text inputs for paste/copy
+  // Always permit in development mode (localhost)
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    return;
+  }
+
+  // In production, allow right-click only in text inputs for paste/copy
   const tag = e.target.tagName?.toLowerCase();
   if (tag === 'input' || tag === 'textarea') return;
+  
   // Also allow inside Material text-field shadow DOM
   const closest = e.target.closest?.('md-outlined-text-field, md-filled-text-field');
   if (closest) return;
+
   e.preventDefault();
 });
 
@@ -41,17 +56,22 @@ const switchPage = (idx) => {
 
     // Sync active state on tabs manually
     const railTab = document.getElementById(`rail-${p}`);
+    const barTab = document.getElementById(`bar-${p}`);
+
     if (railTab) {
       if (i === idx) railTab.setAttribute("active", "");
       else railTab.removeAttribute("active");
     }
 
-    const barTab = document.getElementById(`bar-${p}`);
     if (barTab) {
       if (i === idx) barTab.setAttribute("active", "");
       else barTab.removeAttribute("active");
     }
   });
+
+  if (idx === 2) {
+    checkProxyStatus();
+  }
 };
 
 pages.forEach((p, idx) => {
@@ -81,8 +101,6 @@ const btnClearLog = document.getElementById("btn-clear-log");
 if (btnClearLog) {
   btnClearLog.addEventListener("click", () => {
     if (logArea) logArea.innerHTML = "";
-    // stats are handled in pages/test.js if needed, but they are local there.
-    // Actually, I should probably expose state or clear it.
   });
 }
 
@@ -99,6 +117,9 @@ if (btnClearFields) {
 
 const btnConfig = document.getElementById("btn-config");
 if (btnConfig) btnConfig.addEventListener("click", configProxy);
+
+const btnDisconnect = document.getElementById("btn-config-disconnect");
+if (btnDisconnect) btnDisconnect.addEventListener("click", disconnectProxy);
 
 const btnClearGlobalLog = document.getElementById("btn-clear-global-log");
 if (btnClearGlobalLog) {
@@ -133,9 +154,37 @@ if (btnMtrStop) btnMtrStop.addEventListener('click', stopMtr);
 const btnRouteTrace = document.getElementById('btn-route-trace');
 if (btnRouteTrace) btnRouteTrace.addEventListener('click', runRouteTrace);
 
+// ── Table Resizing Logic ──────────────────────────────────────────────
+function initTableResizers() {
+  document.querySelectorAll('.resizer').forEach(handle => {
+    let startX, startW, th;
+    handle.addEventListener('mousedown', e => {
+      e.preventDefault(); e.stopPropagation();
+      th = handle.parentElement;
+      startX = e.clientX;
+      startW = th.offsetWidth;
+      handle.classList.add('resizing');
+      
+      const onMove = ev => {
+        const deltaX = ev.clientX - startX;
+        th.style.width = Math.max(50, startW + deltaX) + 'px';
+      };
+      
+      const onUp = () => {
+        handle.classList.remove('resizing');
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+      };
+      
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  });
+}
+
 // ── Components & UI Initialization ────────────────────────────────────
 initMtrSorting();
-initMtrResizing();
+initTableResizers();
 initThemeListeners();
 
 // Clear errors on input
@@ -153,25 +202,21 @@ document.querySelectorAll('md-outlined-text-field').forEach(field => {
     }
   };
 
-  // 1. 设置极端情况下的强制超时（3秒）
   const failsafeTimeout = setTimeout(() => {
     console.warn("Initialization taking too long, forcing UI display...");
     hideLoading();
   }, 3000);
 
   try {
-    // 2. 基本同步状态恢复
     initTitlebar();
     restoreTheme();
     renderStats();
 
-    // 3. 等待 UI 组件库就绪（最多等待1.5秒，避免被由于网络或加载导致的卡死）
     await Promise.race([
       customElements.whenDefined("md-tabs"),
       new Promise(r => setTimeout(r, 1500))
     ]);
 
-    // 4. 获取后端配置（带错误保护）
     const cfg = await invoke("get_config").catch(e => {
       console.warn("Backend config unavailable:", e);
       return null;
@@ -193,6 +238,10 @@ document.querySelectorAll('md-outlined-text-field').forEach(field => {
         if (netField) netField.placeholder = cfg.scan_history[0];
       }
     }
+    
+    // Initial check on startup
+    checkProxyStatus();
+    
   } catch (e) {
     console.error("Initialization failed unexpectedly:", e);
   } finally {

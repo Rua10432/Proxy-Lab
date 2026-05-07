@@ -26,3 +26,23 @@
   margin-left: auto;
   flex-shrink: 0;
 }
+
+@media (max-width: 600px) {
+  .action-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .action-row md-filled-button,
+  .action-row md-filled-tonal-button,
+  .action-row md-text-button {
+    width: 100%;
+  }
+  .action-row .status-chip {
+    margin-left: 0;
+    justify-content: center;
+    width: 100%;
+  }
+  .action-row .spacer {
+    display: none;
+  }
+}

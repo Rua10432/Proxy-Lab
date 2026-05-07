@@ -21,6 +21,11 @@ const statScanSpeed = document.getElementById("stat-scan-speed");
 const scanLog = document.getElementById("global-log");
 const configLog = document.getElementById("global-log");
 
+// New elements for filtering and sorting
+const scanFilter = document.getElementById("scan-filter");
+const scanCountBadge = document.getElementById("scan-count-badge");
+const sortableHeaders = document.querySelectorAll("#scan-table thead th.sortable");
+
 let scanFoundCount = 0;
 let scanLatencySum = 0;
 let scanStartTime = null;
@@ -29,6 +34,12 @@ let unlistenScanFound = null;
 let unlistenScanDone = null;
 let unlistenScanProgress = null;
 let unlistenScanPortOpen = null;
+
+// Data state
+let scanResults = [];
+let currentSortCol = null;
+let currentSortDir = 'none'; // 'ascending', 'descending', 'none'
+let currentFilter = '';
 
 export function setScanRunning(running) {
   state.isScanRunning = running;
@@ -107,11 +118,13 @@ export function resetScanStats() {
   scanLatencySum = 0;
   scanStartTime = null;
   scanPortsOpen = 0;
+  scanResults = [];
   if (statScanned) statScanned.textContent = "0";
   if (statPortsOpen) statPortsOpen.textContent = "0";
   if (statFound) statFound.textContent = "0";
   if (statAvgLatency) statAvgLatency.textContent = "-- ms";
   if (statScanSpeed) statScanSpeed.textContent = "0/s";
+  if (scanCountBadge) scanCountBadge.textContent = "0 results";
   updateRing(0);
   if (scanLinearProgress) scanLinearProgress.value = 0;
   if (scanLog) scanLog.innerHTML = "";
@@ -138,53 +151,171 @@ export async function applyProxy(ip, port, protocol) {
   }
 }
 
+/**
+ * Renders the table based on filtered and sorted results
+ */
+function renderTable() {
+  if (!scanTableBody) return;
+
+  // Filter
+  const filtered = scanResults.filter(r => {
+    if (!currentFilter) return true;
+    const f = currentFilter.toLowerCase();
+    return r.ip.toLowerCase().includes(f) || 
+           r.port.toString().includes(f) || 
+           r.protocol.toLowerCase().includes(f);
+  });
+
+  // Sort
+  if (currentSortCol && currentSortDir !== 'none') {
+    filtered.sort((a, b) => {
+      let valA = a[currentSortCol];
+      let valB = b[currentSortCol];
+      
+      // Numeric sort for latency and port
+      if (currentSortCol === 'latency' || currentSortCol === 'port') {
+        valA = Number(a[currentSortCol === 'latency' ? 'latency_ms' : 'port']);
+        valB = Number(b[currentSortCol === 'latency' ? 'latency_ms' : 'port']);
+      }
+
+      if (valA < valB) return currentSortDir === 'ascending' ? -1 : 1;
+      if (valA > valB) return currentSortDir === 'ascending' ? 1 : -1;
+      return 0;
+    });
+  }
+
+  // Update UI stats
+  if (scanCountBadge) scanCountBadge.textContent = `${filtered.length} results`;
+  if (scanEmptyState) scanEmptyState.style.display = filtered.length === 0 ? "flex" : "none";
+
+  // Rebuild DOM efficiently
+  const fragment = document.createDocumentFragment();
+  filtered.forEach((r, idx) => {
+    const tr = document.createElement("tr");
+    
+    // #
+    const tdNum = document.createElement("td");
+    tdNum.textContent = idx + 1;
+    tdNum.className = "col-num";
+    tdNum.style.color = "var(--md-sys-color-outline)";
+    tr.appendChild(tdNum);
+
+    // IP
+    const tdIp = document.createElement("td");
+    tdIp.textContent = r.ip;
+    tdIp.style.fontWeight = "500";
+    tr.appendChild(tdIp);
+
+    // Port
+    const tdPort = document.createElement("td");
+    tdPort.textContent = r.port;
+    tr.appendChild(tdPort);
+
+    // Protocol
+    const tdProto = document.createElement("td");
+    const chip = document.createElement("span");
+    chip.className = `proto-chip ${r.protocol.toLowerCase()}`;
+    chip.textContent = r.protocol;
+    tdProto.appendChild(chip);
+    tr.appendChild(tdProto);
+
+    // Latency
+    const tdLatency = document.createElement("td");
+    tdLatency.textContent = `${r.latency_ms} ms`;
+    tdLatency.className = latencyClass(r.latency_ms);
+    tdLatency.style.fontWeight = "500";
+    tr.appendChild(tdLatency);
+
+    // Apply
+    const tdApply = document.createElement("td");
+    tdApply.className = "col-apply";
+    const btn = document.createElement("md-icon-button");
+    btn.title = `Apply ${r.ip}:${r.port} as system proxy`;
+    const icon = document.createElement("md-icon");
+    icon.textContent = "play_circle";
+    btn.appendChild(icon);
+    btn.addEventListener("click", () => applyProxy(r.ip, String(r.port), r.protocol));
+    tdApply.appendChild(btn);
+    tr.appendChild(tdApply);
+
+    fragment.appendChild(tr);
+  });
+
+  scanTableBody.innerHTML = "";
+  scanTableBody.appendChild(fragment);
+}
+
+function handleSort(header) {
+  const col = header.dataset.col;
+  if (!col || col === 'num') return;
+
+  // Reset all other headers
+  sortableHeaders.forEach(h => {
+    if (h !== header) {
+      h.setAttribute('aria-sort', 'none');
+      const icon = h.querySelector('.sort-icon');
+      if (icon) icon.textContent = 'unfold_more';
+    }
+  });
+
+  if (currentSortCol === col) {
+    if (currentSortDir === 'none') currentSortDir = 'ascending';
+    else if (currentSortDir === 'ascending') currentSortDir = 'descending';
+    else currentSortDir = 'none';
+  } else {
+    currentSortCol = col;
+    currentSortDir = 'ascending';
+  }
+
+  header.setAttribute('aria-sort', currentSortDir);
+  const icon = header.querySelector('.sort-icon');
+  if (icon) {
+    if (currentSortDir === 'none') {
+      icon.textContent = 'unfold_more';
+    } else {
+      icon.textContent = 'arrow_upward';
+    }
+  }
+  
+  renderTable();
+}
+
+// Initial Listeners
+if (scanFilter) {
+  scanFilter.addEventListener("input", (e) => {
+    currentFilter = e.target.value;
+    renderTable();
+  });
+}
+
+sortableHeaders.forEach(header => {
+  header.addEventListener("click", () => handleSort(header));
+});
+
 function addScanRow(payload) {
   scanFoundCount++;
   scanLatencySum += payload.latency_ms;
-  if (scanEmptyState) scanEmptyState.style.display = "none";
+  
+  // Storage for filter/sort
+  scanResults.push(payload);
+  
+  // If no filtering/sorting is active, we can just append for performance
+  // but if they are active, we must re-render.
+  if (!currentFilter && (currentSortDir === 'none')) {
+    if (scanEmptyState) scanEmptyState.style.display = "none";
+    if (scanCountBadge) scanCountBadge.textContent = `${scanResults.length} results`;
+    
+    // Quick append code... (repeating logic for IDX)
+    renderTable(); 
+  } else {
+    renderTable();
+  }
 
-  const tr = document.createElement("tr");
-
-  const tdNum = document.createElement("td");
-  tdNum.textContent = scanFoundCount;
-  tdNum.style.color = "var(--md-sys-color-outline)";
-  tr.appendChild(tdNum);
-
-  const tdIp = document.createElement("td");
-  tdIp.textContent = payload.ip;
-  tdIp.style.fontWeight = "500";
-  tr.appendChild(tdIp);
-
-  const tdPort = document.createElement("td");
-  tdPort.textContent = payload.port;
-  tr.appendChild(tdPort);
-
-  const tdProto = document.createElement("td");
-  const chip = document.createElement("span");
-  chip.className = `proto-chip ${payload.protocol.toLowerCase()}`;
-  chip.textContent = payload.protocol;
-  tdProto.appendChild(chip);
-  tr.appendChild(tdProto);
-
-  const tdLatency = document.createElement("td");
-  tdLatency.textContent = `${payload.latency_ms} ms`;
-  tdLatency.className = latencyClass(payload.latency_ms);
-  tdLatency.style.fontWeight = "500";
-  tr.appendChild(tdLatency);
-
-  const tdApply = document.createElement("td");
-  const btn = document.createElement("md-icon-button");
-  btn.title = `Apply ${payload.ip}:${payload.port} as system proxy`;
-  const icon = document.createElement("md-icon");
-  icon.textContent = "play_circle";
-  btn.appendChild(icon);
-  btn.addEventListener("click", () => applyProxy(payload.ip, String(payload.port), payload.protocol));
-  tdApply.appendChild(btn);
-  tr.appendChild(tdApply);
-
-  if (scanTableBody) scanTableBody.appendChild(tr);
-  const container = document.getElementById("scan-table-container");
-  if (container) container.scrollTop = container.scrollHeight;
+  // Scroll to bottom only if no specific sorting is active
+  if (currentSortDir === 'none') {
+    const tableWrapper = document.querySelector("#scan-table-container .table-wrapper");
+    if (tableWrapper) tableWrapper.scrollTop = tableWrapper.scrollHeight;
+  }
 
   // Auto-save to config
   invoke("save_proxy", {
