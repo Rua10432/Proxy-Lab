@@ -27,19 +27,25 @@
   --md-sys-color-on-error-container: #410002;
   --md-sys-color-surface-variant: #DDE5DA;
   --md-sys-color-on-surface-variant: #414941;
+  --m3-sys-color-primary: #6750A4;
+  --m3-sys-color-on-primary: #FFFFFF;
+  --m3-sys-color-surface: #F7F2FA;
+  --m3-sys-color-on-surface: #1C1B1F;
+  --m3-sys-color-on-surface-variant: #49454F;
+  --m3-sys-color-surface-container-high: #ECE6F0;
+  --m3-sys-color-outline: #79747E;
+  --m3-sys-elevation-3: 0px 1px 3px 1px rgba(0, 0, 0, 0.15), 0px 4px 8px 3px rgba(0, 0, 0, 0.05);
 
   /* ── Custom Gradient Themes ── */
-  --app-bar-gradient: linear-gradient(135deg, 
-    var(--md-sys-color-primary), 
-    var(--md-sys-color-secondary), 
-    var(--md-sys-color-primary)
-  );
+  --app-bar-gradient: linear-gradient(135deg,
+      var(--md-sys-color-primary),
+      var(--md-sys-color-secondary),
+      var(--md-sys-color-primary));
   --app-bar-animation-speed: 8s;
-  --app-status-gradient: linear-gradient(90deg, 
-    color-mix(in srgb, var(--md-sys-color-surface-container-low) 80%, var(--md-sys-color-primary)), 
-    var(--md-sys-color-surface-container-low), 
-    color-mix(in srgb, var(--md-sys-color-surface-container-low) 80%, var(--md-sys-color-primary))
-  );
+  --app-status-gradient: linear-gradient(90deg,
+      color-mix(in srgb, var(--md-sys-color-surface-container-low) 80%, var(--md-sys-color-primary)),
+      var(--md-sys-color-surface-container-low),
+      color-mix(in srgb, var(--md-sys-color-surface-container-low) 80%, var(--md-sys-color-primary)));
   --app-bar-text: var(--md-sys-color-on-primary);
 
   /* ── Elevation Tokens ── */
@@ -93,31 +99,29 @@
   --md-sys-color-on-error: #690005;
   --md-sys-color-error-container: #93000A;
   --md-sys-color-on-error-container: #FFDAD6;
-    --md-sys-color-surface-variant: #414941;
-    --md-sys-color-on-surface-variant: #C1C9BE;
+  --md-sys-color-surface-variant: #414941;
+  --md-sys-color-on-surface-variant: #C1C9BE;
 
-    /* ── Custom Gradient Themes (Dark) ── */
-    --app-bar-gradient: linear-gradient(135deg, 
-      var(--md-sys-color-primary), 
-      color-mix(in srgb, var(--md-sys-color-primary) 70%, black), 
+  /* ── Custom Gradient Themes (Dark) ── */
+  --app-bar-gradient: linear-gradient(135deg,
+      var(--md-sys-color-primary),
+      color-mix(in srgb, var(--md-sys-color-primary) 70%, black),
       var(--md-sys-color-tertiary),
-      var(--md-sys-color-primary)
-    );
-    --app-bar-animation-speed: 6s;
-    --app-status-gradient: linear-gradient(90deg, 
-      var(--md-sys-color-surface-container-lowest), 
-      var(--md-sys-color-surface-container), 
-      var(--md-sys-color-surface-container-lowest)
-    );
-    --app-bar-text: var(--md-sys-color-on-primary);
+      var(--md-sys-color-primary));
+  --app-bar-animation-speed: 6s;
+  --app-status-gradient: linear-gradient(90deg,
+      var(--md-sys-color-surface-container-lowest),
+      var(--md-sys-color-surface-container),
+      var(--md-sys-color-surface-container-lowest));
+  --app-bar-text: var(--md-sys-color-on-primary);
 
-    /* ── Elevation Tokens (Dark) ── */
-    --md-sys-elevation-level0: none;
-    --md-sys-elevation-level1: 0px 1px 3px 1px rgba(0, 0, 0, 0.15), 0px 1px 2px 0px rgba(0, 0, 0, 0.30);
-    --md-sys-elevation-level2: 0px 2px 6px 2px rgba(0, 0, 0, 0.15), 0px 1px 2px 0px rgba(0, 0, 0, 0.30);
-    --md-sys-elevation-level3: 0px 4px 8px 3px rgba(0, 0, 0, 0.15), 0px 1px 3px 0px rgba(0, 0, 0, 0.30);
-    --md-sys-elevation-level4: 0px 6px 10px 4px rgba(0, 0, 0, 0.15), 0px 2px 3px 0px rgba(0, 0, 0, 0.30);
-    --md-sys-elevation-level5: 0px 8px 12px 6px rgba(0, 0, 0, 0.15), 0px 4px 4px 0px rgba(0, 0, 0, 0.30);
+  /* ── Elevation Tokens (Dark) ── */
+  --md-sys-elevation-level0: none;
+  --md-sys-elevation-level1: 0px 1px 3px 1px rgba(0, 0, 0, 0.15), 0px 1px 2px 0px rgba(0, 0, 0, 0.30);
+  --md-sys-elevation-level2: 0px 2px 6px 2px rgba(0, 0, 0, 0.15), 0px 1px 2px 0px rgba(0, 0, 0, 0.30);
+  --md-sys-elevation-level3: 0px 4px 8px 3px rgba(0, 0, 0, 0.15), 0px 1px 3px 0px rgba(0, 0, 0, 0.30);
+  --md-sys-elevation-level4: 0px 6px 10px 4px rgba(0, 0, 0, 0.15), 0px 2px 3px 0px rgba(0, 0, 0, 0.30);
+  --md-sys-elevation-level5: 0px 8px 12px 6px rgba(0, 0, 0, 0.15), 0px 4px 4px 0px rgba(0, 0, 0, 0.30);
 
   md-filled-select {
     --md-filled-select-text-field-container-color: var(--md-sys-color-surface-container-high);

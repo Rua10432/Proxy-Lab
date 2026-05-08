@@ -3,15 +3,16 @@ import { clearFieldError } from './utils.js';
 import { restoreTheme, initThemeListeners } from './theme.js';
 import { startTest, stopTest, renderStats } from './pages/test.js';
 import { startScan, stopScan, resetScanStats } from './pages/scan.js';
-import { 
-  configProxy, 
-  checkProxyStatus, 
-  disconnectProxy, 
-  startMtr, 
-  stopMtr, 
-  initMtrSorting, 
-  runRouteTrace 
+import {
+  configProxy,
+  checkProxyStatus,
+  disconnectProxy,
+  startMtr,
+  stopMtr,
+  initMtrSorting,
+  runRouteTrace
 } from './pages/config.js';
+import { initPool } from './pages/pool.js';
 import { initTitlebar } from './titlebar.js';
 
 // ── Disable Browser Context Menu (native app feel) ────────────────────
@@ -24,7 +25,7 @@ document.addEventListener('contextmenu', (e) => {
   // In production, allow right-click only in text inputs for paste/copy
   const tag = e.target.tagName?.toLowerCase();
   if (tag === 'input' || tag === 'textarea') return;
-  
+
   // Also allow inside Material text-field shadow DOM
   const closest = e.target.closest?.('md-outlined-text-field, md-filled-text-field');
   if (closest) return;
@@ -59,13 +60,30 @@ const switchPage = (idx) => {
     const barTab = document.getElementById(`bar-${p}`);
 
     if (railTab) {
-      if (i === idx) railTab.setAttribute("active", "");
-      else railTab.removeAttribute("active");
+      if (i === idx) {
+        railTab.setAttribute("active", "");
+        // Dynamic position calculation to fix alignment bug
+        const indicator = document.getElementById("rail-indicator");
+        if (indicator) {
+          // Calculate offset relative to the rail container
+          indicator.style.transform = `translateY(${railTab.offsetTop}px)`;
+        }
+      } else {
+        railTab.removeAttribute("active");
+      }
     }
 
     if (barTab) {
-      if (i === idx) barTab.setAttribute("active", "");
-      else barTab.removeAttribute("active");
+      if (i === idx) {
+        barTab.setAttribute("active", "");
+        // Move mobile indicator
+        const bIndicator = document.getElementById("bar-indicator");
+        if (bIndicator) {
+          bIndicator.style.transform = `translateX(${i * 100}%)`;
+        }
+      } else {
+        barTab.removeAttribute("active");
+      }
     }
   });
 
@@ -164,33 +182,98 @@ function initTableResizers() {
       startX = e.clientX;
       startW = th.offsetWidth;
       handle.classList.add('resizing');
-      
+
       const onMove = ev => {
         const deltaX = ev.clientX - startX;
         th.style.width = Math.max(50, startW + deltaX) + 'px';
       };
-      
+
       const onUp = () => {
         handle.classList.remove('resizing');
         document.removeEventListener('mousemove', onMove);
         document.removeEventListener('mouseup', onUp);
       };
-      
+
       document.addEventListener('mousemove', onMove);
       document.addEventListener('mouseup', onUp);
     });
   });
 }
 
-// ── Components & UI Initialization ────────────────────────────────────
-initMtrSorting();
-initTableResizers();
-initThemeListeners();
+/**
+ * ── Performance Monitor (RAM & Sparkline) ──
+ */
+function initPerformanceMonitor() {
+  const ramText = document.getElementById("ram-text");
+  const ramBar = document.getElementById("ram-bar");
+  const canvas = document.getElementById("ram-sparkline");
+  if (!canvas || !ramText || !ramBar) return;
 
-// Clear errors on input
-document.querySelectorAll('md-outlined-text-field').forEach(field => {
-  field.addEventListener('input', () => clearFieldError(field));
-});
+  const ctx = canvas.getContext("2d");
+  const history = new Array(24).fill(0);
+
+  async function update() {
+    try {
+      // Call Rust backend for REAL system memory info
+      const mem = await invoke("shittim_mem_task");
+      const { used_mb, total_gb, percent } = mem;
+
+      // Update Text
+      ramText.textContent = `${used_mb}MB / ${total_gb}GB (${percent.toFixed(1)}%)`;
+
+      // Update Bar
+      ramBar.style.width = `${percent}%`;
+      ramBar.classList.remove("warning", "critical");
+      if (percent > 90) ramBar.classList.add("critical");
+      else if (percent > 60) ramBar.classList.add("warning");
+
+      // Update History for Sparkline
+      history.push(percent);
+      history.shift();
+      renderSparkline();
+    } catch (e) {
+      console.warn("Failed to fetch real memory info:", e);
+      // Optional: keep last known good or clear
+    }
+  }
+
+  function renderSparkline() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Theme-aware colors
+    const isLight = document.documentElement.getAttribute("data-theme") === "light";
+    const strokeColor = isLight ? "#006b5b" : "#A0FFB0";
+    const glowColor = isLight ? "rgba(0, 107, 91, 0.3)" : "rgba(160, 255, 176, 0.5)";
+
+    // Glow effect
+    ctx.shadowBlur = 4;
+    ctx.shadowColor = glowColor;
+    
+    ctx.beginPath();
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 1.5;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+
+    const step = canvas.width / (history.length - 1);
+    // Find a local scale factor so the pulse is always visible
+    const max = Math.max(...history, 1);
+    const min = Math.min(...history);
+    const range = (max - min) || 1;
+
+    for (let i = 0; i < history.length; i++) {
+        const x = i * step;
+        const normalized = (history[i] - min) / range;
+        const y = canvas.height - 2 - (normalized * (canvas.height - 4));
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+
+  setInterval(update, 2000); // 2s refresh to feel stable
+  update();
+}
 
 // ── App Initialization ───────────────────────────────────────────────
 (async function init() {
@@ -208,9 +291,20 @@ document.querySelectorAll('md-outlined-text-field').forEach(field => {
   }, 3000);
 
   try {
+    initMtrSorting();
+    initTableResizers();
+    initThemeListeners();
+    
+    // Clear errors on input
+    document.querySelectorAll('md-outlined-text-field').forEach(field => {
+      field.addEventListener('input', () => clearFieldError(field));
+    });
+
     initTitlebar();
+    initPool();
     restoreTheme();
     renderStats();
+    initPerformanceMonitor();
 
     await Promise.race([
       customElements.whenDefined("md-tabs"),
@@ -238,10 +332,13 @@ document.querySelectorAll('md-outlined-text-field').forEach(field => {
         if (netField) netField.placeholder = cfg.scan_history[0];
       }
     }
-    
+
+    // Trigger initial page state and position indicator
+    switchPage(0);
+
     // Initial check on startup
     checkProxyStatus();
-    
+
   } catch (e) {
     console.error("Initialization failed unexpectedly:", e);
   } finally {

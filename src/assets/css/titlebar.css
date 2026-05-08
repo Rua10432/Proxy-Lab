@@ -1,8 +1,16 @@
 /* ── Animated Gradient Keyframes ──────────────────────────────────────── */
 @keyframes gradientShift {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 /* ── Custom Window Titlebar (Material 3) ──────────────────────────────── */
@@ -10,6 +18,7 @@
   height: 48px;
   background: var(--app-bar-gradient);
   background-size: 300% 300%;
+  background-attachment: fixed;
   animation: gradientShift var(--app-bar-animation-speed) ease infinite;
   color: var(--app-bar-text);
   display: flex;
@@ -17,10 +26,36 @@
   align-items: center;
   user-select: none;
   flex-shrink: 0;
-  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.15);
-  transition: opacity 0.3s;
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  position: relative;
   z-index: 9999;
-  overflow: hidden;
+  overflow: visible; /* To allow filament overflow if needed */
+}
+
+/* ── Status Dot Radar Pulse ── */
+.status-chip .dot {
+  position: relative;
+}
+
+.status-chip .dot::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  transform: translate(-50%, -50%);
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+  animation: radar-pulse 4s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+  opacity: 0;
+}
+
+@keyframes radar-pulse {
+  0% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; }
+  100% { transform: translate(-50%, -50%) scale(3.5); opacity: 0; }
 }
 
 /* 窗口失去焦点时的状态 */
@@ -32,8 +67,8 @@
 .titlebar-left {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding-left: 14px;
+  gap: 16px;
+  padding-left: 18px;
   flex: 1;
   min-width: 0;
   height: 100%;
@@ -48,20 +83,78 @@
 }
 
 .titlebar-icon {
-  width: 20px;
-  height: 20px;
+  width: 28px;
+  height: 28px;
   pointer-events: none;
+  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.2));
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.3s ease;
+}
+
+.titlebar-left:hover .titlebar-icon {
+  transform: scale(1.1) rotate(5deg);
+  filter: drop-shadow(0 0 12px var(--md-sys-color-primary-container));
 }
 
 .titlebar-title {
   font-family: var(--md-sys-typescale-label-large-font);
   font-size: var(--md-sys-typescale-label-large-size);
   font-weight: 500;
-  letter-spacing: 0.1px;
+  letter-spacing: 0.2px;
   margin-left: 8px;
   white-space: nowrap;
+  position: relative;
   overflow: hidden;
-  text-overflow: ellipsis;
+  color: var(--app-bar-text);
+}
+
+.titlebar-title::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -150%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  transform: skewX(-20deg);
+  transition: left 0.6s ease-in-out;
+}
+
+.titlebar-left:hover .titlebar-title::after {
+  left: 150%;
+}
+
+/* ── Data Filament ── */
+#titlebar-filament {
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  z-index: 10;
+}
+
+#titlebar-filament::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100px;
+  width: 40px;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, var(--md-sys-color-primary-container), transparent);
+  box-shadow: 0 0 8px var(--md-sys-color-primary-container);
+  animation: filament-flow 3s linear infinite;
+}
+
+@keyframes filament-flow {
+  0% { left: -10%; }
+  100% { left: 110%; }
 }
 
 .titlebar-right {
@@ -69,7 +162,8 @@
   align-items: center;
   height: 100%;
   flex-shrink: 0;
-  padding-right: 4px; /* Give some space on the right */
+  padding-right: 4px;
+  /* Give some space on the right */
   pointer-events: auto;
   -webkit-app-region: no-drag;
 }
@@ -84,7 +178,8 @@
   align-items: center;
   margin: 0 2px;
   padding: 0;
-  border-radius: 8px; /* 统一圆角矩形形状 */
+  border-radius: 8px;
+  /* 统一圆角矩形形状 */
   transition: background 0.2s, color 0.2s;
   /* 彻底禁用内部默认涟漪和状态层，避免出现形状重叠 */
   --md-icon-button-hover-state-layer-opacity: 0;

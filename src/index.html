@@ -18,6 +18,7 @@
   <link rel="stylesheet" href="./assets/css/page-settings.css" />
   <link rel="stylesheet" href="./assets/css/titlebar.css" />
   <link rel="stylesheet" href="./assets/css/tables.css" />
+  <link rel="stylesheet" href="./assets/css/dialog.css" />
 
   <script type="importmap">
     {
@@ -41,6 +42,7 @@
   <div id="app-wrapper">
     <!-- custom M3 Titlebar -->
     <div id="titlebar">
+      <div id="titlebar-filament"></div>
       <div class="titlebar-left" data-tauri-drag-region>
         <img src="logo.png" class="titlebar-icon" alt="Logo" data-tauri-drag-region>
         <span class="titlebar-title" data-tauri-drag-region>Proxy Tester</span>
@@ -65,8 +67,10 @@
     </div>
 
     <div id="app-root">
+      <div id="noise-overlay"></div>
       <!-- Desktop Navigation Rail -->
       <md-navigation-rail id="main-rail">
+        <div id="rail-indicator"></div>
         <md-navigation-rail-tab id="rail-test" label="Test" active>
           <md-icon slot="active-icon">network_check</md-icon>
           <md-icon slot="inactive-icon">network_check</md-icon>
@@ -76,8 +80,8 @@
           <md-icon slot="inactive-icon">radar</md-icon>
         </md-navigation-rail-tab>
         <md-navigation-rail-tab id="rail-config" label="Config">
-          <md-icon slot="active-icon">settings_input_component</md-icon>
-          <md-icon slot="inactive-icon">settings_input_component</md-icon>
+          <md-icon slot="active-icon" class="gear-icon">settings_input_component</md-icon>
+          <md-icon slot="inactive-icon" class="gear-icon">settings_input_component</md-icon>
         </md-navigation-rail-tab>
         <md-navigation-rail-tab id="rail-logs" label="Logs">
           <md-icon slot="active-icon">terminal</md-icon>
@@ -94,61 +98,136 @@
 
           <!-- ── Page: Test ─────────────────────────────────────────────────────── -->
           <div class="page" id="page-test">
-            <div class="params-panel surface-container-high">
-              <div class="field-row">
-                <md-outlined-text-field class="f-address" id="test-host" label="Address" placeholder="127.0.0.1">
-                  <md-icon slot="leading-icon">dns</md-icon>
-                </md-outlined-text-field>
+            <!-- Test Page Tabs -->
+            <md-tabs id="test-page-tabs" style="margin-bottom: 24px;">
+              <md-primary-tab id="tab-manual" active>
+                <md-icon slot="icon">build</md-icon>Manual Probe
+              </md-primary-tab>
+              <md-primary-tab id="tab-pool">
+                <md-icon slot="icon">reorder</md-icon>Proxy Pool
+              </md-primary-tab>
+            </md-tabs>
 
-                <md-outlined-text-field class="f-port" id="test-port" label="Port" placeholder="7890" type="number"
-                  min="1" max="65535">
-                  <md-icon slot="leading-icon">settings_ethernet</md-icon>
-                </md-outlined-text-field>
+            <div id="test-manual-content" class="tab-content">
+              <div class="params-panel surface-container-high">
+                <div class="field-row">
+                  <md-outlined-text-field class="f-address" id="test-host" label="Address" placeholder="127.0.0.1">
+                    <md-icon slot="leading-icon">dns</md-icon>
+                  </md-outlined-text-field>
 
-                <md-filled-select class="f-proto" id="test-proto" label="Protocol">
-                  <md-select-option value="HTTP" selected>HTTP</md-select-option>
-                  <md-select-option value="SOCKS5">SOCKS5</md-select-option>
-                </md-filled-select>
+                  <md-outlined-text-field class="f-port" id="test-port" label="Port" placeholder="7890" type="number"
+                    min="1" max="65535">
+                    <md-icon slot="leading-icon">settings_ethernet</md-icon>
+                  </md-outlined-text-field>
+
+                  <md-filled-select class="f-proto" id="test-proto" label="Protocol">
+                    <md-select-option value="HTTP" selected>HTTP</md-select-option>
+                    <md-select-option value="SOCKS5">SOCKS5</md-select-option>
+                  </md-filled-select>
+                </div>
+
+                <div class="field-row">
+                  <md-outlined-text-field class="f-count" id="test-count" label="Times" value="10" type="number"
+                    min="1">
+                    <md-icon slot="leading-icon">repeat</md-icon>
+                  </md-outlined-text-field>
+
+                  <md-outlined-text-field class="f-ms" id="test-timeout" label="Timeout" value="3000" type="number"
+                    min="0" suffix-text="ms">
+                    <md-icon slot="leading-icon">timer</md-icon>
+                  </md-outlined-text-field>
+
+                  <md-outlined-text-field class="f-ms" id="test-interval" label="Interval" value="500" type="number"
+                    min="0" suffix-text="ms">
+                    <md-icon slot="leading-icon">hourglass_empty</md-icon>
+                  </md-outlined-text-field>
+                </div>
+
+                <div class="action-row">
+                  <md-filled-button id="btn-test">
+                    <md-icon slot="icon">play_arrow</md-icon>Test
+                  </md-filled-button>
+
+                  <md-filled-tonal-button id="btn-stop" disabled>
+                    <md-icon slot="icon">stop</md-icon>Stop
+                  </md-filled-tonal-button>
+
+                  <md-text-button id="btn-clear-fields">
+                    <md-icon slot="icon">clear_all</md-icon>Clear
+                  </md-text-button>
+
+                  <div class="spacer"></div>
+
+                  <div class="status-chip ready" id="status-chip">
+                    <span class="dot"></span>
+                    <span id="status-text">ready</span>
+                  </div>
+                </div>
               </div>
 
-              <div class="field-row">
-                <md-outlined-text-field class="f-count" id="test-count" label="Times" value="10" type="number" min="1">
-                  <md-icon slot="leading-icon">repeat</md-icon>
-                </md-outlined-text-field>
+            </div>
 
-                <md-outlined-text-field class="f-ms" id="test-timeout" label="Timeout" value="3000" type="number"
-                  min="0" suffix-text="ms">
-                  <md-icon slot="leading-icon">timer</md-icon>
-                </md-outlined-text-field>
+            <div id="test-pool-content" class="tab-content" hidden>
+              <div class="pool-controls surface-container-high">
+                <div class="field-row" style="margin-bottom: 8px;">
+                  <md-outlined-text-field id="pool-sub-url" label="Subscription Link / URL"
+                    placeholder="http://example.com/proxies.txt" style="flex: 1;">
+                    <md-icon slot="leading-icon">link</md-icon>
+                  </md-outlined-text-field>
+                  <md-filled-tonal-button id="btn-pool-fetch">
+                    <md-icon slot="icon">cloud_download</md-icon>Fetch & Import
+                  </md-filled-tonal-button>
+                </div>
 
-                <md-outlined-text-field class="f-ms" id="test-interval" label="Interval" value="500" type="number"
-                  min="0" suffix-text="ms">
-                  <md-icon slot="leading-icon">hourglass_empty</md-icon>
-                </md-outlined-text-field>
+                <div class="action-row">
+                  <md-filled-button id="btn-pool-test-all">
+                    <md-icon slot="icon">speed</md-icon>Test All
+                  </md-filled-button>
+                  <md-filled-tonal-button id="btn-pool-stop" disabled>
+                    <md-icon slot="icon">stop</md-icon>Stop
+                  </md-filled-tonal-button>
+                  <md-text-button id="btn-pool-refresh">
+                    <md-icon slot="icon">refresh</md-icon>Sync
+                  </md-text-button>
+                  <md-text-button id="btn-pool-clear"
+                    style="--md-text-button-label-text-color: var(--md-sys-color-error);">
+                    <md-icon slot="icon">delete_sweep</md-icon>Clear Pool
+                  </md-text-button>
+                  <div class="spacer"></div>
+                  <div class="pool-info-badge">
+                    <md-icon>apps</md-icon>
+                    <span id="pool-count-label">0 Proxies</span>
+                  </div>
+                </div>
               </div>
-
-              <div class="action-row">
-                <md-filled-button id="btn-test">
-                  <md-icon slot="icon">play_arrow</md-icon>Test
-                </md-filled-button>
-
-                <md-filled-tonal-button id="btn-stop" disabled>
-                  <md-icon slot="icon">stop</md-icon>Stop
-                </md-filled-tonal-button>
-
-                <md-text-button id="btn-clear-fields">
-                  <md-icon slot="icon">clear_all</md-icon>Clear
-                </md-text-button>
-
-                <div class="spacer"></div>
-
-                <div class="status-chip ready" id="status-chip">
-                  <span class="dot"></span>
-                  <span id="status-text">ready</span>
+              <md-outlined-text-field id="scan-filter" label="Filter results" placeholder="IP, Port, Protocol..."
+                    class="scan-filter-field">
+                    <md-icon slot="leading-icon">search</md-icon>
+                  </md-outlined-text-field>
+              <div class="m3-table-card pool-table-container">
+                <div class="table-wrapper">
+                  <table class="pool-table" id="pool-table">
+                    <thead>
+                      <tr>
+                        <th style="width: 50px;">#</th>
+                        <th>Host</th>
+                        <th style="width: 100px;">Port</th>
+                        <th style="width: 120px;">Protocol</th>
+                        <th style="width: 140px;">Latency</th>
+                        <th style="width: 100px;">Status</th>
+                        <th style="width: 100px;">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody id="pool-table-body"></tbody>
+                  </table>
+                </div>
+                <div class="table-empty-state" id="pool-empty-state">
+                  <md-icon>cloud_off</md-icon>
+                  <div class="empty-text">Proxy Pool Empty</div>
+                  <div class="empty-sub">Add proxies in the Config page or Scan for new ones</div>
                 </div>
               </div>
             </div>
-
           </div>
 
           <!-- ── Page: Scan ──────────────────────────────────────────────────────── -->
@@ -364,75 +443,74 @@
             </div>
           </div>
 
-            <!-- ── Page: Logs ─────────────────────────────────────────────────────── -->
-            <div class="page" id="page-logs" hidden>
-              <div class="console-wrap m3-log-container" style="flex: 1; display: flex; flex-direction: column;">
+          <!-- ── Page: Logs ─────────────────────────────────────────────────────── -->
+          <div class="page" id="page-logs" hidden>
+            <div class="console-wrap m3-log-container" style="flex: 1; display: flex; flex-direction: column;">
 
-                <!-- Log Toolbar derived from screenshot -->
-                <div class="log-toolbar">
-                  <div class="filter-wrap">
-                    <md-outlined-text-field label="过滤器 (支持正则)" id="log-filter" class="filter-input">
-                      <md-icon slot="trailing-icon">arrow_drop_down</md-icon>
-                    </md-outlined-text-field>
-                  </div>
-
-                  <div class="action-icons">
-                    <md-icon-button id="btn-copy-log" title="Copy Log"><md-icon>content_copy</md-icon></md-icon-button>
-                    <md-icon-button id="btn-clear-global-log"
-                      title="Clear Log"><md-icon>delete</md-icon></md-icon-button>
-                  </div>
-
-                  <div class="toolbar-switches">
-                    <div class="switch-item">
-                      <label for="switch-auto-refresh">自动刷新</label>
-                      <md-switch id="switch-auto-refresh" selected></md-switch>
-                    </div>
-                    <div class="switch-item">
-                      <label for="switch-auto-scroll">自动滚动到末尾</label>
-                      <md-switch id="switch-auto-scroll" selected></md-switch>
-                    </div>
-                  </div>
+              <!-- Log Toolbar derived from screenshot -->
+              <div class="log-toolbar">
+                <div class="filter-wrap">
+                  <md-outlined-text-field label="过滤器 (支持正则)" id="log-filter" class="filter-input">
+                    <md-icon slot="trailing-icon">arrow_drop_down</md-icon>
+                  </md-outlined-text-field>
                 </div>
 
-                <!-- Main Log Display Area -->
-                <div class="console-log" id="global-log"
-                  style="flex: 1; background: #1e1e1e; color: #d0d0d0; padding: 12px; font-family: 'Roboto Mono', monospace; font-size: 13px;">
+                <div class="action-icons">
+                  <md-icon-button id="btn-copy-log" title="Copy Log"><md-icon>content_copy</md-icon></md-icon-button>
+                  <md-icon-button id="btn-clear-global-log" title="Clear Log"><md-icon>delete</md-icon></md-icon-button>
+                </div>
+
+                <div class="toolbar-switches">
+                  <div class="switch-item">
+                    <label for="switch-auto-refresh">自动刷新</label>
+                    <md-switch id="switch-auto-refresh" selected></md-switch>
+                  </div>
+                  <div class="switch-item">
+                    <label for="switch-auto-scroll">自动滚动到末尾</label>
+                    <md-switch id="switch-auto-scroll" selected></md-switch>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <!-- ── Page: Settings ────────────────────────────────────────────────── -->
-            <div class="page" id="page-settings" hidden>
-              <div class="settings-section surface-container-high">
-                <div class="settings-card">
-                  <div>
-                    <div class="settings-card-label">Theme</div>
-                    <div class="settings-card-desc">Choose your preferred color scheme</div>
-                  </div>
-                  <md-filled-select id="theme-select" style="width:140px">
-                    <md-select-option value="system" selected>System</md-select-option>
-                    <md-select-option value="light">Light</md-select-option>
-                    <md-select-option value="dark">Dark</md-select-option>
-                  </md-filled-select>
-                </div>
-
-                <div class="settings-card">
-                  <div>
-                    <div class="settings-card-label">Primary Color</div>
-                    <div class="settings-card-desc">Customize the application's accent color</div>
-                  </div>
-                  <input type="color" id="primary-color-picker" value="#6750A4"
-                    style="cursor: pointer; width: 48px; height: 36px; padding: 0; border: none; border-radius: 8px; background: transparent;">
+              <!-- Main Log Display Area -->
+              <div class="console-log" id="global-log">
+              </div>
             </div>
           </div>
-        </div><!-- End #page-settings -->
 
-      </div><!-- End #pages-container -->
-    </div><!-- End #main-content -->
-  </div><!-- End #app-root -->
+          <!-- ── Page: Settings ────────────────────────────────────────────────── -->
+          <div class="page" id="page-settings" hidden>
+            <div class="settings-section surface-container-high">
+              <div class="settings-card">
+                <div>
+                  <div class="settings-card-label">Theme</div>
+                  <div class="settings-card-desc">Choose your preferred color scheme</div>
+                </div>
+                <md-filled-select id="theme-select" style="width:140px">
+                  <md-select-option value="system" selected>System</md-select-option>
+                  <md-select-option value="light">Light</md-select-option>
+                  <md-select-option value="dark">Dark</md-select-option>
+                </md-filled-select>
+              </div>
+
+              <div class="settings-card">
+                <div>
+                  <div class="settings-card-label">Primary Color</div>
+                  <div class="settings-card-desc">Customize the application's accent color</div>
+                </div>
+                <input type="color" id="primary-color-picker" value="#6750A4"
+                  style="cursor: pointer; width: 48px; height: 36px; padding: 0; border: none; border-radius: 8px; background: transparent;">
+              </div>
+            </div>
+          </div><!-- End #page-settings -->
+
+        </div><!-- End #pages-container -->
+      </div><!-- End #main-content -->
+    </div><!-- End #app-root -->
 
     <!-- Mobile Navigation Bar -->
     <md-navigation-bar id="main-nav-bar">
+      <div id="bar-indicator"></div>
       <md-navigation-tab id="bar-test" label="Test" active>
         <md-icon slot="active-icon">network_check</md-icon>
       </md-navigation-tab>
@@ -449,18 +527,30 @@
         <md-icon slot="active-icon">settings</md-icon>
       </md-navigation-tab>
     </md-navigation-bar>
-      
-      <!-- Fixed Bottom Status Line -->
-      <div id="bottom-status-line">
-        <md-icon style="font-size: 14px; margin-right: 8px;">info</md-icon>
-        <span id="global-status-text">Ready</span>
-        <div class="spacer"></div>
-        <span id="footer-stats-text">-- ms</span>
+
+    <!-- Fixed Bottom Status Line -->
+    <div id="bottom-status-line">
+      <div class="status-left">
+        <div class="perf-monitor">
+          <md-icon style="font-size: 14px;">memory</md-icon>
+          <span class="perf-label">RAM:</span>
+          <span id="ram-text">-- MB / -- GB (0%)</span>
+          <div class="perf-bar-wrap">
+            <div id="ram-bar" class="perf-bar"></div>
+          </div>
+          <canvas id="ram-sparkline" width="24" height="14"></canvas>
+        </div>
       </div>
 
-      <!-- Main Application Entry -->
-      <script type="module" src="./assets/js/main.js"></script>
-    </div><!-- End #app-wrapper -->
+      <div class="status-right">
+        <md-icon style="font-size: 14px; margin-right: 4px;">sensors</md-icon>
+        <span id="footer-stats-text">-- ms</span>
+      </div>
+    </div>
+
+    <!-- Main Application Entry -->
+    <script type="module" src="./assets/js/main.js"></script>
+  </div><!-- End #app-wrapper -->
 </body>
 
 </html>

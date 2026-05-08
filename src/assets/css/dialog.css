@@ -1,0 +1,81 @@
+/* 对话框遮罩层 */
+        .m3-dialog-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.2s ease-out;
+        }
+
+        .m3-dialog-overlay.active {
+            opacity: 1;
+        }
+
+        /* 对话框主体 */
+        .m3-dialog {
+            background-color: var(--m3-sys-color-surface-container-high);
+            border-radius: 28px; /* M3 标准圆角 */
+            padding: 24px;
+            min-width: 280px;
+            max-width: 560px;
+            width: 90%;
+            box-shadow: var(--m3-sys-elevation-3);
+            transform: scale(0.9);
+            transition: transform 0.2s cubic-bezier(0, 0, 0.2, 1);
+        }
+
+        .m3-dialog-overlay.active .m3-dialog {
+            transform: scale(1);
+        }
+
+        /* 标题样式 */
+        .m3-dialog-title {
+            font-size: 24px;
+            font-weight: 400;
+            color: var(--m3-sys-color-on-surface);
+            margin-bottom: 16px;
+        }
+
+        /* 内容样式 */
+        .m3-dialog-content {
+            font-size: 14px;
+            line-height: 20px;
+            color: var(--m3-sys-color-on-surface-variant);
+            margin-bottom: 24px;
+        }
+
+        /* 按钮容器 */
+        .m3-dialog-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+
+        /* M3 文本按钮样式 */
+        .m3-text-button {
+            background: transparent;
+            border: none;
+            color: var(--m3-sys-color-primary);
+            padding: 10px 12px;
+            font-size: 14px;
+            font-weight: 500;
+            border-radius: 100px;
+            cursor: pointer;
+            transition: background 0.2s;
+            min-width: 48px;
+        }
+
+        .m3-text-button:hover {
+            background-color: rgba(103, 80, 164, 0.08);
+        }
+
+        .m3-text-button:active {
+            background-color: rgba(103, 80, 164, 0.12);
+        }

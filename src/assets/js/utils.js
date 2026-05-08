@@ -1,10 +1,42 @@
 export function appendLog(container, text, cls = "log-default") {
   if (!container) return;
+
+  const now = new Date();
+  const ts = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}.${String(now.getMilliseconds()).padStart(3, '0')}`;
+
   const line = document.createElement("div");
   line.className = `log-line ${cls}`;
-  line.textContent = text;
+
+  // 1. Timestamp
+  const timeSpan = document.createElement("span");
+  timeSpan.className = "log-time";
+  timeSpan.textContent = `[${ts}]`;
+  line.appendChild(timeSpan);
+
+  // 2. Status Icon
+  const icon = document.createElement("md-icon");
+  icon.className = "log-status-icon";
+  let iconName = "radio_button_checked"; // Default dot
+  if (cls.includes("ok")) iconName = "check_circle";
+  else if (cls.includes("error")) iconName = "error_outline";
+  else if (cls.includes("header")) iconName = "terminal";
+  else if (cls.includes("info")) iconName = "info";
+  icon.textContent = iconName;
+  line.appendChild(icon);
+
+  // 3. Content
+  const content = document.createElement("span");
+  content.className = "log-content";
+  content.textContent = text;
+  line.appendChild(content);
+
   container.appendChild(line);
-  container.scrollTop = container.scrollHeight;
+  
+  // Auto-scroll logic (usually handled by caller switch, but standard here)
+  const autoScroll = document.getElementById("switch-auto-scroll");
+  if (!autoScroll || autoScroll.selected) {
+    container.scrollTop = container.scrollHeight;
+  }
 }
 
 export function classifyTestLine(text) {
@@ -37,3 +69,4 @@ export function clearFieldError(el) {
     el.errorText = "";
   }
 }
+

@@ -197,7 +197,7 @@ md-icon {
   font-family: 'Material Symbols Outlined' !important;
   font-weight: normal;
   font-style: normal;
-  font-size: 24px;
+  font-size: 26px; /* Increased from 24px */
   line-height: 1;
   letter-spacing: normal;
   text-transform: none;
@@ -206,12 +206,26 @@ md-icon {
   word-wrap: normal;
   direction: ltr;
   -webkit-font-smoothing: antialiased;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* 修复组件未定义时显示双排图标的问题 */
 
 md-icon-button md-icon {
-  --md-icon-size: 22px;
+  --md-icon-size: 24px; /* Increased from 22px */
+}
+
+md-navigation-rail-tab md-icon {
+  --md-icon-size: 28px; /* Prominent rail icons */
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 28;
+}
+
+md-navigation-rail-tab:hover md-icon {
+  transform: scale(1.15);
+}
+
+md-navigation-rail-tab[active] md-icon {
+  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 28;
 }
 
 /* Disabled state normalization */

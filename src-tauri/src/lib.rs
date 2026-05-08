@@ -3,7 +3,7 @@ mod mtr;
 
 use chrono::Local;
 use serde::Serialize;
-use std::net::{TcpStream, ToSocketAddrs};
+
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc, Mutex,
@@ -17,6 +17,7 @@ use std::str::FromStr;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::Semaphore;
 use tokio::time::timeout;
+use sysinfo::System;
 #[cfg(target_os = "linux")]
 use std::process::Command;
 #[cfg(windows)]
@@ -26,22 +27,22 @@ use config::{AppConfig, ProxyEntry, ScanPreferences};
 
 // ─── Original Logic (Unchanged) ───────────────────────────────────────────────
 
-fn tcp_ping(addr: &str, timeout_ms: u64) -> Result<u128, String> {
-    let sock = addr
-        .to_socket_addrs()
-        .map_err(|e| format!("DNS analysis fail: {e}"))?
-        .next()
-        .ok_or_else(|| "Fail to analysis host".to_string())?;
-    let start = Instant::now();
-    TcpStream::connect_timeout(&sock, Duration::from_millis(timeout_ms)).map_err(|e| {
-        if e.kind() == std::io::ErrorKind::TimedOut {
-            "connection time out".into()
-        } else {
-            format!("{e}")
-        }
-    })?;
-    Ok(start.elapsed().as_micros())
-}
+// fn tcp_ping(addr: &str, timeout_ms: u64) -> Result<u128, String> {
+//     let sock = addr
+//         .to_socket_addrs()
+//         .map_err(|e| format!("DNS analysis fail: {e}"))?
+//         .next()
+//         .ok_or_else(|| "Fail to analysis host".to_string())?;
+//     let start = Instant::now();
+//     TcpStream::connect_timeout(&sock, Duration::from_millis(timeout_ms)).map_err(|e| {
+//         if e.kind() == std::io::ErrorKind::TimedOut {
+//             "connection time out".into()
+//         } else {
+//             format!("{e}")
+//         }
+//     })?;
+//     Ok(start.elapsed().as_micros())
+// }
 
 
 fn set_windows_proxy(proxy_addr: &str, proxy_port: &str, enable: bool, protocol: &str) -> io::Result<()> {
@@ -157,6 +158,13 @@ struct ProxyStatus {
     host: String,
     port: String,
     protocol: String,
+}
+
+#[derive(Serialize)]
+pub struct MemoryInfo {
+    used_mb: u64,
+    total_gb: f64,
+    percent: f64,
 }
 
 // ─── Tauri Commands ───────────────────────────────────────────────────────────
@@ -593,6 +601,16 @@ fn remove_proxy(
 }
 
 #[tauri::command]
+fn clear_proxies(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, AppState>,
+) -> Result<(), String> {
+    let mut cfg = state.config.lock().unwrap();
+    cfg.proxies.clear();
+    config::save_config(&app, &cfg)
+}
+
+#[tauri::command]
 fn update_scan_preferences(
     app: tauri::AppHandle,
     state: tauri::State<'_, AppState>,
@@ -839,6 +857,100 @@ fn disconnect_proxy() -> Result<String, String> {
     }
 }
 
+#[tauri::command]
+async fn fetch_proxies_from_url(url: String) -> Result<Vec<ProxyEntry>, String> {
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(15))
+        .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+        .danger_accept_invalid_certs(true) // Sometimes proxy APIs have cert issues
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let res = client.get(&url).send().await.map_err(|e| e.to_string())?;
+    let mut body = res.text().await.map_err(|e| e.to_string())?;
+
+    // Try Base64 decode if it looks like one (no spaces/colons, just alphanumeric/=/+)
+    if !body.contains(':') && body.len() > 10 {
+         use base64::{Engine as _, engine::general_purpose};
+         let body_clean = body.trim().replace("\r\n", "").replace("\n", "").replace(" ", "");
+         if let Ok(decoded) = general_purpose::STANDARD.decode(body_clean) {
+             if let Ok(s) = String::from_utf8(decoded) {
+                 body = s;
+             }
+         }
+    }
+
+    // Heuristic: If it looks like HTML, it's likely an error page or anti-bot
+    if body.to_lowercase().contains("<!doctype html") || body.to_lowercase().contains("<html") {
+        return Err("The link returned an HTML page instead of a proxy list. This might be due to anti-bot protection or an error page.".to_string());
+    }
+
+    let mut entries = Vec::new();
+    let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
+
+    // Regex for finding Host:Port pairs
+    // Group 1: Host/IP, Group 2: Port
+    use regex::Regex;
+    let re = Regex::new(r"(?i)([a-z0-9.-]{4,}):(\d{2,5})").map_err(|e| e.to_string())?;
+
+    for cap in re.captures_iter(&body) {
+        let addr = cap[1].to_string();
+        if let Ok(port) = cap[2].parse::<u16>() {
+            // Basic sanity check: port range and host length
+            if port > 0 && addr.len() > 3 {
+                 entries.push(ProxyEntry {
+                     ip: addr,
+                     port,
+                     protocol: "HTTP".to_string(),
+                     added_at: timestamp.clone(),
+                     latency_ms: 0,
+                     last_tested: None,
+                 });
+            }
+        }
+    }
+
+    if entries.is_empty() {
+        return Err(format!("Successfully fetched content, but no valid proxies (Host:Port) were found. \nPreview: {}", 
+            body.chars().take(100).collect::<String>()));
+    }
+
+    Ok(entries)
+}
+
+#[tauri::command]
+fn shittim_mem_task() -> MemoryInfo {
+    let mut sys = System::new_all();
+    sys.refresh_memory();
+    
+    let total_bytes = sys.total_memory();
+    let total_gb = total_bytes as f64 / 1024.0 / 1024.0 / 1024.0;
+    
+    let mut total_process_memory = 0;
+    if let Ok(root_pid) = sysinfo::get_current_pid() {
+        // Tauri is multi-process (Backend + WebView + GPU etc.)
+        // We sum all processes that are the root or children of the root.
+        for (pid, process) in sys.processes() {
+            if *pid == root_pid {
+                total_process_memory += process.memory();
+            } else if let Some(parent_pid) = process.parent() {
+                if parent_pid == root_pid {
+                    total_process_memory += process.memory();
+                }
+            }
+        }
+    }
+
+    let used_mb = total_process_memory / 1024 / 1024;
+    let percent = (total_process_memory as f64 / total_bytes as f64) * 100.0;
+
+    MemoryInfo {
+        used_mb,
+        total_gb: (total_gb * 10.0).round() / 10.0,
+        percent: (percent * 10.0).round() / 10.0,
+    }
+}
+
 // ─── Entry ────────────────────────────────────────────────────────────────────
 
 pub fn run() {
@@ -854,6 +966,7 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            fetch_proxies_from_url,
             start_ping_test,
             stop_ping_test,
             config_proxy,
@@ -862,6 +975,7 @@ pub fn run() {
             get_config,
             save_proxy,
             remove_proxy,
+            clear_proxies,
             update_scan_preferences,
             add_scan_history,
             start_mtr,
@@ -874,6 +988,7 @@ pub fn run() {
             win_is_maximized,
             get_proxy_status,
             disconnect_proxy,
+            shittim_mem_task,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
