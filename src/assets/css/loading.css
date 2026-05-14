@@ -4,14 +4,14 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: var(--md-sys-color-surface, #FEF7FF);
+  background: var(--md-sys-color-surface);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 16px;
-  z-index: 9999;
-  transition: opacity 0.3s ease;
+  gap: 24px;
+  z-index: 9000;
+  transition: opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 #loading-screen.hidden {
@@ -19,23 +19,65 @@
   pointer-events: none;
 }
 
-.loader-ring {
-  width: 36px;
-  height: 36px;
-  border: 3px solid var(--md-sys-color-outline-variant, #CAC4D0);
-  border-top-color: var(--md-sys-color-primary, #6750A4);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
+.loader-visual {
+  display: flex;
+  gap: 8px;
+}
+
+.loader-bar {
+  width: 4px;
+  height: 24px;
+  background: var(--md-sys-color-primary);
+  border-radius: 4px;
+  animation: loader-stagger 1.2s ease-in-out infinite;
+}
+
+.loader-bar:nth-child(2) { animation-delay: 0.1s; }
+.loader-bar:nth-child(3) { animation-delay: 0.2s; }
+.loader-bar:nth-child(4) { animation-delay: 0.3s; }
+
+@keyframes loader-stagger {
+  0%, 100% { transform: scaleY(1); opacity: 0.5; }
+  50% { transform: scaleY(2); opacity: 1; }
 }
 
 .loader-text {
   font-family: 'Roboto', sans-serif;
-  font-size: 13px;
-  color: var(--md-sys-color-outline, #79747E);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--md-sys-color-outline);
+  animation: pulse-text 2s ease-in-out infinite;
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+@keyframes pulse-text {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
 }
+
+/* ── Staggered Entry Animations ── */
+
+#app-root {
+  opacity: 1; /* Always 1, children will animate */
+}
+
+/* Define entry states */
+.stagger-entry {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1), 
+              transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+body.loaded .stagger-entry {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Staggered delays */
+body.loaded .stagger-delay-1 { transition-delay: 0.1s; }
+body.loaded .stagger-delay-2 { transition-delay: 0.2s; }
+body.loaded .stagger-delay-3 { transition-delay: 0.3s; }
+body.loaded .stagger-delay-4 { transition-delay: 0.4s; }
+body.loaded .stagger-delay-5 { transition-delay: 0.5s; }

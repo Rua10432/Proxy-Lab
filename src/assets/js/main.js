@@ -1,7 +1,7 @@
 import { invoke } from './api.js';
 import { clearFieldError } from './utils.js';
 import { restoreTheme, initThemeListeners } from './theme.js';
-import { startTest, stopTest, renderStats } from './pages/test.js';
+import { startTest, stopTest, renderStats, renderTestHistory } from './pages/test.js';
 import { startScan, stopScan, resetScanStats } from './pages/scan.js';
 import {
   configProxy,
@@ -14,6 +14,7 @@ import {
 } from './pages/config.js';
 import { initPool } from './pages/pool.js';
 import { initTitlebar } from './titlebar.js';
+import { checkAdminStatus, renderRecentConfigs } from './pages/config.js';
 
 // ── Disable Browser Context Menu (native app feel) ────────────────────
 document.addEventListener('contextmenu', (e) => {
@@ -87,8 +88,13 @@ const switchPage = (idx) => {
     }
   });
 
+  if (idx === 0) {
+    renderTestHistory();
+  }
+
   if (idx === 2) {
     checkProxyStatus();
+    renderRecentConfigs();
   }
 };
 
@@ -281,7 +287,8 @@ function initPerformanceMonitor() {
   const hideLoading = () => {
     if (screen && !screen.classList.contains("hidden")) {
       screen.classList.add("hidden");
-      setTimeout(() => screen.remove(), 500);
+      document.body.classList.add("loaded");
+      setTimeout(() => screen.remove(), 600);
     }
   };
 
@@ -305,6 +312,9 @@ function initPerformanceMonitor() {
     restoreTheme();
     renderStats();
     initPerformanceMonitor();
+    checkAdminStatus();
+    renderRecentConfigs();
+    renderTestHistory();
 
     await Promise.race([
       customElements.whenDefined("md-tabs"),

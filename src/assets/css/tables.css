@@ -86,12 +86,14 @@ th {
 .th-content {
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: flex-start;
+  gap: 8px;
   cursor: pointer;
-  width: fit-content;
-  padding: 8px 4px;
-  border-radius: 8px;
+  padding: 6px 10px;
+  border-radius: 12px;
   transition: background-color 0.2s, color 0.2s;
+  height: 36px;
+  margin: auto 0;
 }
 
 .th-content:hover {

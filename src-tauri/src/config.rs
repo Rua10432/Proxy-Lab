@@ -12,6 +12,10 @@ pub struct ProxyEntry {
     pub latency_ms: u64,
     pub added_at: String,
     pub last_tested: Option<String>,
+    #[serde(default)]
+    pub username: Option<String>,
+    #[serde(default)]
+    pub password: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -49,6 +53,10 @@ pub struct AppConfig {
     pub proxies: Vec<ProxyEntry>,
     pub scan_preferences: ScanPreferences,
     pub scan_history: Vec<String>,
+    #[serde(default)]
+    pub recent_configs: Vec<ProxyEntry>,
+    #[serde(default)]
+    pub recent_tests: Vec<ProxyEntry>,
 }
 
 impl Default for AppConfig {
@@ -57,6 +65,8 @@ impl Default for AppConfig {
             proxies: Vec::new(),
             scan_preferences: ScanPreferences::default(),
             scan_history: Vec::new(),
+            recent_configs: Vec::new(),
+            recent_tests: Vec::new(),
         }
     }
 }

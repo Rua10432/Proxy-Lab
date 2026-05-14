@@ -1,7 +1,8 @@
 import { invoke } from '../api.js';
 import { runSilentPing } from './test.js';
 import { appendLog, fmtMs } from '../utils.js';
-import { M3MessageBox } from '../dialog.js';
+import { M3MessageBox, showM3Dialog } from '../dialog.js';
+import { showSnackbar } from '../snackbar.js';
 
 let poolProxies = [];
 let isTesting = false;
@@ -90,15 +91,12 @@ export async function initPool() {
   const btnClear = document.getElementById('btn-pool-clear');
   if (btnClear) {
     btnClear.addEventListener('click', async() => {
-      const m3Dialog = new M3MessageBox();
-      const confirmed = await m3Dialog.show(
-        'Clear Entire Pool',
-        'Are you sure you want to permanently delete all saved proxies from the pool?',
-        //icon: 'delete_sweep',
-        'Clear All',
-        'Cancel'
-        //isAlert: false
-      );
+      const confirmed = await showM3Dialog({
+        title: 'Clear Entire Pool',
+        content: 'Are you sure you want to permanently delete all saved proxies from the pool?',
+        confirmText: 'Clear All',
+        cancelText: 'Cancel'
+      });
 
       if (confirmed) {
         try {

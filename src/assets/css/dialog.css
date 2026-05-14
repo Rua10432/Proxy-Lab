@@ -18,6 +18,16 @@
             opacity: 1;
         }
 
+        .m3-dialog-icon {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 16px;
+            color: var(--m3-sys-color-secondary);
+        }
+        .m3-dialog-icon md-icon {
+            --md-icon-size: 28px;
+        }
+
         /* 对话框主体 */
         .m3-dialog {
             background-color: var(--m3-sys-color-surface-container-high);

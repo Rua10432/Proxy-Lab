@@ -14,6 +14,7 @@ export class M3MessageBox {
       content = '您确定要执行此操作吗？',
       confirmText = '确认',
       cancelText = '取消',
+      icon = '',
       isAlert = false
     } = opts;
 
@@ -27,6 +28,7 @@ export class M3MessageBox {
       // 修复了原代码中的重复 ID 问题，并将 dynamic-id 作为主要标识
       this.container.innerHTML = `
                         <div class="m3-dialog">
+                            ${icon ? `<div class="m3-dialog-icon"><md-icon>${icon}</md-icon></div>` : ''}
                             <div class="m3-dialog-title" id="dynamic-dialog-title">${title}</div>
                             <div class="m3-dialog-content" id="dynamic-dialog-content">${content}</div>
                             <div class="m3-dialog-actions">
@@ -84,14 +86,14 @@ export class M3MessageBox {
 }
 
 
-export async function showM3Dialog(title, content, confirmText, cancelText) {
-  const result = await m3Dialog.show({
-   title,
-   content,
-   //icon: 'info',
-   confirmText,
-    cancelText,
-     isAlert: false
-  });
-  return result;
+const m3Dialog = new M3MessageBox();
+
+export async function showM3Dialog(opts = {}) {
+  // If user passed strings (old way), handle it
+  if (typeof opts === 'string') {
+    const [title, content, confirmText, cancelText] = arguments;
+    return await m3Dialog.show({ title, content, confirmText, cancelText });
   }
+  
+  return await m3Dialog.show(opts);
+}

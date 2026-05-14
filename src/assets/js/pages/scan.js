@@ -52,7 +52,7 @@ export function setScanRunning(running) {
       const el = document.getElementById(id);
       if (el) el.disabled = running;
     });
-  
+
   if (fabScan) {
     fabScan.label = running ? "Stop" : "Scan";
     fabScan.variant = running ? "secondary" : "primary";
@@ -161,9 +161,9 @@ function renderTable() {
   const filtered = scanResults.filter(r => {
     if (!currentFilter) return true;
     const f = currentFilter.toLowerCase();
-    return r.ip.toLowerCase().includes(f) || 
-           r.port.toString().includes(f) || 
-           r.protocol.toLowerCase().includes(f);
+    return r.ip.toLowerCase().includes(f) ||
+      r.port.toString().includes(f) ||
+      r.protocol.toLowerCase().includes(f);
   });
 
   // Sort
@@ -171,7 +171,7 @@ function renderTable() {
     filtered.sort((a, b) => {
       let valA = a[currentSortCol];
       let valB = b[currentSortCol];
-      
+
       // Numeric sort for latency and port
       if (currentSortCol === 'latency' || currentSortCol === 'port') {
         valA = Number(a[currentSortCol === 'latency' ? 'latency_ms' : 'port']);
@@ -192,7 +192,7 @@ function renderTable() {
   const fragment = document.createDocumentFragment();
   filtered.forEach((r, idx) => {
     const tr = document.createElement("tr");
-    
+
     // #
     const tdNum = document.createElement("td");
     tdNum.textContent = idx + 1;
@@ -213,10 +213,35 @@ function renderTable() {
 
     // Protocol
     const tdProto = document.createElement("td");
+    const isAuthRequired = r.protocol.includes("Auth");
+    const baseProtocol = r.protocol.replace(" (Auth)", "");
+    
+    const chipWrapper = document.createElement("div");
+    chipWrapper.style.cssText = "display: flex; align-items: center; gap: 6px; flex-wrap: nowrap;";
+    
     const chip = document.createElement("span");
-    chip.className = `proto-chip ${r.protocol.toLowerCase()}`;
-    chip.textContent = r.protocol;
-    tdProto.appendChild(chip);
+    chip.className = `proto-chip ${baseProtocol.toLowerCase()}`;
+    chip.textContent = baseProtocol;
+    chipWrapper.appendChild(chip);
+
+    if (isAuthRequired) {
+      const isHttp = baseProtocol === "HTTP";
+      const authBadge = document.createElement("span");
+      authBadge.className = "auth-required-badge";
+      authBadge.textContent = isHttp ? "🔒 407" : "🔒 Auth";
+      authBadge.title = isHttp
+        ? "Proxy Authentication Required (HTTP 407)"
+        : "SOCKS5 Username/Password Authentication Required";
+      chipWrapper.appendChild(authBadge);
+    } else {
+      const openBadge = document.createElement("span");
+      openBadge.className = "auth-open-badge";
+      openBadge.textContent = "✓ Open";
+      openBadge.title = "No authentication required — can be applied directly";
+      chipWrapper.appendChild(openBadge);
+    }
+    
+    tdProto.appendChild(chipWrapper);
     tr.appendChild(tdProto);
 
     // Latency
@@ -230,11 +255,21 @@ function renderTable() {
     const tdApply = document.createElement("td");
     tdApply.className = "col-apply";
     const btn = document.createElement("md-icon-button");
-    btn.title = `Apply ${r.ip}:${r.port} as system proxy`;
-    const icon = document.createElement("md-icon");
-    icon.textContent = "play_circle";
-    btn.appendChild(icon);
-    btn.addEventListener("click", () => applyProxy(r.ip, String(r.port), r.protocol));
+    if (isAuthRequired) {
+      btn.title = `${r.ip}:${r.port} requires authentication — go to Config tab to fill credentials`;
+      btn.style.opacity = "0.5";
+      btn.style.cursor = "help";
+      const icon = document.createElement("md-icon");
+      icon.textContent = "key_off";
+      btn.appendChild(icon);
+      // Don't apply directly — guide user to Config tab
+    } else {
+      btn.title = `Apply ${r.ip}:${r.port} as system proxy`;
+      const icon = document.createElement("md-icon");
+      icon.textContent = "play_circle";
+      btn.appendChild(icon);
+      btn.addEventListener("click", () => applyProxy(r.ip, String(r.port), r.protocol));
+    }
     tdApply.appendChild(btn);
     tr.appendChild(tdApply);
 
@@ -276,7 +311,7 @@ function handleSort(header) {
       icon.textContent = 'arrow_upward';
     }
   }
-  
+
   renderTable();
 }
 
@@ -295,18 +330,18 @@ sortableHeaders.forEach(header => {
 function addScanRow(payload) {
   scanFoundCount++;
   scanLatencySum += payload.latency_ms;
-  
+
   // Storage for filter/sort
   scanResults.push(payload);
-  
+
   // If no filtering/sorting is active, we can just append for performance
   // but if they are active, we must re-render.
   if (!currentFilter && (currentSortDir === 'none')) {
     if (scanEmptyState) scanEmptyState.style.display = "none";
     if (scanCountBadge) scanCountBadge.textContent = `${scanResults.length} results`;
-    
+
     // Quick append code... (repeating logic for IDX)
-    renderTable(); 
+    renderTable();
   } else {
     renderTable();
   }

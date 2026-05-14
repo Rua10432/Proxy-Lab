@@ -94,20 +94,25 @@
 
 .scan-filter-field {
   flex: 1;
-  height: 48px;
-  --md-outlined-text-field-container-shape: 24px;
+  --md-outlined-text-field-container-shape: 16px;
+  --md-outlined-text-field-outline-width: 1px;
 }
 
 .scan-count-badge {
   flex-shrink: 0;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--md-sys-color-on-surface-variant);
-  background: var(--md-sys-color-surface-container);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--md-sys-color-primary);
+  background: var(--md-sys-color-primary-container);
   padding: 4px 12px;
-  border-radius: 20px;
+  border-radius: 12px;
   white-space: nowrap;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  border: 1px solid var(--md-sys-color-primary);
+  display: flex;
+  align-items: center;
+  height: 40px; /* Aligned with text field roughly */
 }
 
 /* ── Scan Table Container (Specific adjustments) ── */
@@ -151,7 +156,8 @@ md-linear-progress {
   display: flex;
   justify-content: space-between;
   font-family: var(--md-sys-typescale-label-small-font);
-  font-size: var(--md-sys-typescale-label-small-size);
+  font-size: 12px;
+  font-weight: 500;
   color: var(--md-sys-color-on-surface-variant);
 }
 
@@ -159,14 +165,16 @@ md-linear-progress {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: var(--md-sys-color-secondary-container);
-  /* Filled Tonal style */
-  color: var(--md-sys-color-on-secondary-container);
-  padding: 6px 16px;
+  background: var(--md-sys-color-tertiary-container);
+  color: var(--md-sys-color-on-tertiary-container);
+  padding: 4px 14px;
   border-radius: 12px;
-  font-weight: 600;
-  font-size: 13px;
+  font-weight: 700;
+  font-size: 12px;
   white-space: nowrap;
+  box-shadow: var(--md-sys-elevation-level1);
+  border: 1px solid var(--md-sys-color-tertiary);
+  height: 36px;
 }
 
 /* ── Stats Grid ───────────────────────────────────────────────────────── */
@@ -196,30 +204,54 @@ md-linear-progress {
 }
 
 .scan-stat-card {
-  padding: 12px 16px;
-  border-radius: 16px;
+  padding: 8px 12px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  background: var(--md-sys-color-surface-container-low);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  transition: background-color 0.2s;
+}
+
+.scan-stat-card:hover {
+  background: var(--md-sys-color-surface-container-high);
 }
 
 .scan-stat-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 14px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  background: var(--md-sys-color-surface-container-highest);
 }
 
 .scan-stat-icon md-icon {
-  --md-icon-size: 20px;
+  --md-icon-size: 18px;
+  color: var(--md-sys-color-primary);
+}
+
+.scan-stat-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.scan-stat-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.6;
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .scan-stat-value {
-  font-size: 18px;
-  line-height: 1.2;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--md-sys-color-on-surface);
 }
 
 /* ── Responsive Fixes ─────────────────────────────────────────────────── */

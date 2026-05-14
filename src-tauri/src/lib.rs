@@ -22,6 +22,8 @@ use sysinfo::System;
 use std::process::Command;
 #[cfg(windows)]
 use winreg::{enums::*, RegKey};
+use tauri::menu::{Menu, MenuItem};
+use tauri::tray::{TrayIconBuilder, TrayIconEvent};
 
 use config::{AppConfig, ProxyEntry, ScanPreferences};
 
@@ -135,6 +137,17 @@ struct PingResultPayload {
     seq: u32,
     ms: Option<u128>,
     error: Option<String>,
+    request_id: Option<String>,
+}
+
+#[derive(Clone, Serialize)]
+struct PingDonePayload {
+    request_id: Option<String>,
+}
+
+#[derive(Clone, Serialize)]
+struct PingStoppedPayload {
+    request_id: Option<String>,
 }
 
 #[derive(Clone, Serialize)]
@@ -158,6 +171,8 @@ struct ProxyStatus {
     host: String,
     port: String,
     protocol: String,
+    username: Option<String>,
+    password: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -170,7 +185,13 @@ pub struct MemoryInfo {
 // ─── Tauri Commands ───────────────────────────────────────────────────────────
 
 /// 代理协议级探测逻辑 (真正判断是否为代理)
-async fn verify_proxy_handshake(addr: &str, protocol: &str, timeout_ms: u64) -> Result<u128, String> {
+async fn verify_proxy_handshake(
+    addr: &str, 
+    protocol: &str, 
+    timeout_ms: u64,
+    username: Option<String>,
+    password: Option<String>,
+) -> Result<u128, String> {
     let timeout_duration = Duration::from_millis(timeout_ms);
     let start = Instant::now();
 
@@ -181,8 +202,8 @@ async fn verify_proxy_handshake(addr: &str, protocol: &str, timeout_ms: u64) -> 
                 .map_err(|_| "Connection timed out".to_string())?
                 .map_err(|e| format!("Connection failed: {e}"))?;
 
-            // SOCKS5 握手: [版本号, 方法数, 无认证方法]
-            let socks5_greeting = [0x05, 0x01, 0x00];
+            // SOCKS5 握手: [版本号, 方法数, 无认证方法, 用户名密码方法]
+            let socks5_greeting = [0x05, 0x02, 0x00, 0x02];
             stream.write_all(&socks5_greeting).await.map_err(|e| format!("Write failed: {e}"))?;
 
             let mut buf = [0u8; 2];
@@ -191,10 +212,41 @@ async fn verify_proxy_handshake(addr: &str, protocol: &str, timeout_ms: u64) -> 
                 .map_err(|_| "Handshake read timed out".to_string())?
                 .map_err(|e| format!("Read failed: {e}"))?;
 
-            if buf[0] == 0x05 {
-                Ok(start.elapsed().as_micros())
-            } else {
-                Err("Handshake failed: Target is not a SOCKS5 proxy".into())
+            if buf[0] != 0x05 {
+                return Err("Handshake failed: Target is not a SOCKS5 proxy".into());
+            }
+
+            match buf[1] {
+                0x00 => { // 无需认证
+                    Ok(start.elapsed().as_micros())
+                }
+                0x02 => { // 用户名密码认证
+                    let user = username.unwrap_or_default();
+                    let pass = password.unwrap_or_default();
+                    
+                    let mut auth_req = Vec::new();
+                    auth_req.push(0x01); // Subnegotiation version
+                    auth_req.push(user.len() as u8);
+                    auth_req.extend_from_slice(user.as_bytes());
+                    auth_req.push(pass.len() as u8);
+                    auth_req.extend_from_slice(pass.as_bytes());
+                    
+                    stream.write_all(&auth_req).await.map_err(|e| format!("Auth write failed: {e}"))?;
+                    
+                    let mut auth_res = [0u8; 2];
+                    timeout(timeout_duration, stream.read_exact(&mut auth_res))
+                        .await
+                        .map_err(|_| "Auth read timed out".to_string())?
+                        .map_err(|e| format!("Auth read failed: {e}"))?;
+                    
+                    if auth_res[1] == 0x00 {
+                        Ok(start.elapsed().as_micros())
+                    } else {
+                        Err("SOCKS5 Authentication failed".into())
+                    }
+                }
+                0xFF => Err("SOCKS5: No acceptable authentication methods".into()),
+                _ => Err(format!("SOCKS5: Unsupported auth method 0x{:02X}", buf[1])),
             }
         }
         _ => { // 默认为 HTTP
@@ -204,10 +256,21 @@ async fn verify_proxy_handshake(addr: &str, protocol: &str, timeout_ms: u64) -> 
                 .map_err(|e| format!("Connection failed: {e}"))?;
 
             // HTTP 探测: 发送一个 CONNECT 请求
-            let http_connect = b"CONNECT 1.1.1.1:80 HTTP/1.1\r\nHost: 1.1.1.1:80\r\n\r\n";
-            stream.write_all(http_connect).await.map_err(|e| format!("Write failed: {e}"))?;
+            let mut request = format!("CONNECT 1.1.1.1:80 HTTP/1.1\r\nHost: 1.1.1.1:80\r\n");
+            
+            if let (Some(u), Some(p)) = (username, password) {
+                if !u.is_empty() {
+                    use base64::{Engine as _, engine::general_purpose};
+                    let auth = format!("{}:{}", u, p);
+                    let encoded = general_purpose::STANDARD.encode(auth);
+                    request.push_str(&format!("Proxy-Authorization: Basic {}\r\n", encoded));
+                }
+            }
+            request.push_str("\r\n");
+            
+            stream.write_all(request.as_bytes()).await.map_err(|e| format!("Write failed: {e}"))?;
 
-            let mut buf = [0u8; 64];
+            let mut buf = [0u8; 1024];
             let n = timeout(timeout_duration, stream.read(&mut buf))
                 .await
                 .map_err(|_| "Handshake read timed out".to_string())?
@@ -215,11 +278,20 @@ async fn verify_proxy_handshake(addr: &str, protocol: &str, timeout_ms: u64) -> 
 
             if n >= 12 {
                 let response = &buf[..n];
+                let response_str = String::from_utf8_lossy(response);
+                
                 if response.starts_with(b"HTTP/1.1 200") || response.starts_with(b"HTTP/1.0 200") {
-                    return Ok(start.elapsed().as_micros());
+                    let lower_resp = response_str.to_lowercase();
+                    if lower_resp.contains("connection established") || lower_resp.contains("proxy-connection") {
+                        return Ok(start.elapsed().as_micros());
+                    }
+                } else if response.starts_with(b"HTTP/1.1 407") || response.starts_with(b"HTTP/1.0 407") {
+                    return Err("Proxy Authentication Required (407)".into());
+                } else if response.starts_with(b"HTTP/1.1 401") || response.starts_with(b"HTTP/1.0 401") {
+                    return Err("Unauthorized (401)".into());
                 }
             }
-            Err("Handshake failed: Target is not an HTTP proxy".into())
+            Err("Handshake failed: Target is not an HTTP proxy or verification failed".into())
         }
     }
 }
@@ -230,10 +302,13 @@ async fn start_ping_test(
     state: tauri::State<'_, AppState>,
     host: String,
     port: u16,
-    protocol: String, // 新增协议参数
+    protocol: String,
     count: u32,
     timeout_ms: u64,
     interval_ms: u64,
+    username: Option<String>,
+    password: Option<String>,
+    request_id: Option<String>,
 ) -> Result<(), String> {
     state.stop_flag.store(false, Ordering::SeqCst);
     let stop_flag = Arc::clone(&state.stop_flag);
@@ -241,24 +316,27 @@ async fn start_ping_test(
     tokio::spawn(async move {
         for i in 1..=count {
             if stop_flag.load(Ordering::SeqCst) {
-                let _ = app.emit("ping-stopped", ());
+                let _ = app.emit("ping-stopped", PingStoppedPayload {
+                    request_id: request_id.clone(),
+                });
                 return;
             }
 
             let addr = format!("{}:{}", host, port);
-            // 改为调用具备握手验证的函数
-            let result = verify_proxy_handshake(&addr, &protocol, timeout_ms).await;
+            let result = verify_proxy_handshake(&addr, &protocol, timeout_ms, username.clone(), password.clone()).await;
 
             let payload = match result {
                 Ok(ms) => PingResultPayload {
                     seq: i,
                     ms: Some(ms),
                     error: None,
+                    request_id: request_id.clone(),
                 },
                 Err(e) => PingResultPayload {
                     seq: i,
                     ms: None,
                     error: Some(e),
+                    request_id: request_id.clone(),
                 },
             };
             let _ = app.emit("ping-result", payload);
@@ -273,7 +351,9 @@ async fn start_ping_test(
                 }
             }
         }
-        let _ = app.emit("ping-done", ());
+        let _ = app.emit("ping-done", PingDonePayload {
+            request_id: request_id.clone(),
+        });
     });
 
     Ok(())
@@ -285,7 +365,36 @@ fn stop_ping_test(state: tauri::State<'_, AppState>) {
 }
 
 #[tauri::command]
-fn config_proxy(host: String, port: String, protocol: String) -> Result<String, String> {
+fn is_admin() -> bool {
+    #[cfg(windows)]
+    {
+        use std::process::Command;
+        // On Windows, 'net session' returns 0 if admin, non-zero if not.
+        let output = Command::new("net")
+            .arg("session")
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status();
+        
+        return match output {
+            Ok(status) => status.success(),
+            Err(_) => false,
+        };
+    }
+    #[cfg(not(windows))]
+    false
+}
+
+#[tauri::command]
+fn config_proxy(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, AppState>,
+    host: String, 
+    port: String, 
+    protocol: String, 
+    username: Option<String>, 
+    password: Option<String>
+) -> Result<String, String> {
     if host.trim().is_empty() {
         let ts = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
         return Err(format!("[{}] [ERROR] Address must be filled", ts));
@@ -300,6 +409,22 @@ fn config_proxy(host: String, port: String, protocol: String) -> Result<String, 
     {
         set_windows_proxy(host.trim(), port.trim(), true, &protocol)
             .map(|_| {
+                let mut cfg = state.config.lock().unwrap();
+                let entry = ProxyEntry {
+                    ip: host.trim().to_string(),
+                    port: port.trim().parse().unwrap_or(0),
+                    protocol: protocol.clone(),
+                    added_at: timestamp.clone(),
+                    latency_ms: 0,
+                    last_tested: None,
+                    username: username.clone(),
+                    password: password.clone(),
+                };
+                cfg.recent_configs.retain(|p| p.ip != entry.ip || p.port != entry.port);
+                cfg.recent_configs.insert(0, entry);
+                if cfg.recent_configs.len() > 5 { cfg.recent_configs.truncate(5); }
+                let _ = config::save_config(&app, &cfg);
+
                 format!(
                     "[{}] [INFO] System proxy configured [{}] {}:{}",
                     timestamp,
@@ -308,17 +433,46 @@ fn config_proxy(host: String, port: String, protocol: String) -> Result<String, 
                     port.trim()
                 )
             })
-            .map_err(|e| format!("[{}] [ERROR] System proxy configuration failed: {}", timestamp, e))
+            .map_err(|e| {
+                if is_permission_denied(&e) {
+                     format!("[{}] [ERROR] PERMISSION_DENIED: Registry access restricted. Please run as Administrator.", timestamp)
+                } else {
+                     format!("[{}] [ERROR] System proxy configuration failed: {}", timestamp, e)
+                }
+            })
     }
 
     #[cfg(target_os = "linux")]
     {
         let port_u16: u16 = port.trim().parse().map_err(|_| format!("[{}] [ERROR] Invalid port", timestamp))?;
         set_linux_proxy(&protocol, host.trim(), port_u16);
-        Ok(format!("[{}] [INFO] System proxy configured [{}] {}:{}", timestamp, protocol, host.trim(), port.trim()))
+        let res = format!("[{}] [INFO] System proxy configured [{}] {}:{}", timestamp, protocol, host.trim(), port.trim());
+        
+        let mut cfg = state.config.lock().unwrap();
+        let entry = ProxyEntry {
+            ip: host.trim().to_string(),
+            port: port_u16,
+            protocol: protocol.clone(),
+            added_at: timestamp.clone(),
+            latency_ms: 0,
+            last_tested: None,
+            username: username.clone(),
+            password: password.clone(),
+        };
+        cfg.recent_configs.retain(|p| p.ip != entry.ip || p.port != entry.port);
+        cfg.recent_configs.insert(0, entry);
+        if cfg.recent_configs.len() > 5 { cfg.recent_configs.truncate(5); }
+        let _ = config::save_config(&app, &cfg);
+        
+        return Ok(res);
     }
     #[cfg(not(any(windows, target_os = "linux")))]
     Err(format!("[{}] [ERROR] Unsupported platform", timestamp))
+}
+
+#[cfg(windows)]
+fn is_permission_denied(e: &std::io::Error) -> bool {
+    e.kind() == std::io::ErrorKind::PermissionDenied || e.raw_os_error() == Some(5)
 }
 
 // ─── Proxy Scan ───────────────────────────────────────────────────────────────
@@ -340,33 +494,53 @@ async fn check_proxy(ip: Ipv4Addr, port: u16, verify_timeout_ms: u64) -> Option<
     let addr = format!("{}:{}", ip, port);
     let timeout_duration = Duration::from_millis(verify_timeout_ms);
 
-    // 尝试探测 SOCKS5
+    // 尝试探测 SOCKS5 — 同时声明支持 无认证(0x00) 和 用户名密码认证(0x02)
     let start = Instant::now();
     if let Ok(Ok(mut stream)) = timeout(timeout_duration, tokio::net::TcpStream::connect(&addr)).await {
-        let socks5_greeting = [0x05, 0x01, 0x00];
+        // 声明两种方法: 0x00=无需认证, 0x02=用户名密码认证
+        let socks5_greeting = [0x05, 0x02, 0x00, 0x02];
         if stream.write_all(&socks5_greeting).await.is_ok() {
             let mut buf = [0u8; 2];
             if let Ok(Ok(2)) = timeout(timeout_duration, stream.read_exact(&mut buf)).await {
                 if buf[0] == 0x05 {
                     let latency = start.elapsed().as_millis() as u64;
-                    return Some(("SOCKS5", latency));
+                    return match buf[1] {
+                        0x00 => Some(("SOCKS5", latency)),       // 无需认证
+                        0x02 => Some(("SOCKS5 (Auth)", latency)), // 需要用户名密码
+                        _    => Some(("SOCKS5", latency)),        // 其他方法视为正常
+                    };
                 }
             }
         }
     }
 
-    // 重新连接探测 HTTP 代理 (因为上一次连接的状态可能已污染)
+    // 重新连接探测 HTTP 代理
+    // 任何对 CONNECT 请求返回 200 的服务器，都极可能是 HTTP 代理
+    // （普通 Web 服务器对 CONNECT 会返回 405/400/501，不会返回 200）
     let start = Instant::now();
     if let Ok(Ok(mut stream)) = timeout(timeout_duration, tokio::net::TcpStream::connect(&addr)).await {
         let http_connect = b"CONNECT 1.1.1.1:80 HTTP/1.1\r\nHost: 1.1.1.1:80\r\n\r\n";
         if stream.write_all(http_connect).await.is_ok() {
-            let mut buf = [0u8; 64];
+            let mut buf = [0u8; 1024];
             if let Ok(Ok(n)) = timeout(timeout_duration, stream.read(&mut buf)).await {
                 if n >= 12 {
                     let response = &buf[..n];
-                    if response.starts_with(b"HTTP/1.1 200") || response.starts_with(b"HTTP/1.0 200") {
+                    let lower_resp = String::from_utf8_lossy(response).to_lowercase();
+
+                    let is_200 = response.starts_with(b"HTTP/1.1 200")
+                        || response.starts_with(b"HTTP/1.0 200");
+                    let is_407 = response.starts_with(b"HTTP/1.1 407")
+                        || response.starts_with(b"HTTP/1.0 407");
+                    // 排除普通 Web 服务器：它们会带 HTML 内容
+                    let is_html = lower_resp.contains("<html")
+                        || lower_resp.contains("content-type: text/html");
+
+                    if is_200 && !is_html {
                         let latency = start.elapsed().as_millis() as u64;
                         return Some(("HTTP", latency));
+                    } else if is_407 {
+                        let latency = start.elapsed().as_millis() as u64;
+                        return Some(("HTTP (Auth)", latency));
                     }
                 }
             }
@@ -570,6 +744,42 @@ fn stop_proxy_scan(state: tauri::State<'_, AppState>) {
 #[tauri::command]
 fn get_config(state: tauri::State<'_, AppState>) -> AppConfig {
     state.config.lock().unwrap().clone()
+}
+
+#[tauri::command]
+fn clear_recent_configs(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, AppState>,
+) -> Result<(), String> {
+    let mut cfg = state.config.lock().unwrap();
+    cfg.recent_configs.clear();
+    config::save_config(&app, &cfg)
+}
+
+#[tauri::command]
+fn add_test_history(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, AppState>,
+    entry: ProxyEntry,
+) -> Result<(), String> {
+    let mut cfg = state.config.lock().unwrap();
+    // Dedup and keep latest 5
+    cfg.recent_tests.retain(|p| p.ip != entry.ip || p.port != entry.port);
+    cfg.recent_tests.insert(0, entry);
+    if cfg.recent_tests.len() > 5 {
+        cfg.recent_tests.truncate(5);
+    }
+    config::save_config(&app, &cfg)
+}
+
+#[tauri::command]
+fn clear_test_configs(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, AppState>,
+) -> Result<(), String> {
+    let mut cfg = state.config.lock().unwrap();
+    cfg.recent_tests.clear();
+    config::save_config(&app, &cfg)
 }
 
 #[tauri::command]
@@ -788,7 +998,7 @@ fn win_toggle_maximize(window: tauri::Window) {
 
 #[tauri::command]
 fn win_close(window: tauri::Window) {
-    let _ = window.close();
+    let _ = window.hide();
 }
 
 #[tauri::command]
@@ -829,6 +1039,8 @@ async fn get_proxy_status() -> Result<ProxyStatus, String> {
                     host: parts[0].to_string(),
                     port: parts[1].to_string(),
                     protocol,
+                    username: None,
+                    password: None,
                 });
             }
         }
@@ -839,6 +1051,8 @@ async fn get_proxy_status() -> Result<ProxyStatus, String> {
         host: "".into(),
         port: "".into(),
         protocol: "HTTP".into(),
+        username: None,
+        password: None,
     })
 }
 
@@ -905,6 +1119,8 @@ async fn fetch_proxies_from_url(url: String) -> Result<Vec<ProxyEntry>, String> 
                      added_at: timestamp.clone(),
                      latency_ms: 0,
                      last_tested: None,
+                     username: None,
+                     password: None,
                  });
             }
         }
@@ -955,6 +1171,7 @@ fn shittim_mem_task() -> MemoryInfo {
 
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             let cfg = config::load_config(&app.handle());
             app.manage(AppState {
@@ -963,6 +1180,43 @@ pub fn run() {
                 mtr_stop_flag: Arc::new(AtomicBool::new(false)),
                 config: Arc::new(Mutex::new(cfg)),
             });
+
+            // --- Tray Icon Setup ---
+            let show_item = MenuItem::with_id(app, "show", "Open Main Window", true, None::<&str>)?;
+            let quit_item = MenuItem::with_id(app, "quit", "Quit Application", true, None::<&str>)?;
+            let menu = Menu::with_items(app, &[&show_item, &quit_item])?;
+
+            let _tray = TrayIconBuilder::new()
+                .menu(&menu)
+                .show_menu_on_left_click(false)
+                .on_menu_event(|app, event| {
+                    match event.id.as_ref() {
+                        "quit" => {
+                            app.exit(0);
+                        }
+                        "show" => {
+                            if let Some(window) = app.get_webview_window("main") {
+                                let _ = window.show();
+                                let _ = window.unminimize();
+                                let _ = window.set_focus();
+                            }
+                        }
+                        _ => {}
+                    }
+                })
+                .on_tray_icon_event(|tray, event| {
+                    if let TrayIconEvent::Click { button: tauri::tray::MouseButton::Left, .. } = event {
+                        let app = tray.app_handle();
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.show();
+                            let _ = window.unminimize();
+                            let _ = window.set_focus();
+                        }
+                    }
+                })
+                .icon(app.default_window_icon().unwrap().clone())
+                .build(app)?;
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -973,6 +1227,9 @@ pub fn run() {
             start_proxy_scan,
             stop_proxy_scan,
             get_config,
+            clear_recent_configs,
+            add_test_history,
+            clear_test_configs,
             save_proxy,
             remove_proxy,
             clear_proxies,
@@ -989,6 +1246,7 @@ pub fn run() {
             get_proxy_status,
             disconnect_proxy,
             shittim_mem_task,
+            is_admin,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

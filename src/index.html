@@ -62,14 +62,19 @@
 
     <!-- Loading screen -->
     <div id="loading-screen">
-      <div class="loader-ring"></div>
-      <div class="loader-text">Loading...</div>
+      <div class="loader-visual">
+        <div class="loader-bar"></div>
+        <div class="loader-bar"></div>
+        <div class="loader-bar"></div>
+        <div class="loader-bar"></div>
+      </div>
+      <div class="loader-text">Initializing System...</div>
     </div>
 
     <div id="app-root">
       <div id="noise-overlay"></div>
       <!-- Desktop Navigation Rail -->
-      <md-navigation-rail id="main-rail">
+      <md-navigation-rail id="main-rail" class="stagger-entry stagger-delay-1">
         <div id="rail-indicator"></div>
         <md-navigation-rail-tab id="rail-test" label="Test" active>
           <md-icon slot="active-icon">network_check</md-icon>
@@ -93,7 +98,7 @@
         </md-navigation-rail-tab>
       </md-navigation-rail>
 
-      <div id="main-content">
+      <div id="main-content" class="stagger-entry stagger-delay-2">
         <div id="pages-container">
 
           <!-- ── Page: Test ─────────────────────────────────────────────────────── -->
@@ -143,6 +148,17 @@
                   </md-outlined-text-field>
                 </div>
 
+                <div class="field-row">
+                  <md-outlined-text-field class="f-user" id="test-user" label="Username" placeholder="Optional">
+                    <md-icon slot="leading-icon">person</md-icon>
+                  </md-outlined-text-field>
+
+                  <md-outlined-text-field class="f-pass" id="test-pass" label="Password" type="password"
+                    placeholder="Optional">
+                    <md-icon slot="leading-icon">key</md-icon>
+                  </md-outlined-text-field>
+                </div>
+
                 <div class="action-row">
                   <md-filled-button id="btn-test">
                     <md-icon slot="icon">play_arrow</md-icon>Test
@@ -165,6 +181,21 @@
                 </div>
               </div>
 
+              <!-- Recent Tests (History) -->
+              <div id="recent-tests-container" class="recent-configs-section" style="display: none; margin-top: 16px;">
+                <div class="recent-configs-label">
+                  <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
+                    <md-icon style="font-size: 16px;">history</md-icon> RECENT TESTS
+                  </div>
+                  <md-text-button id="btn-clear-test-history" style="--md-text-button-label-text-size: 10px;">
+                    CLEAR HISTORY
+                  </md-text-button>
+                </div>
+                <div id="recent-tests-list"
+                  style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px;">
+                  <!-- Filled via JS -->
+                </div>
+              </div>
             </div>
 
             <div id="test-pool-content" class="tab-content" hidden>
@@ -200,10 +231,10 @@
                   </div>
                 </div>
               </div>
-              <md-outlined-text-field id="scan-filter" label="Filter results" placeholder="IP, Port, Protocol..."
-                    class="scan-filter-field">
-                    <md-icon slot="leading-icon">search</md-icon>
-                  </md-outlined-text-field>
+              <md-outlined-text-field id="pool-filter" label="Filter results" placeholder="IP, Port, Protocol..."
+                class="scan-filter-field">
+                <md-icon slot="leading-icon">search</md-icon>
+              </md-outlined-text-field>
               <div class="m3-table-card pool-table-container">
                 <div class="table-wrapper">
                   <table class="pool-table" id="pool-table">
@@ -432,6 +463,15 @@
                   <md-select-option value="SOCKS5">SOCKS5</md-select-option>
                 </md-filled-select>
               </div>
+              <div class="config-form-row">
+                <md-outlined-text-field class="f-user" id="config-user" label="Username" placeholder="Optional">
+                  <md-icon slot="leading-icon">person</md-icon>
+                </md-outlined-text-field>
+                <md-outlined-text-field class="f-pass" id="config-pass" label="Password" type="password"
+                  placeholder="Optional">
+                  <md-icon slot="leading-icon">key</md-icon>
+                </md-outlined-text-field>
+              </div>
               <div class="config-action-row" style="display: flex; gap: 12px; margin-top: 16px;">
                 <md-filled-tonal-button id="btn-config-disconnect" disabled style="flex: 1;">
                   <md-icon slot="icon">link_off</md-icon> Disconnect Proxy
@@ -439,6 +479,25 @@
                 <md-filled-button id="btn-config" style="flex: 1;">
                   <md-icon slot="icon">check_circle</md-icon> Apply Proxy
                 </md-filled-button>
+                <md-icon id="admin-lock-icon"
+                  style="width: 24px; height: 24px; font-size: 20px; color: var(--md-sys-color-outline); cursor: help;"
+                  title="Administrator Privilege Status">lock</md-icon>
+              </div>
+            </div>
+
+            <!-- Recent Configs (Refined) -->
+            <div id="recent-configs-container" class="recent-configs-section" style="display: none; margin-top: 24px;">
+              <div class="recent-configs-label">
+                <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
+                  <md-icon style="font-size: 16px;">history</md-icon> RECENT CONFIGURATIONS
+                </div>
+                <md-text-button id="btn-clear-recent" style="--md-text-button-label-text-size: 10px;">
+                  CLEAR HISTORY
+                </md-text-button>
+              </div>
+              <div id="recent-configs-list"
+                style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px;">
+                <!-- Filled via JS -->
               </div>
             </div>
           </div>

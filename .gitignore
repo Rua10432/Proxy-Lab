@@ -16,6 +16,7 @@ dist-ssr/
 .idea/
 *.swp
 *.swo
+check_lines.py
 
 # OS files
 .DS_Store
@@ -25,6 +26,8 @@ Thumbs.db
 target/
 src-tauri/target/
 成品/
+.claude/
+
 
 # Local env files
 .env
