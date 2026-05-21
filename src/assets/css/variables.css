@@ -1,0 +1,222 @@
+/* ═══════════════════════════════════════════════════════════════════════════════
+   Asola: Star's Prayer — Design Token System
+   Based on DESIGN.md specification
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── Core Backgrounds ── */
+  --color-bg:              #1a1a1b;
+  --color-nav-bg:          #141414;
+  --color-footer-bg:       #1a1a1b;
+  --color-surface:         #000000;
+  --color-surface-elevated:#1f1f21;
+  --color-surface-warm:    #f7f4ee;
+
+  /* ── Text Colors ── */
+  --color-text-primary:    #314255;
+  --color-text-heading:    #314255;
+  --color-text-body:       #29292b;
+  --color-text-muted:      #47474a;
+  --color-text-subtle:     #56575d;
+  --color-text-dim:        #666666;
+  --color-text-ink:        #d2d2d2;
+  --color-text-light:      #f7f3ee;
+  --color-text-white:      #ffffff;
+
+  /* ── Accent Colors ── */
+  --color-accent:          #d2d2d2;
+  --color-accent-green:    #9eddc8;
+  --color-accent-pink:     #f4a7b9;
+  --color-accent-yellow:   #f5e9b5;
+  --color-accent-blue:     #9fd4ff;
+  --color-accent-blue-dark:#74a5ff;
+
+  /* ── Neutral / Ink Scale ── */
+  --color-ink-900:         #141516;
+  --color-ink-850:         #181819;
+  --color-ink-800:         #1f1f21;
+  --color-ink-700:         #29292b;
+  --color-ink-600:         #47474a;
+  --color-ink-500:         #56575d;
+  --color-ink-400:         #666666;
+  --color-ink-82:          #d2d2d2;
+  --color-ink-97:          #f6f6f7;
+
+  /* ── Border Colors ── */
+  --color-border:          #d2d2d2;
+  --color-border-warm:     #d7c8b5;
+  --color-border-accent:   #f7f3ee;
+  --color-border-blue:     #9fd4ff;
+  --color-border-blue-dk:  #74a5ff;
+
+  /* ── Button Colors ── */
+  --color-btn-bg:          #000000;
+  --color-btn-text:        #ffffff;
+  --color-btn-secondary-text: #29292b;
+  --color-btn-tertiary-text:  #47474a;
+
+  /* ── Surface / Overlay ── */
+  --color-surface-dark:          #080b12eb;
+  --color-surface-dark-float:    #0c0e14d1;
+  --color-surface-dark-float-strong: #0c0e14e6;
+  --color-surface-overlay:       #0c0e14c2;
+  --color-surface-panel:         #fffffff5;
+
+  /* ── Console / Terminal ── */
+  --color-console-bg:      #0c0e14;
+  --color-console-text:    #56575d;
+  --color-console-border:  #29292b;
+
+  /* ── Status Colors ── */
+  --color-status-ready:    #56575d;
+  --color-status-active:   #9eddc8;
+  --color-status-error:    #f4a7b9;
+  --color-status-warn:     #f5e9b5;
+
+  /* ── Shadows ── */
+  --shadow-subtle:         rgba(0, 0, 0, 0.4) 0px 1px 2px 0px;
+  --shadow-standard:       rgba(0, 0, 0, 0.6) 0px 4px 8px 0px;
+
+  /* ── Border Radius ── */
+  --radius-none:           0px;
+  --radius-sm:             4px;
+  --radius-md:             12px;
+  --radius-lg:             17px;
+  --radius-pill:           999px;
+
+  /* ── Typography ── */
+  --font-primary:          'Noto Sans TC', sans-serif;
+  --font-secondary:        'Noto Serif TC', serif;
+  --font-mono:             'JetBrains Mono', 'Fira Code', monospace;
+  --font-icon:             'Material Symbols Outlined';
+
+  /* ── Font Sizes ── */
+  --text-hero:             60px;
+  --text-section:          52px;
+  --text-title:            34px;
+  --text-subheading:       28px;
+  --text-quote:            24px;
+  --text-large:            22px;
+  --text-link:             20px;
+  --text-body-lg:          18px;
+  --text-body:             16px;
+  --text-small:            14px;
+  --text-caption:          12px;
+
+  /* ── Font Weights ── */
+  --weight-regular:        400;
+  --weight-medium:         500;
+  --weight-semibold:       600;
+  --weight-bold:           700;
+
+  /* ── Line Heights ── */
+  --leading-tight:         1.2;
+  --leading-normal:        1.5;
+  --leading-relaxed:       1.65;
+
+  /* ── Spacing Scale ── */
+  --space-1:               4px;
+  --space-2:               8px;
+  --space-3:               12px;
+  --space-4:               16px;
+  --space-5:               20px;
+  --space-6:               24px;
+  --space-7:               28px;
+  --space-8:               32px;
+  --space-10:              40px;
+  --space-12:              48px;
+  --space-15:              60px;
+
+  /* ── Layout ── */
+  --sidebar-width:         80px;
+  --titlebar-height:       48px;
+  --statusbar-height:      36px;
+  --mobile-nav-height:     64px;
+  --content-max-width:     100%;
+
+  /* ── Transitions ── */
+  --transition-fast:       150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal:     250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow:       400ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-bounce:     500ms cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ── Z-Index ── */
+  --z-sidebar:             100;
+  --z-titlebar:            200;
+  --z-mobile-nav:          150;
+  --z-statusbar:           100;
+  --z-dialog:              1000;
+  --z-snackbar:            1100;
+  --z-noise:               9999;
+  --z-loading:             10000;
+
+  /* ── Hardcoded Gradient Overrides (for theme switching) ── */
+  --color-titlebar-bg:     linear-gradient(180deg, #181819 0%, #141414 100%);
+  --color-sidebar-bg:      linear-gradient(180deg, #181819 0%, #141414 50%, #121214 100%);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   Light Theme – override when .dark is absent
+   ═══════════════════════════════════════════════════════════════════════════════ */
+:root:not(.dark) {
+  /* ── Core Backgrounds ── */
+  --color-bg:              #f4f4f6;
+  --color-nav-bg:          #e8e8ea;
+  --color-footer-bg:       #f4f4f6;
+  --color-surface:         #ffffff;
+  --color-surface-elevated:#eeeef0;
+  --color-surface-warm:    #f7f4ee;
+
+  /* ── Text Colors ── */
+  --color-text-primary:    #1f2937;
+  --color-text-heading:    #111827;
+  --color-text-body:       #374151;
+  --color-text-muted:      #4b5563;
+  --color-text-subtle:     #6b7280;
+  --color-text-dim:        #9ca3af;
+  --color-text-ink:        #6b7280;
+  --color-text-light:      #374151;
+  --color-text-white:      #ffffff;
+
+  /* ── Ink Scale (inverted) ── */
+  --color-ink-900:         #f4f4f6;
+  --color-ink-850:         #eeeef0;
+  --color-ink-800:         #e8e8ea;
+  --color-ink-700:         #dddde0;
+  --color-ink-600:         #c0c0c4;
+  --color-ink-500:         #a0a0a5;
+  --color-ink-400:         #88888d;
+  --color-ink-82:          #4b5563;
+  --color-ink-97:          #374151;
+
+  /* ── Border Colors ── */
+  --color-border:          #c0c0c4;
+  --color-border-warm:     #c8b8a6;
+  --color-border-accent:   #d8d5d0;
+
+  /* ── Button Colors ── */
+  --color-btn-bg:          #1f2937;
+  --color-btn-text:        #ffffff;
+  --color-btn-secondary-text: #4b5563;
+  --color-btn-tertiary-text:  #6b7280;
+
+  /* ── Surface / Overlay ── */
+  --color-surface-dark:          #ffffffeb;
+  --color-surface-dark-float:    #ffffffd1;
+  --color-surface-dark-float-strong: #ffffffe6;
+  --color-surface-overlay:       #ffffffc2;
+  --color-surface-panel:         #fffffff5;
+
+  /* ── Console / Terminal ── */
+  --color-console-bg:      #fafafc;
+  --color-console-text:    #6b7280;
+  --color-console-border:  #dddde0;
+
+  /* ── Shadows for light background ── */
+  --shadow-subtle:         rgba(0, 0, 0, 0.06) 0px 1px 2px 0px;
+  --shadow-standard:       rgba(0, 0, 0, 0.10) 0px 4px 8px 0px;
+
+  /* ── Gradient Overrides ── */
+  --color-titlebar-bg:     linear-gradient(180deg, #e8e8ea 0%, #dddde0 100%);
+  --color-sidebar-bg:      linear-gradient(180deg, #e8e8ea 0%, #dddde0 50%, #d5d5d8 100%);
+}

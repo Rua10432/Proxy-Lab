@@ -1,0 +1,205 @@
+<!-- ═══════════════════════════════════════════════════════════════════════
+             Page: Scan
+             ═══════════════════════════════════════════════════════════════════════ -->
+          <div class="page" id="page-scan">
+            <div class="scan-params">
+              <div class="scan-params-grid">
+                <!-- Target Network -->
+                <div class="params-group">
+                  <div class="group-title">Target Network</div>
+                  <div class="field-row">
+                    <div class="input-field f-address">
+                      <label>Network</label>
+                      <div class="input-wrap">
+                        <span class="icon icon-sm leading-icon">lan</span>
+                        <input type="text" id="scan-network" placeholder="192.168.1.0">
+                      </div>
+                    </div>
+                    <div class="input-field" style="width:160px">
+                      <label>Subnet</label>
+                      <div class="input-wrap">
+                        <span class="icon icon-sm leading-icon">hub</span>
+                        <input type="text" id="scan-mask" value="255.255.255.0">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Port Range -->
+                <div class="params-group">
+                  <div class="group-title">Port Range</div>
+                  <div class="field-row">
+                    <div class="input-field f-port">
+                      <label>From</label>
+                      <div class="input-wrap">
+                        <span class="icon icon-sm leading-icon">settings_ethernet</span>
+                        <input type="number" id="scan-start-port" value="1" min="1" max="65535">
+                      </div>
+                    </div>
+                    <div class="input-field f-port">
+                      <label>To</label>
+                      <div class="input-wrap">
+                        <span class="icon icon-sm leading-icon">settings_ethernet</span>
+                        <input type="number" id="scan-end-port" value="65535" min="1" max="65535">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Performance -->
+                <div class="params-group">
+                  <div class="group-title">Performance</div>
+                  <div class="field-row">
+                    <div class="input-field f-count">
+                      <label>SYN Threads</label>
+                      <div class="input-wrap">
+                        <span class="icon icon-sm leading-icon">layers</span>
+                        <input type="number" id="scan-concurrent" value="250" min="1">
+                      </div>
+                    </div>
+                    <div class="input-field f-ms">
+                      <label>SYN Timeout</label>
+                      <div class="input-wrap">
+                        <span class="icon icon-sm leading-icon">flash_on</span>
+                        <input type="number" id="scan-syn-timeout" value="500" min="50">
+                        <span class="suffix">ms</span>
+                      </div>
+                    </div>
+                    <div class="input-field f-count">
+                      <label>Verify</label>
+                      <div class="input-wrap">
+                        <span class="icon icon-sm leading-icon">verified</span>
+                        <input type="number" id="scan-verify-concurrent" value="50" min="1">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="action-row">
+                <button class="btn btn-primary" id="btn-scan-start">
+                  <span class="icon icon-sm">radar</span> Start Scan
+                </button>
+                <button class="btn btn-tonal" id="btn-scan-stop" disabled>
+                  <span class="icon icon-sm">stop</span> Stop
+                </button>
+                <button class="btn btn-text" id="btn-scan-clear">
+                  <span class="icon icon-sm">delete_sweep</span> Clear
+                </button>
+                <div class="spacer"></div>
+                <div class="status-chip status-ready" id="scan-status-chip">
+                  <span class="dot"></span>
+                  <span id="scan-status-text">idle</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Scan Table Toolbar -->
+            <div class="scan-table-toolbar">
+              <div class="input-field filter-field" style="max-width:360px;margin-top:0">
+                <div class="input-wrap">
+                  <span class="icon icon-sm leading-icon">search</span>
+                  <input type="text" id="scan-filter" placeholder="Filter results...">
+                </div>
+              </div>
+              <span class="scan-count-badge" id="scan-count-badge">0 results</span>
+            </div>
+
+            <!-- Scan Results Table -->
+            <div class="table-card scan-table-container" id="scan-table-container" style="margin-top:12px">
+              <div class="table-wrapper">
+                <table class="data-table" id="scan-table">
+                  <thead>
+                    <tr>
+                      <th style="width:60px">#</th>
+                      <th class="sortable" data-col="ip" style="width:180px">
+                        IP Address <span class="icon icon-sm sort-arrow">arrow_upward</span>
+                      </th>
+                      <th class="sortable" data-col="port" style="width:100px">
+                        Port <span class="icon icon-sm sort-arrow">arrow_upward</span>
+                      </th>
+                      <th class="sortable" data-col="protocol" style="width:120px">
+                        Protocol <span class="icon icon-sm sort-arrow">arrow_upward</span>
+                      </th>
+                      <th class="sortable" data-col="latency" style="width:120px">
+                        Latency <span class="icon icon-sm sort-arrow">arrow_upward</span>
+                      </th>
+                      <th style="width:80px">Apply</th>
+                    </tr>
+                  </thead>
+                  <tbody id="scan-table-body"></tbody>
+                </table>
+              </div>
+              <div class="table-empty" id="scan-empty-state">
+                <span class="icon empty-icon">radar</span>
+                <div class="empty-title">No proxies found yet</div>
+                <div class="empty-sub">Start a scan to discover active proxies on your network</div>
+              </div>
+            </div>
+
+            <!-- Progress Area -->
+            <div class="scan-progress-area">
+              <div class="progress-info">
+                <div class="progress-stats">
+                  <span id="scan-progress-label">Scanned: 0 / 0</span>
+                  <span class="progress-pct" id="scan-ring-pct">0%</span>
+                </div>
+                <div class="progress-bar">
+                  <div class="fill" id="scan-progress-fill" style="width:0%"></div>
+                </div>
+              </div>
+              <div class="found-badge">
+                <span class="icon">check_circle</span>
+                <span id="scan-found-label">Found: 0</span>
+              </div>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="scan-stats-grid">
+              <div class="scan-stat-card" data-stat="scanned">
+                <div class="scan-stat-icon" style="background:rgba(158,221,200,0.08);color:#9eddc8">
+                  <span class="icon">analytics</span>
+                </div>
+                <div class="scan-stat-info">
+                  <span class="scan-stat-label">Total Scanned</span>
+                  <span class="scan-stat-value" id="stat-scanned">0</span>
+                </div>
+              </div>
+              <div class="scan-stat-card" data-stat="open">
+                <div class="scan-stat-icon" style="background:rgba(159,212,255,0.08);color:#9fd4ff">
+                  <span class="icon">sensors</span>
+                </div>
+                <div class="scan-stat-info">
+                  <span class="scan-stat-label">Ports Open</span>
+                  <span class="scan-stat-value" id="stat-ports-open">0</span>
+                </div>
+              </div>
+              <div class="scan-stat-card" data-stat="found">
+                <div class="scan-stat-icon" style="background:rgba(158,221,200,0.08);color:#9eddc8">
+                  <span class="icon">verified</span>
+                </div>
+                <div class="scan-stat-info">
+                  <span class="scan-stat-label">Found Proxies</span>
+                  <span class="scan-stat-value" id="stat-found">0</span>
+                </div>
+              </div>
+              <div class="scan-stat-card" data-stat="latency">
+                <div class="scan-stat-icon" style="background:rgba(245,233,181,0.08);color:#f5e9b5">
+                  <span class="icon">speed</span>
+                </div>
+                <div class="scan-stat-info">
+                  <span class="scan-stat-label">Avg Latency</span>
+                  <span class="scan-stat-value" id="stat-avg-latency">-- ms</span>
+                </div>
+              </div>
+              <div class="scan-stat-card" data-stat="speed">
+                <div class="scan-stat-icon" style="background:rgba(244,167,185,0.08);color:#f4a7b9">
+                  <span class="icon">bolt</span>
+                </div>
+                <div class="scan-stat-info">
+                  <span class="scan-stat-label">Scan Speed</span>
+                  <span class="scan-stat-value" id="stat-scan-speed">0/s</span>
+                </div>
+              </div>
+            </div>
+          </div>

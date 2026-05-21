@@ -29,6 +29,22 @@ pub struct ScanPreferences {
     pub syn_timeout_ms: u64,
     #[serde(default = "default_verify_concurrent")]
     pub verify_concurrent: usize,
+    /// 代理检测时需要匹配的响应头列表（HTTP 代理）
+    #[serde(default = "default_detection_headers")]
+    pub detection_headers: Vec<String>,
+    /// 是否启用严格模式：要求至少匹配一个 detection_headers 才算 HTTP 代理
+    #[serde(default)]
+    pub strict_detection: bool,
+}
+
+fn default_detection_headers() -> Vec<String> {
+    vec![
+        "Via".into(),
+        "X-Cache".into(),
+        "X-Proxy".into(),
+        "Proxy-Connection".into(),
+        "X-Proxy-Agent".into(),
+    ]
 }
 
 fn default_syn_timeout() -> u64 { 500 }
@@ -44,8 +60,18 @@ impl Default for ScanPreferences {
             timeout_ms: 1500,
             syn_timeout_ms: 500,
             verify_concurrent: 50,
+            detection_headers: default_detection_headers(),
+            strict_detection: false,
         }
     }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct ProxyRule {
+    pub app_path: String,
+    pub app_name: String,
+    pub enabled: bool,
+    pub added_at: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -57,6 +83,8 @@ pub struct AppConfig {
     pub recent_configs: Vec<ProxyEntry>,
     #[serde(default)]
     pub recent_tests: Vec<ProxyEntry>,
+    #[serde(default)]
+    pub proxy_rules: Vec<ProxyRule>,
 }
 
 impl Default for AppConfig {
@@ -67,6 +95,7 @@ impl Default for AppConfig {
             scan_history: Vec::new(),
             recent_configs: Vec::new(),
             recent_tests: Vec::new(),
+            proxy_rules: Vec::new(),
         }
     }
 }

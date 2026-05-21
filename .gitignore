@@ -27,8 +27,8 @@ target/
 src-tauri/target/
 成品/
 .claude/
-
-
+src.zip
+src33/
 # Local env files
 .env
 .env.local

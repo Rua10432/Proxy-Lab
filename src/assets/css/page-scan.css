@@ -1,270 +1,134 @@
+/* ═══════════════════════════════════════════════════════════════════════════════
+   Page: Scan — Network Scanner
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
 .scan-params {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  flex: none;
-  margin-bottom: 24px;
-  /* Major section spacing */
-  width: 100%;
-  padding: 16px;
-  border-radius: 20px;
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-ink-700);
+  border-radius: var(--radius-sm);
+  padding: var(--space-4);
 }
 
 .scan-params-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
 }
-
 .params-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 12px;
-  background-color: transparent !important;
-  border-radius: 12px;
-  border: none !important;
+  gap: var(--space-2);
 }
-
-.group-title {
-  font-family: var(--md-sys-typescale-label-small-font);
-  font-size: var(--md-sys-typescale-label-small-size);
-  font-weight: 600;
-  color: var(--md-sys-color-on-surface-variant);
-  /* Tonal consistency */
+.params-group .group-title {
+  font-size: var(--text-small);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  margin-bottom: 8px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+.params-group .field-row {
+  margin-bottom: 0;
 }
 
-.group-title::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--md-sys-color-outline-variant);
-  opacity: 0.3;
-}
-
-.scan-params .field-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.scan-params .field-row>* {
-  flex: 1 1 120px;
-  min-width: 0;
-}
-
-@media (max-width: 600px) {
-  .scan-params .field-row > * {
-    flex: none;
-    width: 100%;
-  }
-}
-
-.scan-content-row {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 400px;
-  /* Ensure table has enough space */
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
-.scan-main-col {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  gap: 12px;
-}
-
-/* ── Scan Table Toolbar (Filter + Count) ──────────────────────────────── */
+/* Scan Table Area */
 .scan-table-toolbar {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 8px;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
 }
-
-.scan-filter-field {
-  flex: 1;
-  --md-outlined-text-field-container-shape: 16px;
-  --md-outlined-text-field-outline-width: 1px;
-}
-
 .scan-count-badge {
-  flex-shrink: 0;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--md-sys-color-primary);
-  background: var(--md-sys-color-primary-container);
-  padding: 4px 12px;
-  border-radius: 12px;
+  font-size: var(--text-small);
+  color: var(--color-text-subtle);
   white-space: nowrap;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-  border: 1px solid var(--md-sys-color-primary);
-  display: flex;
-  align-items: center;
-  height: 40px; /* Aligned with text field roughly */
 }
 
-/* ── Scan Table Container (Specific adjustments) ── */
 .scan-table-container {
-  flex: 1;
-  min-height: 120px;
+  margin-top: var(--space-3);
 }
 
-/* Specific Scan Table column behaviors if any */
-.scan-table .col-apply { text-align: center; }
-
-/* Table row/cell specifics move to tables.css */
-
-/* Hidden rows (filtered out) */
-.scan-table tbody tr.hidden-row {
-  display: none;
-}
-
-/* ── Progress Area ─────────────────────────────────────────────────────── */
+/* Progress Area */
 .scan-progress-area {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 16px;
-  padding: 8px 0;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-ink-700);
+  border-radius: var(--radius-sm);
 }
-
 .progress-info {
   flex: 1;
-  min-width: 240px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
-
-md-linear-progress {
-  margin: 4px 0;
-}
-
 .progress-stats {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  font-family: var(--md-sys-typescale-label-small-font);
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--md-sys-color-on-surface-variant);
+  font-size: var(--text-small);
+  color: var(--color-text-subtle);
 }
-
+.progress-pct {
+  font-weight: var(--weight-semibold);
+  color: var(--color-accent-green);
+}
 .found-badge {
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: var(--md-sys-color-tertiary-container);
-  color: var(--md-sys-color-on-tertiary-container);
-  padding: 4px 14px;
-  border-radius: 12px;
-  font-weight: 700;
-  font-size: 12px;
-  white-space: nowrap;
-  box-shadow: var(--md-sys-elevation-level1);
-  border: 1px solid var(--md-sys-color-tertiary);
-  height: 36px;
+  gap: 6px;
+  font-size: var(--text-small);
+  color: var(--color-accent-green);
+  font-weight: var(--weight-semibold);
+  flex-shrink: 0;
 }
+.found-badge .icon { font-size: 20px; }
 
-/* ── Stats Grid ───────────────────────────────────────────────────────── */
+/* Stats Grid */
 .scan-stats-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr); /* Default 5 columns */
-  gap: 12px;
-  flex: none;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--space-3);
+  margin-top: var(--space-4);
 }
-
-@media (max-width: 1024px) {
-  .scan-stats-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-@media (max-width: 600px) {
-  .scan-stats-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 400px) {
-  .scan-stats-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
 .scan-stat-card {
-  padding: 8px 12px;
-  border-radius: 12px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-ink-700);
+  border-radius: var(--radius-sm);
+  padding: var(--space-4);
   display: flex;
   align-items: center;
-  gap: 10px;
-  background: var(--md-sys-color-surface-container-low);
-  border: 1px solid var(--md-sys-color-outline-variant);
-  transition: background-color 0.2s;
+  gap: var(--space-3);
+  transition: border-color var(--transition-normal);
 }
-
-.scan-stat-card:hover {
-  background: var(--md-sys-color-surface-container-high);
-}
-
+.scan-stat-card:hover { border-color: var(--color-ink-600); }
 .scan-stat-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  background: var(--md-sys-color-surface-container-highest);
 }
+.scan-stat-info { display: flex; flex-direction: column; }
+.scan-stat-label { font-size: var(--text-caption); color: var(--color-text-subtle); font-weight: var(--weight-medium); }
+.scan-stat-value { font-size: 20px; font-weight: var(--weight-bold); color: var(--color-text-primary); }
 
-.scan-stat-icon md-icon {
-  --md-icon-size: 18px;
-  color: var(--md-sys-color-primary);
+/* Responsive */
+@media (max-width: 1024px) {
+  .scan-params-grid { grid-template-columns: 1fr 1fr; }
+  .scan-stats-grid { grid-template-columns: repeat(3, 1fr); }
 }
-
-.scan-stat-info {
-  display: flex;
-  flex-direction: column;
+@media (max-width: 768px) {
+  .scan-params-grid { grid-template-columns: 1fr; }
+  .scan-stats-grid { grid-template-columns: repeat(2, 1fr); }
 }
-
-.scan-stat-label {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  opacity: 0.6;
-  color: var(--md-sys-color-on-surface-variant);
-}
-
-.scan-stat-value {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--md-sys-color-on-surface);
-}
-
-/* ── Responsive Fixes ─────────────────────────────────────────────────── */
-@media (max-width: 1000px) {
-  .scan-params-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* Table row/cell specifics move to tables.css */
-
-/* ── Extended FAB & Hidden ────────────────────────────────────────────── */
-.extended-fab {
-  display: none !important;
-  /* Hide redundant FAB to save space */
+@media (max-width: 480px) {
+  .scan-stats-grid { grid-template-columns: 1fr; }
 }

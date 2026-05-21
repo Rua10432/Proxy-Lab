@@ -1,324 +1,159 @@
-/* ── Config Page ──────────────────────────────────────────────────────── */
-#page-config {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding-top: 12px;
-  overflow-y: auto;
-  padding-bottom: 16px;
-}
-
+/* ═══════════════════════════════════════════════════════════════════════════════
+   Page: Config — System Proxy Setup
+   ═══════════════════════════════════════════════════════════════════════════════ */
 
 .config-card {
-  padding: 16px;
-  /* Standard internal padding */
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  flex-shrink: 0;
-  width: 100%;
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-ink-700);
+  border-radius: var(--radius-sm);
+  padding: var(--space-4);
 }
 
 .config-card-header {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--md-sys-color-on-surface-variant);
-  /* Tonal consistency */
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 8px;
+  font-size: var(--text-body-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-4);
 }
+.config-card-header .icon { color: var(--color-ink-600); }
 
 .config-form-row {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
   flex-wrap: wrap;
 }
-
-.config-form-row .f-address {
-  flex: 2;
-  min-width: 180px;
-}
-
-.config-form-row .f-port {
-  flex: 1;
-  min-width: 100px;
-}
-
-.config-form-row .f-proto {
-  flex: 1;
-  min-width: 100px;
-}
-
-@media (max-width: 600px) {
-  .config-form-row {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .config-form-row > * {
-    flex: none !important;
-    width: 100% !important;
-  }
-  .config-action-row {
-    justify-content: center;
-  }
-  .config-action-row md-filled-button {
-    width: 100%;
-  }
-}
+.config-form-row .input-field { flex: 1; min-width: 140px; }
+.config-form-row .f-port { max-width: 160px; }
+.config-form-row .f-proto { max-width: 180px; }
 
 .config-action-row {
   display: flex;
-  justify-content: flex-end;
-  gap: 12px;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
 }
 
-.console-wrap {
+.admin-lock-icon {
+  width: 24px;
+  height: 24px;
+  font-size: 20px;
+  color: var(--color-ink-600);
+  cursor: help;
+}
+
+/* Recent Configs */
+.recent-configs-section {
+  margin-top: var(--space-6);
+  display: none;
+}
+.recent-configs-section.visible { display: block; }
+.recent-configs-label {
+  display: flex;
+  align-items: center;
+  margin-bottom: var(--space-3);
+}
+.recent-configs-label .label-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   flex: 1;
-  background: #1e1e1e !important;
-  border-radius: 8px;
+  font-size: var(--text-small);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-muted);
+  letter-spacing: 1px;
+}
+.recent-configs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-3);
+}
+
+/* ─────── Local Proxy Detection ─────── */
+.local-proxy-section {
+  margin-top: var(--space-6);
+}
+.local-proxy-hint {
+  font-size: var(--text-small);
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-3);
+  line-height: 1.5;
+}
+.local-proxy-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--space-2);
+}
+.local-proxy-empty {
+  grid-column: 1 / -1;
+  padding: var(--space-4);
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: var(--text-small);
+  background: var(--color-surface-elevated);
+  border: 1px dashed var(--color-ink-600);
+  border-radius: var(--radius-sm);
+}
+.local-proxy-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3);
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-ink-700);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.local-proxy-card:hover {
+  border-color: var(--color-accent-blue);
+  background: var(--color-ink-800);
+}
+.lpc-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.lpc-port {
+  font-family: var(--font-mono);
+  font-size: var(--text-body);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-primary);
+}
+.lpc-proto-badge {
+  font-size: 11px;
+  font-weight: var(--weight-semibold);
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--color-ink-700);
+  color: var(--color-accent-cyan);
+}
+.lpc-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.lpc-proc {
+  font-size: var(--text-small);
+  color: var(--color-text-secondary);
+  max-width: 100px;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  border: none !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-
-.log-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 12px 16px; /* Slightly more vertical padding */
-  background: var(--md-sys-color-surface-container-low); /* Better contrast */
-  border-bottom: 1px solid var(--md-sys-color-outline-variant);
-  flex-wrap: nowrap; /* Prevent wrapping for a cleaner desktop feel */
-  min-height: 72px; /* Ensure space for M3 text field */
-}
-
-.filter-wrap {
-  flex: 1;
-  min-width: 200px;
-}
-
-.filter-input {
-  --md-outlined-text-field-container-shape: 12px; /* Standard M3 shape */
-  width: 100%;
-  height: 56px; /* Explicit height to prevent layout shifts */
-  flex: 1;
-}
-
-.action-icons {
-  display: flex;
-  gap: 4px;
-}
-
-.toolbar-switches {
-  display: flex;
-  align-items: center;
-  gap: 20px;
+.lpc-state {
+  font-size: 11px;
+  color: var(--color-accent-green);
+  text-transform: uppercase;
 }
 
 @media (max-width: 600px) {
-  .log-toolbar {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
-  }
-  .toolbar-switches {
-    justify-content: space-between;
-    width: 100%;
-    gap: 8px;
-  }
-  .filter-wrap {
-    min-width: 0;
-  }
-}
-
-.switch-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--md-sys-color-on-surface-variant);
-  cursor: pointer;
-}
-
-
-.console-titlebar {
-  padding: 8px 16px;
-  background: transparent;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--md-sys-color-on-surface-variant);
-  border-bottom: 1px solid var(--md-sys-color-outline-variant);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.console-log {
-  flex: 1;
-  overflow-y: auto;
-  font-family: 'Roboto Mono', monospace;
-  font-size: 13px;
-  line-height: 1.6;
-  padding: 12px 16px;
-  color: var(--md-sys-color-on-surface);
-}
-
-.console-log .log-line {
-  white-space: pre-wrap;
-  word-break: break-all;
-}
-
-.console-log .log-info {
-  color: var(--md-sys-color-primary);
-}
-
-.console-log .log-ok {
-  color: var(--md-sys-color-tertiary);
-}
-
-.console-log .log-error {
-  color: var(--md-sys-color-error);
-}
-
-.console-log .log-default {
-  color: var(--md-sys-color-outline);
-}
-
-/* ── MTR Panel ───────────────────────────────────────────────────────────── */
-.mtr-panel {
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.mtr-input-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.mtr-content-row {
-  display: flex;
-  gap: 14px;
-  min-height: 200px;
-}
-
-@media (max-width: 800px) {
-  .mtr-content-row {
-    flex-direction: column;
-  }
-}
-
-.mtr-table-wrap {
-  flex: 1;
-  max-height: 400px;
-}
-
-/* MTR table row/cell specifics move to tables.css */
-.mtr-table {
-  font-family: 'Roboto Mono', monospace;
-  font-size: 12px;
-}
-
-@keyframes mtrFlash {
-  0% {
-    background: color-mix(in srgb, var(--md-sys-color-primary) 20%, transparent);
-  }
-
-  100% {
-    background: transparent;
-  }
-}
-
-.mtr-row-flash {
-  animation: mtrFlash 0.6s ease-out;
-}
-
-.mtr-sparkline-col {
-  width: 200px;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  overflow-y: auto;
-  border: 1px solid var(--md-sys-color-outline-variant);
-  border-radius: 12px;
-  padding: 8px;
-  background: transparent;
-}
-
-@media (max-width: 800px) {
-  .mtr-sparkline-col {
-    width: 100%;
-    max-height: 150px;
-  }
-}
-
-.mtr-sparkline-col .spark-label {
-  font-size: 10px;
-  color: var(--md-sys-color-outline);
-  font-family: 'Roboto Mono', monospace;
-}
-
-.mtr-sparkline-col svg {
-  display: block;
-}
-
-.mtr-fab-row {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-}
-
-/* ── Route Card & Table ────────────────────────────────────────────────── */
-.route-table-wrap {
-  overflow: auto;
-}
-
-.route-table th, .route-table td {
-  white-space: nowrap;
-}
-.route-card {
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.route-card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.route-card-title {
-  font-size: 16px;
-  font-weight: 500;
-  color: var(--md-sys-color-primary);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.route-card-time {
-  font-size: 12px;
-  color: var(--md-sys-color-outline);
-  font-family: 'Roboto Mono', monospace;
-}
-
-/* Route table specifics move to tables.css */
-
-.route-empty {
-  text-align: center;
-  padding: 24px;
-  color: var(--md-sys-color-outline);
-  font-size: 13px;
+  .config-form-row { flex-direction: column; }
+  .config-form-row .f-port,
+  .config-form-row .f-proto { max-width: none; }
+  .config-action-row { flex-direction: column; }
+  .recent-configs-grid { grid-template-columns: 1fr; }
 }

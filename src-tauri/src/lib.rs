@@ -64,12 +64,98 @@ fn set_windows_proxy(proxy_addr: &str, proxy_port: &str, enable: bool, protocol:
                 "SOCKS5" | "SOCKS" => format!("socks={}:{}", proxy_addr, proxy_port),
                 _ => format!("{}:{}", proxy_addr, proxy_port), // 默认为 HTTP
             };
-            
+
             cur_ver.set_value("ProxyServer", &full_proxy_addr)?;
         }
+
+        // 广播 WM_SETTINGCHANGE 通知 Edge/Chrome 等应用重新读取代理设置
+        unsafe {
+            unsafe extern "system" {
+                fn SendNotifyMessageW(
+                    hWnd: *mut std::ffi::c_void,
+                    Msg: u32,
+                    wParam: usize,
+                    lParam: *const u16,
+                ) -> isize;
+            }
+            const HWND_BROADCAST: *mut std::ffi::c_void = 0xFFFF as _;
+            const WM_SETTINGCHANGE: u32 = 0x001A;
+            let setting: Vec<u16> = "InternetSettings\0".encode_utf16().collect();
+            SendNotifyMessageW(HWND_BROADCAST, WM_SETTINGCHANGE, 0, setting.as_ptr());
+        }
     }
-    
+
     Ok(())
+}
+
+/// 从 Windows 注册表动态检测系统代理配置（支持 PAC 和全局模式）
+/// 返回 (host, port, protocol, is_active)
+#[cfg(windows)]
+pub fn detect_system_proxy() -> (String, u16, String, bool) {
+    use winreg::{enums::*, RegKey};
+    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+    let path = "Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings";
+
+    if let Ok(key) = hkcu.open_subkey(path) {
+        // Priority 1: PAC 模式（v2rayN 默认写 AutoConfigURL，不写 ProxyEnable）
+        if let Ok(pac_url) = key.get_value::<String, _>("AutoConfigURL") {
+            if !pac_url.is_empty() {
+                // AutoConfigURL 格式: "http://127.0.0.1:10809/proxy.pac"
+                let rest = pac_url
+                    .trim_start_matches("http://")
+                    .trim_start_matches("https://");
+                if let Some(host_part) = rest.split('/').next() {
+                    if let Some(colon_pos) = host_part.rfind(':') {
+                        let port: u16 = host_part[colon_pos + 1..]
+                            .parse()
+                            .unwrap_or(10809);
+                        let host = host_part[..colon_pos]
+                            .trim_start_matches('[')
+                            .trim_end_matches(']')
+                            .to_string();
+                        return (host, port, "HTTP".to_string(), true);
+                    }
+                    let host = host_part
+                        .trim_start_matches('[')
+                        .trim_end_matches(']')
+                        .to_string();
+                    return (host, 10809, "HTTP".to_string(), true);
+                }
+            }
+        }
+
+        // Priority 2: 全局代理模式（传统 ProxyEnable + ProxyServer）
+        let enabled: u32 = key.get_value("ProxyEnable").unwrap_or(0);
+        if enabled == 1 {
+            if let Ok(server) = key.get_value::<String, _>("ProxyServer") {
+                if !server.is_empty() {
+                    let mut protocol = "HTTP".to_string();
+                    let mut host_port = server.clone();
+
+                    let lower = server.to_lowercase();
+                    if lower.starts_with("socks=") {
+                        protocol = "SOCKS5".to_string();
+                        host_port = server[6..].to_string();
+                    } else if lower.starts_with("http=") {
+                        host_port = server[5..].to_string();
+                    } else if lower.starts_with("https=") {
+                        protocol = "HTTPS".to_string();
+                        host_port = server[6..].to_string();
+                    }
+
+                    let parts: Vec<&str> = host_port.split(':').collect();
+                    if parts.len() >= 2 {
+                        if let Ok(port) = parts[1].parse::<u16>() {
+                            return (parts[0].to_string(), port, protocol, true);
+                        }
+                    }
+                    return (host_port, 80, protocol, true);
+                }
+            }
+        }
+    }
+
+    (String::new(), 0, "HTTP".to_string(), false)
 }
 
 #[cfg(target_os = "linux")]
@@ -163,6 +249,42 @@ struct ScanProgressPayload {
     scanned: u64,
     total: u64,
     found: u64,
+}
+
+
+
+#[derive(Clone, Serialize, Debug)]
+pub struct TcpConnection {
+    pub local_addr: String,
+    pub local_port: u16,
+    pub remote_addr: String,
+    pub remote_port: u16,
+    pub state: String,
+    pub pid: u32,
+    pub process_name: String,
+    pub process_path: String,
+    pub is_proxy_traffic: bool,
+    pub protocol: String,
+}
+
+#[derive(Clone, Serialize, Debug)]
+struct MonitorData {
+    connections: Vec<TcpConnection>,
+    proxy_active: bool,
+    proxy_host: String,
+    proxy_port: u16,
+    proxy_rules: Vec<config::ProxyRule>,
+    summary: MonitorSummary,
+}
+
+#[derive(Clone, Serialize, Debug)]
+struct MonitorSummary {
+    total_connections: usize,
+    proxy_connections: usize,
+    direct_connections: usize,
+    listening_ports: usize,
+    unique_processes: usize,
+    unique_proxy_processes: usize,
 }
 
 #[derive(Serialize)]
@@ -997,8 +1119,8 @@ fn win_toggle_maximize(window: tauri::Window) {
 }
 
 #[tauri::command]
-fn win_close(window: tauri::Window) {
-    let _ = window.hide();
+fn win_close(app: tauri::AppHandle) {
+    app.exit(0);
 }
 
 #[tauri::command]
@@ -1012,37 +1134,415 @@ fn win_is_maximized(window: tauri::Window) -> bool {
 }
 
 #[tauri::command]
+fn win_set_decorations(window: tauri::Window, decorations: bool) {
+    let _ = window.set_decorations(decorations);
+
+    #[cfg(target_os = "windows")]
+    {
+        use raw_window_handle::{HasWindowHandle, RawWindowHandle};
+        if let Ok(handle) = window.window_handle() {
+            if let RawWindowHandle::Win32(wh) = handle.as_raw() {
+                unsafe extern "system" {
+                    fn GetWindowLongW(hWnd: *mut std::ffi::c_void, nIndex: i32) -> i32;
+                    fn SetWindowLongW(hWnd: *mut std::ffi::c_void, nIndex: i32, dwNewLong: i32) -> i32;
+                }
+                unsafe {
+                    const GWL_EXSTYLE: i32 = -20;
+                    const WS_EX_LAYERED: i32 = 0x0008_0000;
+                    const WS_EX_TRANSPARENT: i32 = 0x0000_0020;
+                    let hwnd = wh.hwnd.get() as *mut std::ffi::c_void;
+                    let ex_style = GetWindowLongW(hwnd, GWL_EXSTYLE);
+                    if decorations {
+                        let new_ex = ex_style & !(WS_EX_LAYERED | WS_EX_TRANSPARENT);
+                        SetWindowLongW(hwnd, GWL_EXSTYLE, new_ex);
+                    } else {
+                        let new_ex = ex_style | WS_EX_LAYERED;
+                        SetWindowLongW(hwnd, GWL_EXSTYLE, new_ex);
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+#[tauri::command]
+fn get_tcp_connections(state: tauri::State<'_, AppState>) -> MonitorData {
+    let cfg = state.config.lock().unwrap();
+    let proxy_rules = cfg.proxy_rules.clone();
+
+    // 动态检测 Windows 系统代理（支持 PAC AutoConfigURL 和全局模式）
+    #[cfg(windows)]
+    let (sys_host, sys_port, _sys_proto, sys_active) = detect_system_proxy();
+    #[cfg(not(windows))]
+    let (sys_host, sys_port, _sys_proto, sys_active) = (String::new(), 0u16, String::new(), false);
+
+    // 优先使用系统代理状态；fallback 到用户曾在 app 配置过的代理列表
+    let proxy_active = sys_active || cfg.proxies.iter().any(|p| !p.ip.is_empty());
+    let proxy_host = if !sys_host.is_empty() { sys_host } else { cfg.proxies.first().map(|p| p.ip.clone()).unwrap_or_default() };
+    let proxy_port = if sys_port > 0 { sys_port } else { cfg.proxies.first().map(|p| p.port).unwrap_or(0) };
+
+    let connections = get_netstat_connections(&proxy_rules, proxy_port);
+    let total = connections.len();
+    let proxy_count = connections.iter().filter(|c| c.is_proxy_traffic).count();
+    let direct = total - proxy_count;
+    let listen_count = connections.iter().filter(|c| c.state == "LISTENING").count();
+
+    let mut unique_procs: std::collections::HashSet<String> = std::collections::HashSet::new();
+    let mut unique_proxy_procs: std::collections::HashSet<String> = std::collections::HashSet::new();
+    for c in &connections {
+        unique_procs.insert(c.process_name.clone());
+        if c.is_proxy_traffic {
+            unique_proxy_procs.insert(c.process_name.clone());
+        }
+    }
+
+    MonitorData {
+        connections,
+        proxy_active,
+        proxy_host,
+        proxy_port,
+        proxy_rules:proxy_rules.to_vec(),
+        summary: MonitorSummary {
+            total_connections: total,
+            proxy_connections: proxy_count,
+            direct_connections: direct,
+            listening_ports: listen_count,
+            unique_processes: unique_procs.len(),
+            unique_proxy_processes: unique_proxy_procs.len(),
+        },
+    }
+}
+
+fn get_netstat_connections(
+    proxy_rules: &[config::ProxyRule],
+    proxy_port: u16,
+) -> Vec<TcpConnection> {
+    let mut result = Vec::new();
+    use std::process::Command as ProcCmd;
+
+    #[cfg(windows)]
+    {
+        use std::collections::HashMap;
+
+        // Get process names via sysinfo
+        let mut sys = sysinfo::System::new();
+        sys.refresh_processes(sysinfo::ProcessesToUpdate::All, true);
+        let mut pid_name: HashMap<u32, (String, String)> = HashMap::new();
+        for (pid, proc) in sys.processes() {
+            pid_name.insert(pid.as_u32(), (
+                proc.name().to_string_lossy().to_string(),
+                proc.exe().map(|p| p.to_string_lossy().to_string()).unwrap_or_default(),
+            ));
+        }
+
+        // Parse netstat output
+        if let Ok(output) = ProcCmd::new("netstat").arg("-ano").output() {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let ruled_paths: std::collections::HashSet<String> = proxy_rules.iter()
+                .filter(|r| r.enabled)
+                .map(|r| r.app_path.clone())
+                .collect();
+
+            for line in stdout.lines().skip(4) {
+                let parts: Vec<&str> = line.split_whitespace().collect();
+                if parts.len() < 5 { continue; }
+
+                // Parse protocol
+                let protocol = match parts[0] {
+                    "TCP" | "UDP" => parts[0].to_string(),
+                    _ => continue,
+                };
+
+                // Parse local address:port
+                let local = parse_addr_port(parts[1]);
+                let remote = parse_addr_port(parts[2]);
+                let state = if parts.len() > 3 { parts[3].to_string() } else { String::new() };
+                let pid_str = parts.last().unwrap_or(&"0");
+                let pid: u32 = pid_str.parse().unwrap_or(0);
+
+                let (proc_name, proc_path) = pid_name.get(&pid)
+                    .map(|(n, p)| (n.clone(), p.clone()))
+                    .unwrap_or(("Unknown".to_string(), String::new()));
+
+                let is_proxy = if proxy_port > 0 && (local.1 == proxy_port || remote.1 == proxy_port) {
+                    true
+                } else if ruled_paths.contains(&proc_path) {
+                    true
+                } else {
+                    false
+                };
+
+                result.push(TcpConnection {
+                    local_addr: local.0,
+                    local_port: local.1,
+                    remote_addr: remote.0,
+                    remote_port: remote.1,
+                    state,
+                    pid,
+                    process_name: proc_name,
+                    process_path: proc_path,
+                    is_proxy_traffic: is_proxy,
+                    protocol,
+                });
+            }
+        }
+    }
+
+    #[cfg(not(windows))]
+    {
+        // Linux / Mac: parse /proc/net/tcp or netstat output
+        if let Ok(output) = ProcCmd::new("netstat").arg("-anp").arg("tcp").output() {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let ruled_paths: std::collections::HashSet<String> = proxy_rules.iter()
+                .filter(|r| r.enabled)
+                .map(|r| r.app_path.clone())
+                .collect();
+
+            for line in stdout.lines().skip(2) {
+                let parts: Vec<&str> = line.split_whitespace().collect();
+                if parts.len() < 6 { continue; }
+
+                let protocol = "TCP".to_string();
+                let local = parse_addr_port(parts[3]);
+                let remote = parse_addr_port(parts[4]);
+                let state_code: u32 = parts[5].parse().unwrap_or(0);
+                let state = tcp_state_str(state_code);
+
+                // Extract PID from the last column (format: pid/program)
+                let mut pid: u32 = 0;
+                let mut proc_name = String::new();
+                if let Some(last) = parts.last() {
+                    if let Some(pid_start) = last.find('/') {
+                        if let Ok(p) = last[..pid_start].parse() {
+                            pid = p;
+                        }
+                        proc_name = last[pid_start + 1..].to_string();
+                    }
+                }
+
+                let proc_path = String::new();
+                let is_proxy = proxy_port > 0 && (local.1 == proxy_port || remote.1 == proxy_port)
+                    || ruled_paths.contains(&proc_path);
+
+                result.push(TcpConnection {
+                    local_addr: local.0,
+                    local_port: local.1,
+                    remote_addr: remote.0,
+                    remote_port: remote.1,
+                    state,
+                    pid,
+                    process_name: proc_name,
+                    process_path: proc_path,
+                    is_proxy_traffic: is_proxy,
+                    protocol,
+                });
+            }
+        }
+    }
+
+    result
+}
+
+fn parse_addr_port(s: &str) -> (String, u16) {
+    // Handle IPv6: [::1]:port or IPv4: 127.0.0.1:port
+    if s.starts_with('[') {
+        // IPv6: [addr]:port
+        if let Some(bracket_end) = s.find(']') {
+            let addr = s[1..bracket_end].to_string();
+            let port: u16 = s[bracket_end + 2..].parse().unwrap_or(0);
+            (addr, port)
+        } else {
+            (s.to_string(), 0)
+        }
+    } else if let Some(colon) = s.rfind(':') {
+        let addr = s[..colon].to_string();
+        let port: u16 = s[colon + 1..].parse().unwrap_or(0);
+        (addr, port)
+    } else {
+        (s.to_string(), 0)
+    }
+}
+
+// fn tcp_state_str(code: u32) -> String {
+//     match code {
+//         1 => "ESTABLISHED".to_string(),
+//         2 => "SYN_SENT".to_string(),
+//         3 => "SYN_RECV".to_string(),
+//         4 => "FIN_WAIT1".to_string(),
+//         5 => "FIN_WAIT2".to_string(),
+//         6 => "TIME_WAIT".to_string(),
+//         7 => "CLOSE".to_string(),
+//         8 => "CLOSE_WAIT".to_string(),
+//         9 => "LAST_ACK".to_string(),
+//         10 => "LISTENING".to_string(),
+//         11 => "CLOSING".to_string(),
+//         _ => format!("UNKNOWN({})", code),
+//     }
+// }
+
+#[tauri::command]
+fn get_proxy_rules(state: tauri::State<'_, AppState>) -> Vec<config::ProxyRule> {
+    state.config.lock().unwrap().proxy_rules.clone()
+}
+
+#[tauri::command]
+fn set_app_proxy_rule(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, AppState>,
+    app_path: String,
+) -> Result<config::ProxyRule, String> {
+    let mut cfg = state.config.lock().unwrap();
+
+    // Check if rule already exists
+    if let Some(existing) = cfg.proxy_rules.iter_mut().find(|r| r.app_path == app_path) {
+        existing.enabled = true;
+        let rule = existing.clone();
+        config::save_config(&app, &cfg)?;
+        return Ok(rule);
+    }
+
+    // Extract app name from path
+    let app_name = std::path::Path::new(&app_path)
+        .file_stem()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_else(|| "Unknown".to_string());
+
+    let now = chrono::Local::now();
+    let rule = config::ProxyRule {
+        app_path: app_path.clone(),
+        app_name,
+        enabled: true,
+        added_at: now.format("%Y-%m-%d %H:%M:%S").to_string(),
+    };
+
+    cfg.proxy_rules.push(rule.clone());
+    config::save_config(&app, &cfg)?;
+    Ok(rule)
+}
+
+#[tauri::command]
+fn remove_app_proxy_rule(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, AppState>,
+    app_path: String,
+) -> Result<(), String> {
+    let mut cfg = state.config.lock().unwrap();
+    cfg.proxy_rules.retain(|r| r.app_path != app_path);
+    config::save_config(&app, &cfg)
+}
+
+#[tauri::command]
+fn toggle_app_proxy_rule(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, AppState>,
+    app_path: String,
+    enabled: bool,
+) -> Result<(), String> {
+    let mut cfg = state.config.lock().unwrap();
+    if let Some(rule) = cfg.proxy_rules.iter_mut().find(|r| r.app_path == app_path) {
+        rule.enabled = enabled;
+    }
+    config::save_config(&app, &cfg)
+}
+
+
+#[derive(Serialize)]
+struct LocalProxyPort {
+    port: u16,
+    protocol: String,
+    process_name: String,
+    state: String,
+}
+
+/// 扫描本地常见代理端口，检测哪些端口上有服务在监听
+#[tauri::command]
+fn get_local_proxy_ports() -> Vec<LocalProxyPort> {
+    use std::process::Command as ProcCmd;
+    use std::collections::HashMap;
+
+    // 常见代理服务端口列表
+    const PROXY_PORTS: &[u16] = &[
+        1080, 1081, 1088,  // SOCKS 代理
+        3128, 3129,        // Squid / 缓存代理
+        7890, 7891, 7892,  // Clash / Clash Verge
+        8080, 8081,        // HTTP 代理
+        8118,              // Privoxy
+        8443,              // HTTPS 代理
+        8888,              // mitmproxy / HTTP 代理
+        9050, 9150,        // Tor SOCKS
+        9090,              // 代理管理面板
+        10000,             // 各类代理服务
+    ];
+
+    let mut sys = sysinfo::System::new();
+    sys.refresh_processes(sysinfo::ProcessesToUpdate::All, true);
+    let mut pid_name: HashMap<u32, String> = HashMap::new();
+    for (pid, proc) in sys.processes() {
+        pid_name.insert(pid.as_u32(), proc.name().to_string_lossy().to_string());
+    }
+
+    // 用 HashSet 加速查找
+    let proxy_set: std::collections::HashSet<u16> = PROXY_PORTS.iter().copied().collect();
+    let mut found: HashMap<u16, (String, u32, String)> = HashMap::new(); // port -> (protocol, pid, state)
+
+    #[cfg(windows)]
+    if let Ok(output) = ProcCmd::new("netstat").args(["-ano"]).output() {
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        for line in stdout.lines().skip(4) {
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            if parts.len() < 4 { continue; }
+
+            let protocol = parts[0].to_string();
+            if protocol != "TCP" && protocol != "TCP6" { continue; }
+
+            // 解析本地地址和端口（格式: "0.0.0.0:1080" 或 "[::]:1080"）
+            let local_part = parts[1];
+            let port = local_part.split(':').last()
+                .and_then(|s| s.parse::<u16>().ok())
+                .unwrap_or(0);
+
+            if !proxy_set.contains(&port) { continue; }
+
+            let state = parts.last().unwrap_or(&"").to_string();
+            let pid: u32 = parts[3].parse().unwrap_or(0);
+
+            // 只关心 LISTENING 状态的端口
+            if state != "LISTENING" { continue; }
+
+            found.entry(port).or_insert_with(|| {
+                (protocol.clone(), pid, state.clone())
+            });
+        }
+    }
+
+    let mut result: Vec<LocalProxyPort> = found.into_iter().map(|(port, (protocol, pid, state))| {
+        LocalProxyPort {
+            port,
+            process_name: pid_name.get(&pid).cloned().unwrap_or_else(|| "Unknown".into()),
+            protocol,
+            state,
+        }
+    }).collect();
+
+    result.sort_by_key(|p| p.port);
+    result
+}
+
+#[tauri::command]
 async fn get_proxy_status() -> Result<ProxyStatus, String> {
     #[cfg(windows)]
     {
-        use winreg::{enums::*, RegKey};
-        let hkcu = RegKey::predef(HKEY_CURRENT_USER);
-        let cur_ver = hkcu.open_subkey("Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings")
-            .map_err(|e| e.to_string())?;
-
-        let enabled: u32 = cur_ver.get_value("ProxyEnable").unwrap_or(0);
-        let server: String = cur_ver.get_value("ProxyServer").unwrap_or_default();
-
-        if enabled == 1 && !server.is_empty() {
-            let mut protocol = "HTTP".to_string();
-            let mut host_port = server.clone();
-
-            if server.to_lowercase().starts_with("socks=") {
-                protocol = "SOCKS5".to_string();
-                host_port = server[6..].to_string();
-            }
-
-            let parts: Vec<&str> = host_port.split(':').collect();
-            if parts.len() == 2 {
-                return Ok(ProxyStatus {
-                    is_active: true,
-                    host: parts[0].to_string(),
-                    port: parts[1].to_string(),
-                    protocol,
-                    username: None,
-                    password: None,
-                });
-            }
+        let (host, port, protocol, is_active) = detect_system_proxy();
+        if is_active {
+            return Ok(ProxyStatus {
+                is_active: true,
+                host,
+                port: port.to_string(),
+                protocol,
+                username: None,
+                password: None,
+            });
         }
     }
     
@@ -1243,7 +1743,14 @@ pub fn run() {
             win_close,
             win_start_drag,
             win_is_maximized,
+            win_set_decorations,
+            get_tcp_connections,
+            get_proxy_rules,
+            set_app_proxy_rule,
+            remove_app_proxy_rule,
+            toggle_app_proxy_rule,
             get_proxy_status,
+            get_local_proxy_ports,
             disconnect_proxy,
             shittim_mem_task,
             is_admin,

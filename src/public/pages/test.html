@@ -1,0 +1,208 @@
+<!-- ═══════════════════════════════════════════════════════════════════════
+             Page: Test
+             ═══════════════════════════════════════════════════════════════════════ -->
+          <div class="page active" id="page-test">
+            <!-- Tabs -->
+            <div class="tabs">
+              <button class="tab-btn active" data-tab="manual">
+                <span class="icon icon-sm">build</span> Manual Probe
+              </button>
+              <button class="tab-btn" data-tab="pool">
+                <span class="icon icon-sm">reorder</span> Proxy Pool
+              </button>
+            </div>
+
+            <!-- Tab: Manual Probe -->
+            <div class="tab-content" id="tab-manual">
+              <div class="test-params">
+                <div class="field-row">
+                  <div class="input-field f-address">
+                    <label>Address</label>
+                    <div class="input-wrap">
+                      <span class="icon icon-sm leading-icon">dns</span>
+                      <input type="text" id="test-host" placeholder="127.0.0.1">
+                    </div>
+                  </div>
+                  <div class="input-field f-port">
+                    <label>Port</label>
+                    <div class="input-wrap">
+                      <span class="icon icon-sm leading-icon">settings_ethernet</span>
+                      <input type="number" id="test-port" placeholder="7890" min="1" max="65535">
+                    </div>
+                  </div>
+                  <div class="input-field f-proto">
+                    <label>Protocol</label>
+                    <div class="select-field" id="test-proto-select">
+                      <div class="select-trigger">
+                        <span class="select-value">HTTP</span>
+                        <span class="icon icon-sm arrow">expand_more</span>
+                      </div>
+                      <div class="select-dropdown">
+                        <div class="select-option selected" data-value="HTTP">HTTP</div>
+                        <div class="select-option" data-value="SOCKS5">SOCKS5</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="field-row">
+                  <div class="input-field f-count">
+                    <label>Times</label>
+                    <div class="input-wrap">
+                      <span class="icon icon-sm leading-icon">repeat</span>
+                      <input type="number" id="test-count" value="10" min="1">
+                    </div>
+                  </div>
+                  <div class="input-field f-ms">
+                    <label>Timeout</label>
+                    <div class="input-wrap">
+                      <span class="icon icon-sm leading-icon">timer</span>
+                      <input type="number" id="test-timeout" value="3000" min="0">
+                      <span class="suffix">ms</span>
+                    </div>
+                  </div>
+                  <div class="input-field f-ms">
+                    <label>Interval</label>
+                    <div class="input-wrap">
+                      <span class="icon icon-sm leading-icon">hourglass_empty</span>
+                      <input type="number" id="test-interval" value="500" min="0">
+                      <span class="suffix">ms</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="field-row">
+                  <div class="input-field f-user">
+                    <label>Username</label>
+                    <div class="input-wrap">
+                      <span class="icon icon-sm leading-icon">person</span>
+                      <input type="text" id="test-user" placeholder="Optional">
+                    </div>
+                  </div>
+                  <div class="input-field f-pass">
+                    <label>Password</label>
+                    <div class="input-wrap">
+                      <span class="icon icon-sm leading-icon">key</span>
+                      <input type="password" id="test-pass" placeholder="Optional">
+                    </div>
+                  </div>
+                </div>
+
+                <div class="action-row">
+                  <button class="btn btn-primary" id="btn-test">
+                    <span class="icon icon-sm">play_arrow</span> Test
+                  </button>
+                  <button class="btn btn-tonal" id="btn-stop" disabled>
+                    <span class="icon icon-sm">stop</span> Stop
+                  </button>
+                  <button class="btn btn-text" id="btn-clear-fields">
+                    <span class="icon icon-sm">clear_all</span> Clear
+                  </button>
+                  <div class="spacer"></div>
+                  <div class="status-chip status-ready" id="status-chip">
+                    <span class="dot"></span>
+                    <span id="status-text">ready</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Test Stats Bar -->
+              <div class="test-stats-bar" id="test-stats-bar" style="display:none">
+                <div class="stat-item">
+                  <span class="stat-label">Min:</span>
+                  <span class="stat-val" id="stat-min">--</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">Max:</span>
+                  <span class="stat-val" id="stat-max">--</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">Avg:</span>
+                  <span class="stat-val" id="stat-avg">--</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">Loss:</span>
+                  <span class="stat-val" id="stat-loss">0%</span>
+                </div>
+              </div>
+
+              <!-- Recent Tests -->
+              <div class="recent-section" id="recent-tests-section">
+                <div class="recent-header">
+                  <div class="recent-label">
+                    <span class="icon icon-sm">history</span> RECENT TESTS
+                  </div>
+                  <button class="btn btn-text" id="btn-clear-test-history" style="font-size:12px">CLEAR HISTORY</button>
+                </div>
+                <div class="recent-grid" id="recent-tests-list"></div>
+              </div>
+            </div>
+
+            <!-- Tab: Proxy Pool -->
+            <div class="tab-content hidden" id="tab-pool">
+              <div class="pool-controls">
+                <div class="field-row" style="margin-bottom:8px">
+                  <div class="input-field" style="flex:1">
+                    <label>Subscription Link / URL</label>
+                    <div class="input-wrap">
+                      <span class="icon icon-sm leading-icon">link</span>
+                      <input type="text" id="pool-sub-url" placeholder="http://example.com/proxies.txt">
+                    </div>
+                  </div>
+                  <button class="btn btn-tonal" id="btn-pool-fetch" style="align-self:flex-end">
+                    <span class="icon icon-sm">cloud_download</span> Fetch &amp; Import
+                  </button>
+                </div>
+                <div class="action-row">
+                  <button class="btn btn-primary" id="btn-pool-test-all">
+                    <span class="icon icon-sm">speed</span> Test All
+                  </button>
+                  <button class="btn btn-tonal" id="btn-pool-stop" disabled>
+                    <span class="icon icon-sm">stop</span> Stop
+                  </button>
+                  <button class="btn btn-text" id="btn-pool-refresh">
+                    <span class="icon icon-sm">refresh</span> Sync
+                  </button>
+                  <button class="btn btn-danger" id="btn-pool-clear">
+                    <span class="icon icon-sm">delete_sweep</span> Clear Pool
+                  </button>
+                  <div class="spacer"></div>
+                  <div class="pool-info-badge">
+                    <span class="icon">apps</span>
+                    <span id="pool-count-label">0 Proxies</span>
+                  </div>
+                </div>
+              </div>
+              <div class="filter-field">
+                <div class="input-field">
+                  <div class="input-wrap">
+                    <span class="icon icon-sm leading-icon">search</span>
+                    <input type="text" id="pool-filter" placeholder="Filter results...">
+                  </div>
+                </div>
+              </div>
+              <div class="table-card pool-table-container" style="margin-top:16px">
+                <div class="table-wrapper">
+                  <table class="data-table" id="pool-table">
+                    <thead>
+                      <tr>
+                        <th style="width:50px">#</th>
+                        <th>Host</th>
+                        <th style="width:100px">Port</th>
+                        <th style="width:120px">Protocol</th>
+                        <th style="width:140px">Latency</th>
+                        <th style="width:100px">Status</th>
+                        <th style="width:100px">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody id="pool-table-body"></tbody>
+                  </table>
+                </div>
+                <div class="table-empty" id="pool-empty-state">
+                  <span class="icon empty-icon">cloud_off</span>
+                  <div class="empty-title">Proxy Pool Empty</div>
+                  <div class="empty-sub">Add proxies in the Config page or Scan for new ones</div>
+                </div>
+              </div>
+            </div>
+          </div>

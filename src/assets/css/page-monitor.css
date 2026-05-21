@@ -1,0 +1,359 @@
+/* ═══════════════════════════════════════════════════════════════════════════════
+   Page: Monitor — TCP Connection & Proxy Traffic Monitor
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+.monitor-layout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* Summary Row */
+.monitor-summary-row {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: var(--space-3);
+}
+
+.monitor-summary-card {
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-ink-700);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  transition: all var(--transition-normal);
+}
+.monitor-summary-card:hover {
+  border-color: var(--color-ink-600);
+  transform: translateY(-1px);
+}
+
+.msc-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.msc-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.msc-label {
+  font-size: 10px;
+  color: var(--color-text-subtle);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: var(--weight-semibold);
+  white-space: nowrap;
+}
+
+.msc-value {
+  font-size: 20px;
+  font-weight: var(--weight-bold);
+  color: var(--color-text-primary);
+  font-family: var(--font-mono);
+}
+
+/* Proxy Status Banner */
+.proxy-status-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-ink-700);
+  background: var(--color-ink-800);
+}
+.proxy-status-bar.active {
+  border-color: rgba(158, 221, 200, 0.3);
+  background: rgba(158, 221, 200, 0.06);
+}
+.proxy-status-bar.inactive {
+  border-color: rgba(244, 167, 185, 0.3);
+  background: rgba(244, 167, 185, 0.04);
+}
+
+.proxy-status-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.proxy-status-bar.active .proxy-status-icon { color: var(--color-accent-green); }
+.proxy-status-bar.inactive .proxy-status-icon { color: var(--color-accent-pink); }
+
+.proxy-status-text {
+  font-size: var(--text-small);
+  color: var(--color-text-subtle);
+}
+.proxy-status-bar.active .proxy-status-text { color: var(--color-accent-green); }
+.proxy-status-bar.inactive .proxy-status-text { color: var(--color-accent-pink); }
+
+/* Monitor Tabs */
+.monitor-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--color-ink-700);
+  gap: 4px;
+}
+
+.monitor-tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  font-size: var(--text-small);
+  font-weight: var(--weight-semibold);
+  color: var(--color-ink-600);
+  background: none;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  transition: color var(--transition-fast);
+}
+.monitor-tab-btn:hover { color: var(--color-ink-82); }
+.monitor-tab-btn.active { color: var(--color-accent-green); }
+.monitor-tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--color-accent-green);
+}
+
+.monitor-tab-content {
+  display: none;
+  flex-direction: column;
+  scrollbar-width: auto;
+  gap: var(--space-4);
+}
+.monitor-tab-content.active { display: flex; }
+
+/* Monitor Toolbar */
+.monitor-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.monitor-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* Select Chips */
+.monitor-select-chip {
+  display: flex;
+  gap: 4px;
+  background: var(--color-ink-800);
+  border-radius: var(--radius-pill);
+  padding: 3px;
+}
+
+.chip-btn {
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: var(--weight-semibold);
+  color: var(--color-ink-500);
+  border: none;
+  background: none;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.chip-btn:hover { color: var(--color-ink-82); }
+.chip-btn.active {
+  background: var(--color-surface-elevated);
+  color: var(--color-accent-green);
+  box-shadow: var(--shadow-subtle);
+}
+
+/* Monitor Table Container */
+.monitor-table-container {
+  max-height: calc(100vh - 420px);
+  min-height: 300px;
+  min-width: 0;  /* allow flex shrink below table min-width so horizontal scrollbar can appear */
+}
+.monitor-table-container .table-wrapper {
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: calc(100vh - 420px);
+  min-height: 300px;
+}
+#monitor-table {
+  table-layout: fixed;
+  min-width: 990px;
+}
+
+/* Traffic Indicators */
+.traffic-dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: var(--weight-semibold);
+}
+.traffic-dot::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.traffic-dot.proxy { color: var(--color-accent-green); }
+.traffic-dot.proxy::before { background: var(--color-accent-green); }
+.traffic-dot.direct { color: var(--color-accent-blue); }
+.traffic-dot.direct::before { background: var(--color-accent-blue); }
+.traffic-dot.listen { color: var(--color-accent-yellow); }
+.traffic-dot.listen::before { background: var(--color-accent-yellow); }
+
+/* Process cell */
+.process-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.process-cell .process-icon {
+  font-size: 16px;
+  color: var(--color-ink-500);
+}
+
+/* Action btn in table */
+.monitor-action-btn {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  color: var(--color-ink-500);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.monitor-action-btn:hover { background: var(--color-ink-700); color: var(--color-accent-green); }
+.monitor-action-btn.ruled { color: var(--color-accent-green); }
+
+/* Rules Toolbar Info */
+.rules-toolbar-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  font-size: var(--text-small);
+  color: var(--color-text-subtle);
+}
+
+/* Rules List */
+.rules-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  color: var(--color-text-subtle);
+  gap: 8px;
+}
+
+.rules-list-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 10px 14px;
+  border: 1px solid var(--color-ink-700);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+}
+.rules-list-item + .rules-list-item { margin-top: 8px; }
+.rules-list-item:hover { border-color: var(--color-ink-600); }
+
+.rules-item-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  background: rgba(158, 221, 200, 0.08);
+  color: var(--color-accent-green);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.rules-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.rules-item-name {
+  font-size: var(--text-small);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rules-item-path {
+  font-size: 11px;
+  color: var(--color-text-subtle);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+.rules-item-meta {
+  font-size: 11px;
+  color: var(--color-ink-500);
+  margin-top: 2px;
+}
+
+.rules-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Responsive */
+@media (max-width: 1100px) {
+  .monitor-summary-row {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .monitor-summary-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .monitor-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .monitor-toolbar-right {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .monitor-table-container .table-wrapper {
+    overflow-x: auto;
+    max-height: 400px;
+  }
+  .monitor-tabs {
+      overflow-x: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .monitor-summary-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}

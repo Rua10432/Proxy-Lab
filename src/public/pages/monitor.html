@@ -1,0 +1,164 @@
+<!-- ═══════════════════════════════════════════════════════════════════════
+             Page: Monitor — TCP Connection & Proxy Traffic Monitor
+             ═══════════════════════════════════════════════════════════════════════ -->
+          <div class="page" id="page-monitor">
+            <div class="monitor-layout">
+
+              <!-- Summary Cards -->
+              <div class="monitor-summary-row">
+                <div class="monitor-summary-card">
+                  <div class="msc-icon" style="background:rgba(158,221,200,0.08);color:#9eddc8">
+                    <span class="icon">cable</span>
+                  </div>
+                  <div class="msc-info">
+                    <span class="msc-label" data-i18n="monitor.totalConn">Total Connections</span>
+                    <span class="msc-value" id="mon-total-conn">0</span>
+                  </div>
+                </div>
+                <div class="monitor-summary-card">
+                  <div class="msc-icon" style="background:rgba(158,221,200,0.12);color:#9eddc8">
+                    <span class="icon">shield</span>
+                  </div>
+                  <div class="msc-info">
+                    <span class="msc-label" data-i18n="monitor.proxyTraffic">Proxy Traffic</span>
+                    <span class="msc-value" id="mon-proxy-conn">0</span>
+                  </div>
+                </div>
+                <div class="monitor-summary-card">
+                  <div class="msc-icon" style="background:rgba(159,212,255,0.08);color:#9fd4ff">
+                    <span class="icon">public</span>
+                  </div>
+                  <div class="msc-info">
+                    <span class="msc-label" data-i18n="monitor.directTraffic">Direct Traffic</span>
+                    <span class="msc-value" id="mon-direct-conn">0</span>
+                  </div>
+                </div>
+                <div class="monitor-summary-card">
+                  <div class="msc-icon" style="background:rgba(245,233,181,0.08);color:#f5e9b5">
+                    <span class="icon">hearing</span>
+                  </div>
+                  <div class="msc-info">
+                    <span class="msc-label" data-i18n="monitor.listening">Listening</span>
+                    <span class="msc-value" id="mon-listen-conn">0</span>
+                  </div>
+                </div>
+                <div class="monitor-summary-card">
+                  <div class="msc-icon" style="background:rgba(244,167,185,0.08);color:#f4a7b9">
+                    <span class="icon">apps</span>
+                  </div>
+                  <div class="msc-info">
+                    <span class="msc-label" data-i18n="monitor.processes">Processes</span>
+                    <span class="msc-value" id="mon-processes">0</span>
+                  </div>
+                </div>
+                <div class="monitor-summary-card">
+                  <div class="msc-icon" style="background:rgba(158,221,200,0.12);color:#9eddc8">
+                    <span class="icon">verified_user</span>
+                  </div>
+                  <div class="msc-info">
+                    <span class="msc-label" data-i18n="monitor.viaProxy">Via Proxy</span>
+                    <span class="msc-value" id="mon-proxy-procs">0</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Proxy Status Banner -->
+              <div class="proxy-status-bar" id="proxy-status-bar">
+                <span class="icon proxy-status-icon">info</span>
+                <div class="proxy-status-text">
+                  <span id="proxy-status-msg">Checking proxy status...</span>
+                </div>
+              </div>
+
+              <!-- Main Content: Tabs for Connections + Rules -->
+              <div class="monitor-tabs">
+                <button class="monitor-tab-btn active" data-tab="connections">
+                  <span class="icon icon-sm">lan</span> Connections
+                </button>
+                <button class="monitor-tab-btn" data-tab="rules">
+                  <span class="icon icon-sm">rule</span> Proxy Rules
+                </button>
+              </div>
+
+              <!-- Connections Tab -->
+              <div class="monitor-tab-content active" id="mon-tab-connections">
+                <!-- Toolbar -->
+                <div class="monitor-toolbar">
+                  <div class="filter-wrap">
+                    <div class="input-field" style="margin-top:0">
+                      <div class="input-wrap">
+                        <span class="icon icon-sm leading-icon">search</span>
+                        <input type="text" id="mon-filter" data-i18n-placeholder="monitor.searchPlaceholder" placeholder="Filter by process or address...">
+                      </div>
+                    </div>
+                  </div>
+                  <div class="monitor-toolbar-right">
+                    <div class="monitor-select-chip">
+                      <button class="chip-btn active" data-filter="all" data-i18n="monitor.filterAll">All</button>
+                      <button class="chip-btn" data-filter="proxy" data-i18n="monitor.filterProxy">Proxy</button>
+                      <button class="chip-btn" data-filter="direct" data-i18n="monitor.filterDirect">Direct</button>
+                      <button class="chip-btn" data-filter="listen" data-i18n="monitor.filterListen">Listening</button>
+                    </div>
+                    <button class="btn-pill" id="btn-refresh-monitor">
+                      <span class="icon icon-sm">refresh</span> Refresh
+                    </button>
+                    <div class="switch-wrap">
+                      <div class="switch on" id="switch-monitor-auto">
+                        <div class="thumb"></div>
+                      </div>
+                      <span class="switch-label">Auto</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Connections Table -->
+                <div class="table-card monitor-table-container">
+                  <div class="table-wrapper">
+                    <table class="data-table" id="monitor-table">
+                      <thead>
+                        <tr>
+                          <th style="width:36px"></th>
+                          <th style="width:180px">Process</th>
+                          <th style="width:120px">PID</th>
+                          <th style="width:200px">Local Address</th>
+                          <th style="width:200px">Remote Address</th>
+                          <th style="width:100px">State</th>
+                          <th style="width:80px">Traffic</th>
+                          <th style="width:60px">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody id="monitor-table-body"></tbody>
+                    </table>
+                  </div>
+                  <div class="table-empty" id="monitor-empty-state">
+                    <span class="icon empty-icon">lan</span>
+                    <div class="empty-title">No connections to display</div>
+                    <div class="empty-sub">Click Refresh to fetch current TCP connections</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Rules Tab -->
+              <div class="monitor-tab-content" id="mon-tab-rules">
+                <div class="monitor-toolbar">
+                  <div class="rules-toolbar-info">
+                    <span class="icon icon-sm" style="color:var(--color-accent-green)">info</span>
+                    <span>Add application paths to enforce proxy routing. The application will always route traffic through the configured proxy when active.</span>
+                  </div>
+                  <button class="btn btn-primary" id="btn-add-rule">
+                    <span class="icon icon-sm">add</span> Add Application
+                  </button>
+                </div>
+
+                <div class="surface-container" id="rules-container">
+                  <div class="rules-empty" id="rules-empty-state">
+                    <span class="icon empty-icon">rule</span>
+                    <div class="empty-title">No proxy rules defined</div>
+                    <div class="empty-sub">Add applications to force them through the proxy</div>
+                  </div>
+                  <div id="rules-list"></div>
+                </div>
+              </div>
+
+            </div>
+          </div>

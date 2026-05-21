@@ -1,454 +1,218 @@
-import { invoke, listen } from '../api.js';
-import { state } from '../state.js';
-import { appendLog, setFieldError, classifyConfigLine } from '../utils.js';
+/* ═══════════════════════════════════════════════════════════════════════════════
+   Page: Scan — Network Scanner
+   ═══════════════════════════════════════════════════════════════════════════════ */
 
-const scanTableBody = document.getElementById("scan-table-body");
-const scanEmptyState = document.getElementById("scan-empty-state");
-const scanLinearProgress = document.getElementById("scan-linear-progress");
-const scanProgressLabel = document.getElementById("scan-progress-label");
-const scanFoundLabel = document.getElementById("scan-found-label");
-const scanStatusChip = document.getElementById("scan-status-chip");
-const scanStatusText = document.getElementById("scan-status-text");
-const btnScanStart = document.getElementById("btn-scan-start");
-const btnScanStop = document.getElementById("btn-scan-stop");
-const fabScan = document.getElementById("fab-scan");
-const scanRingPct = document.getElementById("scan-ring-pct");
-const statScanned = document.getElementById("stat-scanned");
-const statPortsOpen = document.getElementById("stat-ports-open");
-const statFound = document.getElementById("stat-found");
-const statAvgLatency = document.getElementById("stat-avg-latency");
-const statScanSpeed = document.getElementById("stat-scan-speed");
-const scanLog = document.getElementById("global-log");
-const configLog = document.getElementById("global-log");
+function initScanPage() {
+  $('#btn-scan-start').addEventListener('click', startScan);
+  $('#btn-scan-stop').addEventListener('click', stopScan);
+  $('#btn-scan-clear').addEventListener('click', clearScan);
+  $('#scan-filter').addEventListener('input', renderScanTable);
 
-// New elements for filtering and sorting
-const scanFilter = document.getElementById("scan-filter");
-const scanCountBadge = document.getElementById("scan-count-badge");
-const sortableHeaders = document.querySelectorAll("#scan-table thead th.sortable");
-
-let scanFoundCount = 0;
-let scanLatencySum = 0;
-let scanStartTime = null;
-let scanPortsOpen = 0;
-let unlistenScanFound = null;
-let unlistenScanDone = null;
-let unlistenScanProgress = null;
-let unlistenScanPortOpen = null;
-
-// Data state
-let scanResults = [];
-let currentSortCol = null;
-let currentSortDir = 'none'; // 'ascending', 'descending', 'none'
-let currentFilter = '';
-
-export function setScanRunning(running) {
-  state.isScanRunning = running;
-  if (btnScanStart) btnScanStart.disabled = running;
-  if (btnScanStop) btnScanStop.disabled = !running;
-
-  // Toggle inputs
-  ["scan-network", "scan-mask", "scan-start-port", "scan-end-port", "scan-concurrent", "scan-syn-timeout", "scan-verify-concurrent"]
-    .forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.disabled = running;
+  $$('#scan-table .sortable').forEach(th => {
+    th.addEventListener('click', () => {
+      const col = th.dataset.col;
+      const currentDir = th.classList.contains('sort-asc') ? 'asc' : (th.classList.contains('sort-desc') ? 'desc' : '');
+      $$('#scan-table .sortable').forEach(t => t.classList.remove('sort-asc', 'sort-desc'));
+      const newDir = currentDir === 'asc' ? 'desc' : 'asc';
+      th.classList.add('sort-' + newDir);
+      sortScanResults(col, newDir);
     });
-
-  if (fabScan) {
-    fabScan.label = running ? "Stop" : "Scan";
-    fabScan.variant = running ? "secondary" : "primary";
-    const icon = fabScan.querySelector('md-icon');
-    if (icon) icon.textContent = running ? "stop" : "radar";
-  }
-
-  if (scanLinearProgress) {
-    scanLinearProgress.indeterminate = running;
-  }
-
-  if (running) {
-    if (scanStatusChip) scanStatusChip.className = "status-chip testing";
-    if (scanStatusText) scanStatusText.textContent = "scanning";
-  } else {
-    if (scanStatusChip) scanStatusChip.className = "status-chip ready";
-    if (scanStatusText) scanStatusText.textContent = "idle";
-  }
-}
-
-function cleanupScanListeners() {
-  if (unlistenScanFound) { unlistenScanFound(); unlistenScanFound = null; }
-  if (unlistenScanDone) { unlistenScanDone(); unlistenScanDone = null; }
-  if (unlistenScanProgress) { unlistenScanProgress(); unlistenScanProgress = null; }
-  if (unlistenScanPortOpen) { unlistenScanPortOpen(); unlistenScanPortOpen = null; }
-}
-
-function latencyClass(ms) {
-  if (ms <= 100) return "latency-fast";
-  if (ms <= 500) return "latency-medium";
-  return "latency-slow";
-}
-
-function updateRing(pct) {
-  if (scanRingPct) scanRingPct.textContent = `${Math.round(pct)}%`;
-}
-
-function appendScanLog(text, cls) {
-  const line = document.createElement("div");
-  line.className = `scan-log-line ${cls || ''}`;
-  line.textContent = text;
-  if (scanLog) {
-    scanLog.appendChild(line);
-    scanLog.scrollTop = scanLog.scrollHeight;
-    while (scanLog.children.length > 200) scanLog.removeChild(scanLog.firstChild);
-  }
-}
-
-function updateScanStats(scanned, total, found) {
-  if (statScanned) statScanned.textContent = scanned.toLocaleString();
-  if (statFound) statFound.textContent = found;
-  if (scanFoundCount > 0 && statAvgLatency) {
-    statAvgLatency.textContent = `${Math.round(scanLatencySum / scanFoundCount)} ms`;
-  }
-  if (scanStartTime && statScanSpeed) {
-    const elapsed = (Date.now() - scanStartTime) / 1000;
-    if (elapsed > 0) statScanSpeed.textContent = `${Math.round(scanned / elapsed)}/s`;
-  }
-}
-
-export function resetScanStats() {
-  scanFoundCount = 0;
-  scanLatencySum = 0;
-  scanStartTime = null;
-  scanPortsOpen = 0;
-  scanResults = [];
-  if (statScanned) statScanned.textContent = "0";
-  if (statPortsOpen) statPortsOpen.textContent = "0";
-  if (statFound) statFound.textContent = "0";
-  if (statAvgLatency) statAvgLatency.textContent = "-- ms";
-  if (statScanSpeed) statScanSpeed.textContent = "0/s";
-  if (scanCountBadge) scanCountBadge.textContent = "0 results";
-  updateRing(0);
-  if (scanLinearProgress) scanLinearProgress.value = 0;
-  if (scanLog) scanLog.innerHTML = "";
-}
-
-export async function applyProxy(ip, port, protocol) {
-  try {
-    const msg = await invoke("config_proxy", { host: ip, port, protocol });
-    appendLog(configLog, msg, classifyConfigLine(msg));
-    const chip = document.createElement("div");
-    chip.style.cssText = `
-      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-      background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container);
-      padding: 8px 20px; border-radius: 20px; font-size: 13px; font-weight: 500;
-      z-index: 100; transition: opacity 0.5s; pointer-events: none;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-    `;
-    chip.textContent = `✓ Applied ${protocol} proxy ${ip}:${port}`;
-    document.body.appendChild(chip);
-    setTimeout(() => { chip.style.opacity = "0"; }, 1500);
-    setTimeout(() => chip.remove(), 2000);
-  } catch (err) {
-    appendLog(configLog, String(err), "log-error");
-  }
-}
-
-/**
- * Renders the table based on filtered and sorted results
- */
-function renderTable() {
-  if (!scanTableBody) return;
-
-  // Filter
-  const filtered = scanResults.filter(r => {
-    if (!currentFilter) return true;
-    const f = currentFilter.toLowerCase();
-    return r.ip.toLowerCase().includes(f) ||
-      r.port.toString().includes(f) ||
-      r.protocol.toLowerCase().includes(f);
   });
 
-  // Sort
-  if (currentSortCol && currentSortDir !== 'none') {
-    filtered.sort((a, b) => {
-      let valA = a[currentSortCol];
-      let valB = b[currentSortCol];
-
-      // Numeric sort for latency and port
-      if (currentSortCol === 'latency' || currentSortCol === 'port') {
-        valA = Number(a[currentSortCol === 'latency' ? 'latency_ms' : 'port']);
-        valB = Number(b[currentSortCol === 'latency' ? 'latency_ms' : 'port']);
-      }
-
-      if (valA < valB) return currentSortDir === 'ascending' ? -1 : 1;
-      if (valA > valB) return currentSortDir === 'ascending' ? 1 : -1;
-      return 0;
-    });
+  if (isTauriAvailable()) {
+    tauriListen('scan-progress', (e) => onScanProgress(e.payload));
+    tauriListen('scan-port-open', (e) => onScanPortOpen(e.payload));
+    tauriListen('scan-found', (e) => onScanFound(e.payload));
+    tauriListen('scan-done', () => finishScan());
   }
-
-  // Update UI stats
-  if (scanCountBadge) scanCountBadge.textContent = `${filtered.length} results`;
-  if (scanEmptyState) scanEmptyState.style.display = filtered.length === 0 ? "flex" : "none";
-
-  // Rebuild DOM efficiently
-  const fragment = document.createDocumentFragment();
-  filtered.forEach((r, idx) => {
-    const tr = document.createElement("tr");
-
-    // #
-    const tdNum = document.createElement("td");
-    tdNum.textContent = idx + 1;
-    tdNum.className = "col-num";
-    tdNum.style.color = "var(--md-sys-color-outline)";
-    tr.appendChild(tdNum);
-
-    // IP
-    const tdIp = document.createElement("td");
-    tdIp.textContent = r.ip;
-    tdIp.style.fontWeight = "500";
-    tr.appendChild(tdIp);
-
-    // Port
-    const tdPort = document.createElement("td");
-    tdPort.textContent = r.port;
-    tr.appendChild(tdPort);
-
-    // Protocol
-    const tdProto = document.createElement("td");
-    const isAuthRequired = r.protocol.includes("Auth");
-    const baseProtocol = r.protocol.replace(" (Auth)", "");
-    
-    const chipWrapper = document.createElement("div");
-    chipWrapper.style.cssText = "display: flex; align-items: center; gap: 6px; flex-wrap: nowrap;";
-    
-    const chip = document.createElement("span");
-    chip.className = `proto-chip ${baseProtocol.toLowerCase()}`;
-    chip.textContent = baseProtocol;
-    chipWrapper.appendChild(chip);
-
-    if (isAuthRequired) {
-      const isHttp = baseProtocol === "HTTP";
-      const authBadge = document.createElement("span");
-      authBadge.className = "auth-required-badge";
-      authBadge.textContent = isHttp ? "🔒 407" : "🔒 Auth";
-      authBadge.title = isHttp
-        ? "Proxy Authentication Required (HTTP 407)"
-        : "SOCKS5 Username/Password Authentication Required";
-      chipWrapper.appendChild(authBadge);
-    } else {
-      const openBadge = document.createElement("span");
-      openBadge.className = "auth-open-badge";
-      openBadge.textContent = "✓ Open";
-      openBadge.title = "No authentication required — can be applied directly";
-      chipWrapper.appendChild(openBadge);
-    }
-    
-    tdProto.appendChild(chipWrapper);
-    tr.appendChild(tdProto);
-
-    // Latency
-    const tdLatency = document.createElement("td");
-    tdLatency.textContent = `${r.latency_ms} ms`;
-    tdLatency.className = latencyClass(r.latency_ms);
-    tdLatency.style.fontWeight = "500";
-    tr.appendChild(tdLatency);
-
-    // Apply
-    const tdApply = document.createElement("td");
-    tdApply.className = "col-apply";
-    const btn = document.createElement("md-icon-button");
-    if (isAuthRequired) {
-      btn.title = `${r.ip}:${r.port} requires authentication — go to Config tab to fill credentials`;
-      btn.style.opacity = "0.5";
-      btn.style.cursor = "help";
-      const icon = document.createElement("md-icon");
-      icon.textContent = "key_off";
-      btn.appendChild(icon);
-      // Don't apply directly — guide user to Config tab
-    } else {
-      btn.title = `Apply ${r.ip}:${r.port} as system proxy`;
-      const icon = document.createElement("md-icon");
-      icon.textContent = "play_circle";
-      btn.appendChild(icon);
-      btn.addEventListener("click", () => applyProxy(r.ip, String(r.port), r.protocol));
-    }
-    tdApply.appendChild(btn);
-    tr.appendChild(tdApply);
-
-    fragment.appendChild(tr);
-  });
-
-  scanTableBody.innerHTML = "";
-  scanTableBody.appendChild(fragment);
 }
 
-function handleSort(header) {
-  const col = header.dataset.col;
-  if (!col || col === 'num') return;
-
-  // Reset all other headers
-  sortableHeaders.forEach(h => {
-    if (h !== header) {
-      h.setAttribute('aria-sort', 'none');
-      const icon = h.querySelector('.sort-icon');
-      if (icon) icon.textContent = 'unfold_more';
-    }
-  });
-
-  if (currentSortCol === col) {
-    if (currentSortDir === 'none') currentSortDir = 'ascending';
-    else if (currentSortDir === 'ascending') currentSortDir = 'descending';
-    else currentSortDir = 'none';
-  } else {
-    currentSortCol = col;
-    currentSortDir = 'ascending';
+function startScan() {
+  const network = $('#scan-network').value.trim();
+  if (!network) {
+    setFieldError($('#scan-network').closest('.input-wrap'), 'Network address is required');
+    return;
   }
+  clearFieldError($('#scan-network').closest('.input-wrap'));
+  if (!isTauriAvailable()) return;
 
-  header.setAttribute('aria-sort', currentSortDir);
-  const icon = header.querySelector('.sort-icon');
-  if (icon) {
-    if (currentSortDir === 'none') {
-      icon.textContent = 'unfold_more';
-    } else {
-      icon.textContent = 'arrow_upward';
-    }
-  }
+  AppState.scanStatus = 'scanning';
+  AppState.scanResults = [];
+  AppState.scanStats = { scanned: 0, total: 0, portsOpen: 0, found: 0, avgLatency: 0, speed: 0 };
+  updateScanStatusChip();
+  updateScanStats();
 
-  renderTable();
-}
+  $('#btn-scan-start').disabled = true;
+  $('#btn-scan-stop').disabled = false;
 
-// Initial Listeners
-if (scanFilter) {
-  scanFilter.addEventListener("input", (e) => {
-    currentFilter = e.target.value;
-    renderTable();
+  appendLog('info', `Starting scan on ${network}...`);
+  renderLogConsole();
+
+  const mask = $('#scan-mask').value.trim() || '255.255.255.0';
+  const startPort = parseInt($('#scan-start-port').value) || 1;
+  const endPort = parseInt($('#scan-end-port').value) || 65535;
+  const concurrent = parseInt($('#scan-concurrent').value) || 250;
+  const synTimeout = parseInt($('#scan-syn-timeout').value) || 500;
+  const verifyConcurrent = parseInt($('#scan-verify-concurrent').value) || 50;
+
+  tauriInvoke('start_proxy_scan', {
+    network, mask,
+    startPort, endPort,
+    concurrent, synTimeoutMs: synTimeout,
+    verifyConcurrent,
   });
 }
 
-sortableHeaders.forEach(header => {
-  header.addEventListener("click", () => handleSort(header));
-});
+function onScanProgress(payload) {
+  AppState.scanStats.scanned = payload.scanned;
+  AppState.scanStats.total = payload.total;
+  AppState.scanStats.found = payload.found;
 
-function addScanRow(payload) {
-  scanFoundCount++;
-  scanLatencySum += payload.latency_ms;
-
-  // Storage for filter/sort
-  scanResults.push(payload);
-
-  // If no filtering/sorting is active, we can just append for performance
-  // but if they are active, we must re-render.
-  if (!currentFilter && (currentSortDir === 'none')) {
-    if (scanEmptyState) scanEmptyState.style.display = "none";
-    if (scanCountBadge) scanCountBadge.textContent = `${scanResults.length} results`;
-
-    // Quick append code... (repeating logic for IDX)
-    renderTable();
-  } else {
-    renderTable();
-  }
-
-  // Scroll to bottom only if no specific sorting is active
-  if (currentSortDir === 'none') {
-    const tableWrapper = document.querySelector("#scan-table-container .table-wrapper");
-    if (tableWrapper) tableWrapper.scrollTop = tableWrapper.scrollHeight;
-  }
-
-  // Auto-save to config
-  invoke("save_proxy", {
-    entry: {
-      ip: payload.ip,
-      port: payload.port,
-      protocol: payload.protocol,
-      latency_ms: payload.latency_ms,
-      added_at: new Date().toISOString(),
-      last_tested: null,
-    }
-  }).catch(e => console.error("save_proxy:", e));
+  const total = payload.total || 1;
+  const pct = ((payload.scanned / total) * 100).toFixed(1);
+  $('#scan-progress-label').textContent = `Scanned: ${payload.scanned} / ${payload.total}`;
+  $('#scan-ring-pct').textContent = pct + '%';
+  $('#scan-progress-fill').style.width = pct + '%';
+  $('#scan-found-label').textContent = `Found: ${payload.found}`;
+  updateScanStats();
 }
 
-export async function startScan() {
-  const netEl = document.getElementById("scan-network");
-  const maskEl = document.getElementById("scan-mask");
-  const sPortEl = document.getElementById("scan-start-port");
-  const ePortEl = document.getElementById("scan-end-port");
-  const concEl = document.getElementById("scan-concurrent");
-  const synTimeoutEl = document.getElementById("scan-syn-timeout");
-  const verifyConEl = document.getElementById("scan-verify-concurrent");
+function onScanPortOpen(payload) {
+  AppState.scanStats.portsOpen = payload.open_count;
+  updateScanStats();
+}
 
-  let hasError = false;
-  const network = netEl.value.trim();
-  if (!network) { setFieldError(netEl, "Network is required"); hasError = true; }
-  const mask = maskEl.value.trim();
-  if (!mask) { setFieldError(maskEl, "Mask is required"); hasError = true; }
-
-  const startPort = parseInt(sPortEl.value, 10);
-  const endPort = parseInt(ePortEl.value, 10);
-  if (isNaN(startPort) || startPort < 1 || startPort > 65535) { setFieldError(sPortEl, "Invalid port"); hasError = true; }
-  if (isNaN(endPort) || endPort < 1 || endPort > 65535) { setFieldError(ePortEl, "Invalid port"); hasError = true; }
-  if (!isNaN(startPort) && !isNaN(endPort) && startPort > endPort) {
-    setFieldError(sPortEl, "Start > End"); setFieldError(ePortEl, "End < Start"); hasError = true;
-  }
-  if (hasError) return;
-
-  const concurrent = Math.min(Math.max(parseInt(concEl.value, 10) || 250, 1), 50000);
-  const synTimeoutMs = Math.min(Math.max(parseInt(synTimeoutEl.value, 10) || 500, 50), 5000);
-  const verifyConcurrent = Math.min(Math.max(parseInt(verifyConEl.value, 10) || 50, 1), 500);
-
-  if (scanTableBody) scanTableBody.innerHTML = "";
-  if (scanEmptyState) scanEmptyState.style.display = "flex";
-  if (scanProgressLabel) scanProgressLabel.textContent = "Scanned: 0 / 0";
-  if (scanFoundLabel) scanFoundLabel.textContent = "Found: 0";
-  resetScanStats();
-  scanStartTime = Date.now();
-
-  setScanRunning(true);
-  appendScanLog(`[START] 2-Phase scan: ${network}/${mask} ports ${startPort}-${endPort}`, "log-info");
-
-  invoke("add_scan_history", { network }).catch(e => console.error("add_scan_history:", e));
-
-  unlistenScanPortOpen = await listen("scan-port-open", (event) => {
-    scanPortsOpen = event.payload.open_count;
-    if (statPortsOpen) statPortsOpen.textContent = scanPortsOpen;
+function onScanFound(payload) {
+  AppState.scanResults.push({
+    id: genId(),
+    ip: payload.ip,
+    port: payload.port,
+    protocol: payload.protocol,
+    latency: payload.latency_ms,
+    open: true,
   });
+  AppState.scanStats.found++;
+  renderScanTable();
+  appendLog('ok', `Found: ${payload.ip}:${payload.port} (${payload.protocol}) — ${payload.latency_ms}ms`);
+  renderLogConsole();
 
-  unlistenScanFound = await listen("scan-found", (event) => {
-    addScanRow(event.payload);
-    if (scanFoundLabel) scanFoundLabel.textContent = `Found: ${scanFoundCount}`;
-    appendScanLog(`[FOUND] ${event.payload.protocol} proxy at ${event.payload.ip}:${event.payload.port} (${event.payload.latency_ms}ms)`, "log-found");
+  AppState.proxyPool.push({
+    id: genId(),
+    host: payload.ip,
+    port: payload.port,
+    protocol: payload.protocol,
+    latency: payload.latency_ms,
+    status: 'ok',
   });
+  saveToStorage('proxyPool', AppState.proxyPool);
+}
 
-  unlistenScanProgress = await listen("scan-progress", (event) => {
-    const { scanned, total, found } = event.payload;
-    const pct = total > 0 ? ((scanned / total) * 100) : 0;
-    if (scanLinearProgress) scanLinearProgress.value = (scanned / total);
-    if (scanProgressLabel) scanProgressLabel.textContent = `Scanned: ${scanned.toLocaleString()} / ${total.toLocaleString()} (${pct.toFixed(1)}%)`;
-    if (scanFoundLabel) scanFoundLabel.textContent = `Found: ${found}`;
-    updateRing(pct);
-    updateScanStats(scanned, total, found);
-  });
+function finishScan() {
+  AppState.scanStatus = 'done';
+  updateScanStatusChip();
+  $('#btn-scan-start').disabled = false;
+  $('#btn-scan-stop').disabled = true;
+  appendLog('ok', `Scan complete. Found ${AppState.scanStats.found} proxies.`);
+  renderLogConsole();
+}
 
-  unlistenScanDone = await listen("scan-done", () => {
-    cleanupScanListeners();
-    setScanRunning(false);
-    if (scanLinearProgress) scanLinearProgress.value = 1;
-    updateRing(100);
-    const elapsed = scanStartTime ? ((Date.now() - scanStartTime) / 1000).toFixed(1) : "?";
-    appendScanLog(`[DONE] Scan completed in ${elapsed}s — ${scanPortsOpen} ports open, ${scanFoundCount} proxies found`, "log-done");
-  });
+function stopScan() {
+  if (!isTauriAvailable()) return;
+  tauriInvoke('stop_proxy_scan');
+  AppState.scanStatus = 'idle';
+  updateScanStatusChip();
+  $('#btn-scan-start').disabled = false;
+  $('#btn-scan-stop').disabled = true;
+  appendLog('warn', 'Scan stopped by user');
+  renderLogConsole();
+}
 
-  try {
-    await invoke("start_proxy_scan", { network, mask, startPort, endPort, concurrent, synTimeoutMs, verifyConcurrent });
-  } catch (err) {
-    appendScanLog(`[ERROR] ${err}`, "log-error");
-    cleanupScanListeners();
-    setScanRunning(false);
+function clearScan() {
+  AppState.scanResults = [];
+  AppState.scanStats = { scanned: 0, total: 0, portsOpen: 0, found: 0, avgLatency: 0, speed: 0 };
+  updateScanStats();
+  renderScanTable();
+  $('#scan-progress-label').textContent = 'Scanned: 0 / 0';
+  $('#scan-ring-pct').textContent = '0%';
+  $('#scan-progress-fill').style.width = '0%';
+  $('#scan-found-label').textContent = 'Found: 0';
+  showSnackbar('Scan results cleared', 'success');
+}
+
+function updateScanStatusChip() {
+  const chip = $('#scan-status-chip');
+  const text = $('#scan-status-text');
+  chip.className = 'status-chip';
+  switch (AppState.scanStatus) {
+    case 'idle':     chip.classList.add('status-ready'); text.textContent = 'idle'; break;
+    case 'scanning': chip.classList.add('status-active'); text.textContent = 'scanning'; break;
+    case 'done':     chip.classList.add('status-active'); text.textContent = 'done'; break;
+    case 'error':    chip.classList.add('status-error'); text.textContent = 'error'; break;
   }
 }
 
-export async function stopScan() {
-  try {
-    await invoke("stop_proxy_scan");
-    appendScanLog(`[STOP] Scan stopped by user`, "log-info");
-  } catch (err) {
-    console.error("stop_proxy_scan error:", err);
-  }
+function updateScanStats() {
+  $('#stat-scanned').textContent = AppState.scanStats.scanned;
+  $('#stat-ports-open').textContent = AppState.scanStats.portsOpen;
+  $('#stat-found').textContent = AppState.scanStats.found;
+  $('#stat-avg-latency').textContent = AppState.scanStats.avgLatency > 0
+    ? AppState.scanStats.avgLatency.toFixed(0) + ' ms' : '-- ms';
+  $('#stat-scan-speed').textContent = AppState.scanStats.speed + '/s';
+  $('#scan-count-badge').textContent = AppState.scanResults.length + ' results';
 }
+
+function renderScanTable() {
+  const tbody = $('#scan-table-body');
+  const emptyState = $('#scan-empty-state');
+  const filter = ($('#scan-filter')?.value || '').toLowerCase();
+
+  let results = AppState.scanResults.filter(r => {
+    if (!filter) return true;
+    return (r.ip + ':' + r.port + ' ' + r.protocol).toLowerCase().includes(filter);
+  });
+
+  if (results.length === 0) {
+    tbody.innerHTML = '';
+    emptyState.style.display = '';
+    return;
+  }
+  emptyState.style.display = 'none';
+
+  tbody.innerHTML = results.map((r, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td>${r.ip}</td>
+      <td>${r.port}</td>
+      <td>${protocolBadge(r.protocol)}</td>
+      <td style="color:${latencyColor(r.latency)}">${r.latency !== undefined ? r.latency + 'ms' : '--'}</td>
+      <td><button class="btn btn-text" style="padding:4px 8px;font-size:12px;height:auto" onclick="applyProxy('${r.ip}',${r.port},'${r.protocol}')"><span class="icon icon-sm">arrow_forward</span></button></td>
+    </tr>
+  `).join('');
+}
+
+function sortScanResults(column, direction) {
+  const dir = direction === 'asc' ? 1 : -1;
+  AppState.scanResults.sort((a, b) => {
+    let va = a[column], vb = b[column];
+    if (typeof va === 'string') return va.localeCompare(vb) * dir;
+    if (typeof va === 'number') return (va - vb) * dir;
+    return 0;
+  });
+  renderScanTable();
+}
+
+function applyProxy(host, port, protocol) {
+  $('#config-host').value = host;
+  $('#config-port').value = port;
+  const selectField = $('#config-proto-select');
+  selectField.querySelectorAll('.select-option').forEach(o => {
+    o.classList.toggle('selected', o.dataset.value === protocol);
+  });
+  selectField.querySelector('.select-value').textContent = protocol;
+  switchPage('config');
+  showSnackbar('Proxy address filled. Click Apply to set.', 'info');
+}
+
+window.initScanPage = initScanPage;
+window.applyProxy = applyProxy;
+

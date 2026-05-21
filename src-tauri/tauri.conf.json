@@ -3,7 +3,10 @@
   "version": "1.0.0",
   "identifier": "jp.rua.proxylab",
   "build": {
-    "frontendDist": "../src"
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
+    "devUrl": "http://127.0.0.1:5173",
+    "frontendDist": "../dist"
   },
   "app": {
     "withGlobalTauri": true,
