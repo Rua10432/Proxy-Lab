@@ -110,6 +110,119 @@ function classifyConfigLine(line) {
   return 'info';
 }
 
+/* ── IP & Subnet Validation ── */
+function isValidIPv4(ip) {
+  const parts = ip.split('.');
+  if (parts.length !== 4) return false;
+  return parts.every(part => {
+    const n = parseInt(part, 10);
+    if (isNaN(n) || n < 0 || n > 255) return false;
+    if (part.length > 1 && part[0] === '0') return false; // no leading zeros
+    return String(n) === part;
+  });
+}
+
+function isValidIPv6(ip) {
+  // Strip brackets [::1] -> ::1
+  const raw = ip.replace(/^\[|\]$/g, '');
+  if (raw.length < 2) return false;
+  const parts = raw.split(':');
+  if (parts.length < 2 || parts.length > 8) return false;
+
+  // Count empty segments (:: compression)
+  const emptyCount = parts.filter(p => p === '').length;
+  if (emptyCount > 1) return false; // :: used more than once
+
+  // Allow exactly one :: compression
+  const compressed = raw.includes('::');
+  if (compressed && parts.length > 8) return false;
+  if (!compressed && parts.length !== 8) return false;
+
+  return parts.every((part, i) => {
+    if (part === '') return true; // empty from ::
+    if (part.length > 4) return false;
+    // IPv4-mapped IPv6 (e.g. ::ffff:192.168.1.1)
+    if (part.includes('.') && i >= parts.length - 2) return isValidIPv4(part);
+    return /^[0-9a-fA-F]{1,4}$/.test(part);
+  });
+}
+
+function isValidIP(ip) {
+  if (!ip || typeof ip !== 'string') return false;
+  return isValidIPv4(ip) || isValidIPv6(ip);
+}
+
+function isValidSubnetMask(mask) {
+  const parts = mask.split('.');
+  if (parts.length !== 4) return false;
+  const nums = parts.map(p => {
+    const n = parseInt(p, 10);
+    return isNaN(n) ? -1 : n;
+  });
+  if (nums.some(n => n < 0 || n > 255)) return false;
+
+  // Convert to 32-bit binary string
+  const binary = nums.map(n => n.toString(2).padStart(8, '0')).join('');
+  // Valid mask: 1s followed by 0s
+  const firstZero = binary.indexOf('0');
+  if (firstZero === -1) return true; // 255.255.255.255 (valid, though unusual)
+  return binary.indexOf('1', firstZero) === -1;
+}
+
+function isValidPort(port) {
+  const n = parseInt(port, 10);
+  return !isNaN(n) && n >= 1 && n <= 65535 && String(n) === String(port).trim();
+}
+
+function validateAndStyle(inputEl) {
+  const wrap = inputEl.closest('.input-wrap');
+  const field = wrap?.closest('.input-field');
+  if (!wrap) return true;
+  const val = inputEl.value.trim();
+  if (!val) {
+    wrap.classList.remove('valid', 'error');
+    const errEl = field?.querySelector('.error-text');
+    if (errEl) errEl.remove();
+    return true; // empty = no validation error (required handled elsewhere)
+  }
+
+  const type = inputEl.dataset.validate;
+  let valid = false;
+  let msg = '';
+  if (type === 'ip') {
+    valid = isValidIP(val);
+    if (!valid) msg = '无效的 IP 地址格式';
+  } else if (type === 'subnet') {
+    valid = isValidSubnetMask(val);
+    if (!valid) msg = '无效的子网掩码格式';
+  } else if (type === 'port') {
+    valid = isValidPort(val);
+    if (!valid) msg = '端口范围 1-65535';
+  } else {
+    return true;
+  }
+
+  wrap.classList.remove('valid', 'error');
+  const errEl = field?.querySelector('.error-text');
+  if (valid) {
+    wrap.classList.add('valid');
+    if (errEl) errEl.remove();
+  } else {
+    wrap.classList.add('error');
+    if (field) {
+      if (!errEl) {
+        const el = document.createElement('span');
+        el.className = 'error-text';
+        el.textContent = msg;
+        field.appendChild(el);
+      } else {
+        errEl.textContent = msg;
+      }
+    }
+  }
+  return valid;
+}
+
 /* ── Field Error ── */
 function setFieldError(inputWrap, msg) {
   inputWrap.classList.add('error');
@@ -178,4 +291,10 @@ window.clearFieldError = clearFieldError;
 window.escapeHtml = escapeHtml;
 window.saveToStorage = saveToStorage;
 window.loadFromStorage = loadFromStorage;
+window.isValidIP = isValidIP;
+window.isValidIPv4 = isValidIPv4;
+window.isValidIPv6 = isValidIPv6;
+window.isValidSubnetMask = isValidSubnetMask;
+window.isValidPort = isValidPort;
+window.validateAndStyle = validateAndStyle;
 

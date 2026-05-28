@@ -48,6 +48,10 @@
 .scan-table-container {
   margin-top: var(--space-3);
 }
+.scan-table-container .table-wrapper {
+  max-height: calc(100vh - 420px);
+  min-height: 200px;
+}
 
 /* Progress Area */
 .scan-progress-area {

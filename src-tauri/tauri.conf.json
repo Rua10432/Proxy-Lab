@@ -1,5 +1,5 @@
 {
-  "productName": "Proxy Tester",
+  "productName": "Proxy Lab",
   "version": "1.0.0",
   "identifier": "jp.rua.proxylab",
   "build": {
@@ -12,14 +12,21 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "Proxy Test v1.0",
+        "title": "Proxy Test",
         "width": 700,
         "height": 560,
-        "minWidth": 400,
+        "minWidth": 850,
         "minHeight": 420,
         "resizable": true,
         "decorations": false,
-        "transparent": true
+        "transparent": true,
+        "backgroundColor": [
+          26,
+          26,
+          27,
+          255
+        ]
+        
       }
     ],
     "security": {
@@ -29,6 +36,11 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "icon": []
+    "icon": [],
+    "windows": {
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper"
+      }
+    }
   }
 }

@@ -5,10 +5,10 @@
             <!-- Tabs -->
             <div class="tabs">
               <button class="tab-btn active" data-tab="manual">
-                <span class="icon icon-sm">build</span> Manual Probe
+                <span class="icon icon-sm">build</span> <span data-i18n="test.tabManual">Manual Probe</span>
               </button>
               <button class="tab-btn" data-tab="pool">
-                <span class="icon icon-sm">reorder</span> Proxy Pool
+                <span class="icon icon-sm">reorder</span> <span data-i18n="test.tabPool">Proxy Pool</span>
               </button>
             </div>
 
@@ -17,21 +17,21 @@
               <div class="test-params">
                 <div class="field-row">
                   <div class="input-field f-address">
-                    <label>Address</label>
+                    <label data-i18n="test.address">Address</label>
                     <div class="input-wrap">
                       <span class="icon icon-sm leading-icon">dns</span>
-                      <input type="text" id="test-host" placeholder="127.0.0.1">
+                      <input type="text" id="test-host" placeholder="127.0.0.1 / [::1]" data-i18n-placeholder="test.placeholderHost" data-validate="ip" autocomplete="off">
                     </div>
                   </div>
                   <div class="input-field f-port">
-                    <label>Port</label>
+                    <label data-i18n="test.port">Port</label>
                     <div class="input-wrap">
                       <span class="icon icon-sm leading-icon">settings_ethernet</span>
-                      <input type="number" id="test-port" placeholder="7890" min="1" max="65535">
+                      <input type="number" id="test-port" placeholder="7890" min="1" max="65535" data-i18n-placeholder="test.placeholderPort" data-validate="port" autocomplete="off">
                     </div>
                   </div>
                   <div class="input-field f-proto">
-                    <label>Protocol</label>
+                    <label data-i18n="test.protocol">Protocol</label>
                     <div class="select-field" id="test-proto-select">
                       <div class="select-trigger">
                         <span class="select-value">HTTP</span>
@@ -47,25 +47,25 @@
 
                 <div class="field-row">
                   <div class="input-field f-count">
-                    <label>Times</label>
+                    <label data-i18n="test.times">Times</label>
                     <div class="input-wrap">
                       <span class="icon icon-sm leading-icon">repeat</span>
-                      <input type="number" id="test-count" value="10" min="1">
+                      <input type="number" id="test-count" value="10" min="1" autocomplete="off">
                     </div>
                   </div>
                   <div class="input-field f-ms">
-                    <label>Timeout</label>
+                    <label data-i18n="test.timeout">Timeout</label>
                     <div class="input-wrap">
                       <span class="icon icon-sm leading-icon">timer</span>
-                      <input type="number" id="test-timeout" value="3000" min="0">
+                      <input type="number" id="test-timeout" value="3000" min="0" autocomplete="off">
                       <span class="suffix">ms</span>
                     </div>
                   </div>
                   <div class="input-field f-ms">
-                    <label>Interval</label>
+                    <label data-i18n="test.interval">Interval</label>
                     <div class="input-wrap">
                       <span class="icon icon-sm leading-icon">hourglass_empty</span>
-                      <input type="number" id="test-interval" value="500" min="0">
+                      <input type="number" id="test-interval" value="500" min="0" autocomplete="off">
                       <span class="suffix">ms</span>
                     </div>
                   </div>
@@ -73,35 +73,35 @@
 
                 <div class="field-row">
                   <div class="input-field f-user">
-                    <label>Username</label>
+                    <label data-i18n="common.username">Username</label>
                     <div class="input-wrap">
                       <span class="icon icon-sm leading-icon">person</span>
-                      <input type="text" id="test-user" placeholder="Optional">
+                      <input type="text" id="test-user" placeholder="Optional" data-i18n-placeholder="test.placeholderOptional" autocomplete="off">
                     </div>
                   </div>
                   <div class="input-field f-pass">
-                    <label>Password</label>
+                    <label data-i18n="common.password">Password</label>
                     <div class="input-wrap">
                       <span class="icon icon-sm leading-icon">key</span>
-                      <input type="password" id="test-pass" placeholder="Optional">
+                      <input type="password" id="test-pass" placeholder="Optional" data-i18n-placeholder="test.placeholderOptional" autocomplete="new-password">
                     </div>
                   </div>
                 </div>
 
                 <div class="action-row">
                   <button class="btn btn-primary" id="btn-test">
-                    <span class="icon icon-sm">play_arrow</span> Test
+                    <span class="icon icon-sm">play_arrow</span> <span data-i18n="test.start">Test</span>
                   </button>
                   <button class="btn btn-tonal" id="btn-stop" disabled>
-                    <span class="icon icon-sm">stop</span> Stop
+                    <span class="icon icon-sm">stop</span> <span data-i18n="test.stop">Stop</span>
                   </button>
                   <button class="btn btn-text" id="btn-clear-fields">
-                    <span class="icon icon-sm">clear_all</span> Clear
+                    <span class="icon icon-sm">clear_all</span> <span data-i18n="test.clear">Clear</span>
                   </button>
                   <div class="spacer"></div>
                   <div class="status-chip status-ready" id="status-chip">
                     <span class="dot"></span>
-                    <span id="status-text">ready</span>
+                    <span id="status-text" data-i18n="test.statusReady">ready</span>
                   </div>
                 </div>
               </div>
@@ -109,19 +109,19 @@
               <!-- Test Stats Bar -->
               <div class="test-stats-bar" id="test-stats-bar" style="display:none">
                 <div class="stat-item">
-                  <span class="stat-label">Min:</span>
+                  <span class="stat-label" data-i18n="test.statMin">Min:</span>
                   <span class="stat-val" id="stat-min">--</span>
                 </div>
                 <div class="stat-item">
-                  <span class="stat-label">Max:</span>
+                  <span class="stat-label" data-i18n="test.statMax">Max:</span>
                   <span class="stat-val" id="stat-max">--</span>
                 </div>
                 <div class="stat-item">
-                  <span class="stat-label">Avg:</span>
+                  <span class="stat-label" data-i18n="test.statAvg">Avg:</span>
                   <span class="stat-val" id="stat-avg">--</span>
                 </div>
                 <div class="stat-item">
-                  <span class="stat-label">Loss:</span>
+                  <span class="stat-label" data-i18n="test.statLoss">Loss:</span>
                   <span class="stat-val" id="stat-loss">0%</span>
                 </div>
               </div>
@@ -130,9 +130,9 @@
               <div class="recent-section" id="recent-tests-section">
                 <div class="recent-header">
                   <div class="recent-label">
-                    <span class="icon icon-sm">history</span> RECENT TESTS
+                    <span class="icon icon-sm">history</span> <span data-i18n="test.recentTests">RECENT TESTS</span>
                   </div>
-                  <button class="btn btn-text" id="btn-clear-test-history" style="font-size:12px">CLEAR HISTORY</button>
+                  <button class="btn btn-text" id="btn-clear-test-history" style="font-size:12px"><span data-i18n="test.clearHistory">CLEAR HISTORY</span></button>
                 </div>
                 <div class="recent-grid" id="recent-tests-list"></div>
               </div>
@@ -143,41 +143,61 @@
               <div class="pool-controls">
                 <div class="field-row" style="margin-bottom:8px">
                   <div class="input-field" style="flex:1">
-                    <label>Subscription Link / URL</label>
+                    <label data-i18n="test.subscriptionUrl">Subscription Link / URL</label>
                     <div class="input-wrap">
                       <span class="icon icon-sm leading-icon">link</span>
-                      <input type="text" id="pool-sub-url" placeholder="http://example.com/proxies.txt">
+                      <input type="text" id="pool-sub-url" placeholder="http://example.com/proxies.txt" data-i18n-placeholder="test.placeholderSubUrl" autocomplete="off">
                     </div>
                   </div>
                   <button class="btn btn-tonal" id="btn-pool-fetch" style="align-self:flex-end">
-                    <span class="icon icon-sm">cloud_download</span> Fetch &amp; Import
+                    <span class="icon icon-sm">cloud_download</span> <span data-i18n="test.fetchImport">Fetch</span> &amp; Import
+                  </button>
+                  <button class="btn btn-tonal" id="btn-pool-fetch-clipboard" style="align-self:flex-end">
+                    <span class="icon icon-sm">content_paste</span> <span data-i18n="test.fetchClipboard">从剪贴板获取</span>
                   </button>
                 </div>
                 <div class="action-row">
                   <button class="btn btn-primary" id="btn-pool-test-all">
-                    <span class="icon icon-sm">speed</span> Test All
+                    <span class="icon icon-sm">speed</span> <span data-i18n="test.testAll">Test All</span>
                   </button>
                   <button class="btn btn-tonal" id="btn-pool-stop" disabled>
                     <span class="icon icon-sm">stop</span> Stop
                   </button>
-                  <button class="btn btn-text" id="btn-pool-refresh">
-                    <span class="icon icon-sm">refresh</span> Sync
-                  </button>
+                  <div class="input-field f-ms" style="width:140px;margin:0">
+                    <label data-i18n="test.timeout">Timeout</label>
+                    <div class="input-wrap" style="height:32px">
+                      <span class="icon icon-sm leading-icon">timer</span>
+                      <input type="number" id="pool-timeout" value="3000" min="100" style="height:32px" autocomplete="off">
+                      <span class="suffix">ms</span>
+                    </div>
+                  </div>
                   <button class="btn btn-danger" id="btn-pool-clear">
-                    <span class="icon icon-sm">delete_sweep</span> Clear Pool
+                    <span class="icon icon-sm">delete_sweep</span> <span data-i18n="test.clearPool">Clear Pool</span>
                   </button>
                   <div class="spacer"></div>
                   <div class="pool-info-badge">
                     <span class="icon">apps</span>
-                    <span id="pool-count-label">0 Proxies</span>
+                    <span id="pool-count-label" data-i18n="test.proxyCount">0 Proxies</span>
                   </div>
                 </div>
               </div>
-              <div class="filter-field">
-                <div class="input-field">
+              <div class="pool-filter-row">
+                <div class="input-field filter-field">
                   <div class="input-wrap">
                     <span class="icon icon-sm leading-icon">search</span>
-                    <input type="text" id="pool-filter" placeholder="Filter results...">
+                    <input type="text" id="pool-filter" placeholder="Filter results..." data-i18n-placeholder="test.filter" autocomplete="off">
+                  </div>
+                </div>
+                <div class="select-field filter-status-select" id="pool-status-filter">
+                  <div class="select-trigger">
+                    <span class="select-value" data-i18n="test.statusAll">All Status</span>
+                    <span class="icon icon-sm arrow">expand_more</span>
+                  </div>
+                  <div class="select-dropdown">
+                    <div class="select-option selected" data-value="all" data-i18n="test.statusAll">All Status</div>
+                    <div class="select-option" data-value="ok" data-i18n="test.statusOk">OK</div>
+                    <div class="select-option" data-value="error" data-i18n="test.statusError">Error</div>
+                    <div class="select-option" data-value="untested" data-i18n="test.statusUntested">Untested</div>
                   </div>
                 </div>
               </div>
@@ -187,12 +207,12 @@
                     <thead>
                       <tr>
                         <th style="width:50px">#</th>
-                        <th>Host</th>
-                        <th style="width:100px">Port</th>
-                        <th style="width:120px">Protocol</th>
-                        <th style="width:140px">Latency</th>
-                        <th style="width:100px">Status</th>
-                        <th style="width:100px">Action</th>
+                        <th data-i18n="test.colHost">Host</th>
+                        <th style="width:100px" data-i18n="test.colPort">Port</th>
+                        <th style="width:120px" data-i18n="test.colType">Protocol</th>
+                        <th style="width:140px" data-i18n="test.colLatency">Latency</th>
+                        <th style="width:100px" data-i18n="common.status">Status</th>
+                        <th style="width:100px" data-i18n="test.colAction">Action</th>
                       </tr>
                     </thead>
                     <tbody id="pool-table-body"></tbody>
@@ -200,8 +220,8 @@
                 </div>
                 <div class="table-empty" id="pool-empty-state">
                   <span class="icon empty-icon">cloud_off</span>
-                  <div class="empty-title">Proxy Pool Empty</div>
-                  <div class="empty-sub">Add proxies in the Config page or Scan for new ones</div>
+                  <div class="empty-title" data-i18n="test.poolEmpty">Proxy Pool Empty</div>
+                  <div class="empty-sub" data-i18n="test.poolEmptySub">Add proxies in the Config page or Scan for new ones</div>
                 </div>
               </div>
             </div>

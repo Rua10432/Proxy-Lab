@@ -4,25 +4,25 @@
           <div class="page" id="page-config">
             <div class="config-card">
               <div class="config-card-header">
-                <span class="icon">router</span> System Proxy Setup
+                <span class="icon">router</span> <span data-i18n="config.systemSetup">System Proxy Setup</span>
               </div>
               <div class="config-form-row">
                 <div class="input-field f-address">
-                  <label>Address</label>
+                  <label data-i18n="config.proxyAddress">Address</label>
                   <div class="input-wrap">
                     <span class="icon icon-sm leading-icon">dns</span>
-                    <input type="text" id="config-host" placeholder="127.0.0.1">
+                    <input type="text" id="config-host" placeholder="127.0.0.1" data-i18n-placeholder="config.placeholderHost" data-validate="ip" autocomplete="off">
                   </div>
                 </div>
                 <div class="input-field f-port">
-                  <label>Port</label>
+                  <label data-i18n="config.proxyPort">Port</label>
                   <div class="input-wrap">
                     <span class="icon icon-sm leading-icon">settings_ethernet</span>
-                    <input type="number" id="config-port" min="1" max="65535">
+                    <input type="number" id="config-port" min="1" max="65535" data-validate="port" autocomplete="off">
                   </div>
                 </div>
                 <div class="input-field f-proto">
-                  <label>Protocol</label>
+                  <label data-i18n="config.proxyProtocol">Protocol</label>
                   <div class="select-field" id="config-proto-select">
                     <div class="select-trigger">
                       <span class="select-value">HTTP</span>
@@ -37,46 +37,50 @@
               </div>
               <div class="config-form-row">
                 <div class="input-field f-user">
-                  <label>Username</label>
+                  <label data-i18n="config.proxyUsername">Username</label>
                   <div class="input-wrap">
                     <span class="icon icon-sm leading-icon">person</span>
-                    <input type="text" id="config-user" placeholder="Optional">
+                    <input type="text" id="config-user" placeholder="Optional" data-i18n-placeholder="config.placeholderOptional" autocomplete="off">
                   </div>
                 </div>
                 <div class="input-field f-pass">
-                  <label>Password</label>
+                  <label data-i18n="config.proxyPassword">Password</label>
                   <div class="input-wrap">
                     <span class="icon icon-sm leading-icon">key</span>
-                    <input type="password" id="config-pass" placeholder="Optional">
+                    <input type="password" id="config-pass" placeholder="Optional" data-i18n-placeholder="config.placeholderOptional" autocomplete="new-password">
                   </div>
                 </div>
               </div>
               <div class="action-row">
-                <button class="btn btn-tonal" id="btn-config-disconnect" disabled style="flex:1">
-                  <span class="icon icon-sm">link_off</span> Disconnect Proxy
+                <button class="btn btn-outline" id="btn-test-config" style="flex:1">
+                  <span class="icon icon-sm">network_check</span> <span data-i18n="config.test_connectivity">Test Connection</span>
                 </button>
-                <button class="btn btn-primary" id="btn-config" style="flex:1">
-                  <span class="icon icon-sm">check_circle</span> Apply Proxy
+                <button class="btn btn-primary" id="btn-config" disabled style="flex:1">
+                  <span class="icon icon-sm">check_circle</span> <span data-i18n="config.apply">Apply Proxy</span>
+                </button>
+                <button class="btn btn-tonal" id="btn-config-disconnect" disabled style="flex:1">
+                  <span class="icon icon-sm">link_off</span> <span data-i18n="config.disconnect">Disconnect Proxy</span>
                 </button>
                 <span class="icon admin-lock-icon" id="admin-lock-icon"
-                  title="Administrator Privilege Status">lock</span>
+                  data-i18n-title="config.adminLockTitle">lock</span>
               </div>
+              <div class="test-result" id="test-result"></div>
             </div>
 
             <!-- Local Proxy Detection -->
             <div class="local-proxy-section" id="local-proxy-section">
               <div class="recent-configs-label">
                 <div class="label-text">
-                  <span class="icon icon-sm">radar</span> 本地代理端口检测
+                  <span class="icon icon-sm">radar</span> <span data-i18n="config.localProxyDetect">本地代理端口检测</span>
                 </div>
-                <button class="btn btn-text" id="btn-refresh-local-proxy" style="font-size:12px">刷新</button>
+                <button class="btn btn-text" id="btn-refresh-local-proxy" style="font-size:12px"><span data-i18n="config.refreshLocal">刷新</span></button>
               </div>
-              <div class="local-proxy-hint">
+              <div class="local-proxy-hint" data-i18n="config.localProxyDesc">
                 自动扫描本机常见代理端口，检测正在运行的代理服务。
                 点击端口或进程名可以直接填入上方配置表单。
               </div>
               <div class="local-proxy-list" id="local-proxy-list">
-                <div class="local-proxy-empty">正在检测本地代理服务...</div>
+                <div class="local-proxy-empty" data-i18n="config.localProxyChecking">正在检测本地代理服务...</div>
               </div>
             </div>
 
@@ -84,9 +88,9 @@
             <div class="recent-configs-section" id="recent-configs-section">
               <div class="recent-configs-label">
                 <div class="label-text">
-                  <span class="icon icon-sm">history</span> RECENT CONFIGURATIONS
+                  <span class="icon icon-sm">history</span> <span data-i18n="config.recentConfigs">RECENT CONFIGURATIONS</span>
                 </div>
-                <button class="btn btn-text" id="btn-clear-recent" style="font-size:12px">CLEAR HISTORY</button>
+                <button class="btn btn-text" id="btn-clear-recent" style="font-size:12px"><span data-i18n="config.clearHistory">CLEAR HISTORY</span></button>
               </div>
               <div class="recent-configs-grid" id="recent-configs-list"></div>
             </div>

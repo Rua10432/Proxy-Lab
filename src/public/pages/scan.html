@@ -6,20 +6,20 @@
               <div class="scan-params-grid">
                 <!-- Target Network -->
                 <div class="params-group">
-                  <div class="group-title">Target Network</div>
+                  <div class="group-title" data-i18n="scan.targetNetwork">Target Network</div>
                   <div class="field-row">
                     <div class="input-field f-address">
-                      <label>Network</label>
+                      <label data-i18n="scan.network">Network</label>
                       <div class="input-wrap">
                         <span class="icon icon-sm leading-icon">lan</span>
-                        <input type="text" id="scan-network" placeholder="192.168.1.0">
+                        <input type="text" id="scan-network" placeholder="192.168.1.0 (IPv4 only)" data-validate="ip" autocomplete="off">
                       </div>
                     </div>
                     <div class="input-field" style="width:160px">
-                      <label>Subnet</label>
+                      <label data-i18n="scan.subnet">Subnet</label>
                       <div class="input-wrap">
                         <span class="icon icon-sm leading-icon">hub</span>
-                        <input type="text" id="scan-mask" value="255.255.255.0">
+                        <input type="text" id="scan-mask" value="255.255.255.0" data-validate="subnet" autocomplete="off">
                       </div>
                     </div>
                   </div>
@@ -27,20 +27,20 @@
 
                 <!-- Port Range -->
                 <div class="params-group">
-                  <div class="group-title">Port Range</div>
+                  <div class="group-title" data-i18n="scan.portRange">Port Range</div>
                   <div class="field-row">
                     <div class="input-field f-port">
-                      <label>From</label>
+                      <label data-i18n="scan.from">From</label>
                       <div class="input-wrap">
                         <span class="icon icon-sm leading-icon">settings_ethernet</span>
-                        <input type="number" id="scan-start-port" value="1" min="1" max="65535">
+                        <input type="number" id="scan-start-port" value="1" min="1" max="65535" data-validate="port" autocomplete="off">
                       </div>
                     </div>
                     <div class="input-field f-port">
-                      <label>To</label>
+                      <label data-i18n="scan.to">To</label>
                       <div class="input-wrap">
                         <span class="icon icon-sm leading-icon">settings_ethernet</span>
-                        <input type="number" id="scan-end-port" value="65535" min="1" max="65535">
+                        <input type="number" id="scan-end-port" value="65535" min="1" max="65535" data-validate="port" autocomplete="off">
                       </div>
                     </div>
                   </div>
@@ -48,28 +48,28 @@
 
                 <!-- Performance -->
                 <div class="params-group">
-                  <div class="group-title">Performance</div>
+                  <div class="group-title" data-i18n="scan.performance">Performance</div>
                   <div class="field-row">
                     <div class="input-field f-count">
-                      <label>SYN Threads</label>
+                      <label data-i18n="scan.synThreads">SYN Threads</label>
                       <div class="input-wrap">
                         <span class="icon icon-sm leading-icon">layers</span>
-                        <input type="number" id="scan-concurrent" value="250" min="1">
+                        <input type="number" id="scan-concurrent" value="250" min="1" autocomplete="off">
                       </div>
                     </div>
                     <div class="input-field f-ms">
-                      <label>SYN Timeout</label>
+                      <label data-i18n="scan.synTimeout">SYN Timeout</label>
                       <div class="input-wrap">
                         <span class="icon icon-sm leading-icon">flash_on</span>
-                        <input type="number" id="scan-syn-timeout" value="500" min="50">
+                        <input type="number" id="scan-syn-timeout" value="500" min="50" autocomplete="off">
                         <span class="suffix">ms</span>
                       </div>
                     </div>
                     <div class="input-field f-count">
-                      <label>Verify</label>
+                      <label data-i18n="scan.verifyThreads">Verify</label>
                       <div class="input-wrap">
                         <span class="icon icon-sm leading-icon">verified</span>
-                        <input type="number" id="scan-verify-concurrent" value="50" min="1">
+                        <input type="number" id="scan-verify-concurrent" value="50" min="1" autocomplete="off">
                       </div>
                     </div>
                   </div>
@@ -78,18 +78,18 @@
 
               <div class="action-row">
                 <button class="btn btn-primary" id="btn-scan-start">
-                  <span class="icon icon-sm">radar</span> Start Scan
+                  <span class="icon icon-sm">radar</span> <span data-i18n="scan.start">Start Scan</span>
                 </button>
                 <button class="btn btn-tonal" id="btn-scan-stop" disabled>
-                  <span class="icon icon-sm">stop</span> Stop
+                  <span class="icon icon-sm">stop</span> <span data-i18n="scan.stop">Stop</span>
                 </button>
                 <button class="btn btn-text" id="btn-scan-clear">
-                  <span class="icon icon-sm">delete_sweep</span> Clear
+                  <span class="icon icon-sm">delete_sweep</span> <span data-i18n="scan.clear">Clear</span>
                 </button>
                 <div class="spacer"></div>
                 <div class="status-chip status-ready" id="scan-status-chip">
                   <span class="dot"></span>
-                  <span id="scan-status-text">idle</span>
+                  <span id="scan-status-text" data-i18n="scan.statusIdle">idle</span>
                 </div>
               </div>
             </div>
@@ -99,10 +99,10 @@
               <div class="input-field filter-field" style="max-width:360px;margin-top:0">
                 <div class="input-wrap">
                   <span class="icon icon-sm leading-icon">search</span>
-                  <input type="text" id="scan-filter" placeholder="Filter results...">
+                  <input type="text" id="scan-filter" placeholder="Filter results..." data-i18n-placeholder="scan.filter" autocomplete="off">
                 </div>
               </div>
-              <span class="scan-count-badge" id="scan-count-badge">0 results</span>
+              <span class="scan-count-badge" id="scan-count-badge" data-i18n="scan.resultCount">0 results</span>
             </div>
 
             <!-- Scan Results Table -->
@@ -113,18 +113,14 @@
                     <tr>
                       <th style="width:60px">#</th>
                       <th class="sortable" data-col="ip" style="width:180px">
-                        IP Address <span class="icon icon-sm sort-arrow">arrow_upward</span>
-                      </th>
+                        <span data-i18n="scan.colIp">IP Address</span> <span class="icon icon-sm sort-arrow">arrow_upward</span>                      </th>
                       <th class="sortable" data-col="port" style="width:100px">
-                        Port <span class="icon icon-sm sort-arrow">arrow_upward</span>
-                      </th>
+                        <span data-i18n="scan.colPort">Port</span> <span class="icon icon-sm sort-arrow">arrow_upward</span>                      </th>
                       <th class="sortable" data-col="protocol" style="width:120px">
-                        Protocol <span class="icon icon-sm sort-arrow">arrow_upward</span>
-                      </th>
+                        <span data-i18n="scan.colProtocol">Protocol</span> <span class="icon icon-sm sort-arrow">arrow_upward</span>                      </th>
                       <th class="sortable" data-col="latency" style="width:120px">
-                        Latency <span class="icon icon-sm sort-arrow">arrow_upward</span>
-                      </th>
-                      <th style="width:80px">Apply</th>
+                        <span data-i18n="scan.colLatency">Latency</span> <span class="icon icon-sm sort-arrow">arrow_upward</span>                      </th>
+                      <th style="width:80px" data-i18n="scan.colApply">Apply</th>
                     </tr>
                   </thead>
                   <tbody id="scan-table-body"></tbody>
@@ -132,8 +128,8 @@
               </div>
               <div class="table-empty" id="scan-empty-state">
                 <span class="icon empty-icon">radar</span>
-                <div class="empty-title">No proxies found yet</div>
-                <div class="empty-sub">Start a scan to discover active proxies on your network</div>
+                <div class="empty-title" data-i18n="scan.emptyTitle">No proxies found yet</div>
+                <div class="empty-sub" data-i18n="scan.emptySub">Start a scan to discover active proxies on your network</div>
               </div>
             </div>
 
@@ -141,7 +137,7 @@
             <div class="scan-progress-area">
               <div class="progress-info">
                 <div class="progress-stats">
-                  <span id="scan-progress-label">Scanned: 0 / 0</span>
+                  <span id="scan-progress-label" data-i18n="scan.progressLabel">Scanned: 0 / 0</span>
                   <span class="progress-pct" id="scan-ring-pct">0%</span>
                 </div>
                 <div class="progress-bar">
@@ -150,7 +146,7 @@
               </div>
               <div class="found-badge">
                 <span class="icon">check_circle</span>
-                <span id="scan-found-label">Found: 0</span>
+                <span id="scan-found-label" data-i18n="scan.foundLabel">Found: 0</span>
               </div>
             </div>
 
@@ -161,7 +157,7 @@
                   <span class="icon">analytics</span>
                 </div>
                 <div class="scan-stat-info">
-                  <span class="scan-stat-label">Total Scanned</span>
+                  <span class="scan-stat-label" data-i18n="scan.statScanned">Total Scanned</span>
                   <span class="scan-stat-value" id="stat-scanned">0</span>
                 </div>
               </div>
@@ -170,7 +166,7 @@
                   <span class="icon">sensors</span>
                 </div>
                 <div class="scan-stat-info">
-                  <span class="scan-stat-label">Ports Open</span>
+                  <span class="scan-stat-label" data-i18n="scan.statPortsOpen">Ports Open</span>
                   <span class="scan-stat-value" id="stat-ports-open">0</span>
                 </div>
               </div>
@@ -179,7 +175,7 @@
                   <span class="icon">verified</span>
                 </div>
                 <div class="scan-stat-info">
-                  <span class="scan-stat-label">Found Proxies</span>
+                  <span class="scan-stat-label" data-i18n="scan.statFoundProxies">Found Proxies</span>
                   <span class="scan-stat-value" id="stat-found">0</span>
                 </div>
               </div>
@@ -188,7 +184,7 @@
                   <span class="icon">speed</span>
                 </div>
                 <div class="scan-stat-info">
-                  <span class="scan-stat-label">Avg Latency</span>
+                  <span class="scan-stat-label" data-i18n="scan.statAvgLatency">Avg Latency</span>
                   <span class="scan-stat-value" id="stat-avg-latency">-- ms</span>
                 </div>
               </div>
@@ -197,7 +193,7 @@
                   <span class="icon">bolt</span>
                 </div>
                 <div class="scan-stat-info">
-                  <span class="scan-stat-label">Scan Speed</span>
+                  <span class="scan-stat-label" data-i18n="scan.statScanSpeed">Scan Speed</span>
                   <span class="scan-stat-value" id="stat-scan-speed">0/s</span>
                 </div>
               </div>

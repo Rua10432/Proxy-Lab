@@ -7,6 +7,7 @@ yarn-error.log*
 
 # Dependency directories
 node_modules/
+.vite/
 dist/
 dist-ssr/
 
@@ -22,16 +23,31 @@ check_lines.py
 .DS_Store
 Thumbs.db
 
-# Build artifacts
+# Build artifacts & Tauri gen
 target/
 src-tauri/target/
+src-tauri/gen/
 成品/
 .claude/
+.antigravitycli/
 src.zip
 src33/
+
+# Local database files
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
 # Local env files
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
+!.env.example
+
+# Unused files
+main2.rs
+split_pages.js
+
+# Build counter (auto-incremented)
+build_count.txt

@@ -22,21 +22,22 @@
 #titlebar-filament {
   position: absolute;
   top: 0;
-  left: -33%;
+  left: 0;
   width: 33%;
   height: 100%;
   background: linear-gradient(90deg, transparent, rgba(158, 221, 200, 0.15), transparent);
   animation: filamentSweep 4s ease-in-out infinite;
   pointer-events: none;
+  will-change: transform;
 }
 
 @keyframes filamentSweep {
   0% {
-    transform: translateX(-100%);
+    transform: translate3d(-100%, 0, 0);
   }
 
   100% {
-    transform: translateX(300%);
+    transform: translate3d(300%, 0, 0);
   }
 }
 
@@ -72,13 +73,16 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   border-radius: var(--radius-sm);
   color: var(--color-ink-600);
   cursor: pointer;
-  transition: all var(--transition-fast);
-  font-size: 16px;
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+
+.win-btn .icon {
+  font-size: 22px;
 }
 
 .win-btn:hover {
@@ -134,9 +138,10 @@
   height: 56px;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: all var(--transition-normal);
+  transition: background var(--transition-normal), color var(--transition-normal);
   position: relative;
   gap: 4px;
+  will-change: transform;
 }
 
 .nav-item:hover {
@@ -314,6 +319,16 @@
 .status-right .icon {
   font-size: 14px;
   color: var(--color-ink-600);
+}
+
+/* ── Disabled State ── */
+input:disabled,
+select:disabled,
+textarea:disabled,
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 /* ── Responsive ── */

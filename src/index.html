@@ -6,12 +6,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Proxy Tester</title>
 
-  <!-- Fonts: Noto Sans TC, Noto Serif TC, JetBrains Mono (Material Symbols loaded locally) -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&family=Noto+Serif+TC:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
-    rel="stylesheet">
+  <!-- Fonts: Noto Serif (Latin/SC/JP), JetBrains Mono — loaded locally via CSS -->
+  <link rel="preload" href="assets/fonts/noto-serif-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/noto-serif-sc-chinese-simplified-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/noto-serif-jp-japanese-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/noto-serif-tc-chinese-traditional-400-normal.woff2" as="font" type="font/woff2" crossorigin>
 
   <!-- Stylesheets -->
   <link rel="stylesheet" href="assets/css/icons.css">
@@ -34,21 +33,21 @@
     <!-- ══════════════════════════════════════════════════════════════════════════
        Titlebar (Desktop)
        ══════════════════════════════════════════════════════════════════════════ -->
-    <div id="titlebar" data-tauri-drag-region>
-      <div id="titlebar-filament" data-tauri-drag-region></div>
-      <div class="titlebar-left" data-tauri-drag-region>
-        <span class="icon icon-lg titlebar-icon" aria-hidden="true" data-tauri-drag-region>network_check</span>
-        <span class="titlebar-title" data-tauri-drag-region>Proxy Tester</span>
+    <div id="titlebar">
+      <div id="titlebar-filament"></div>
+      <div class="titlebar-left">
+        <span class="icon icon-lg titlebar-icon" aria-hidden="true">network_check</span>
+        <span class="titlebar-title">Proxy Tester</span>
       </div>
       <div class="titlebar-right">
         <button class="win-btn" id="win-minimize" aria-label="Minimize">
-          <span class="icon" style="font-size:18px">remove</span>
+          <span class="icon">remove</span>
         </button>
         <button class="win-btn" id="win-maximize" aria-label="Maximize">
-          <span class="icon" style="font-size:14px">crop_square</span>
+          <span class="icon">crop_square</span>
         </button>
         <button class="win-btn close" id="win-close" aria-label="Close">
-          <span class="icon" style="font-size:16px">close</span>
+          <span class="icon">close</span>
         </button>
       </div>
     </div>
@@ -167,8 +166,7 @@
         <div class="dialog-header">
           <span class="icon icon-lg" id="dialog-icon" style="color:var(--color-accent-green)">info</span>
           <h3 id="dialog-title">Dialog Title</h3>
-          <button class="btn-icon" id="dialog-close"><span class="icon">close</span></button>
-        </div>
+          </div>
         <div class="dialog-body" id="dialog-body">Dialog content goes here.</div>
         <div class="dialog-footer dialog-actions" id="dialog-actions">
           <button class="btn btn-tonal" id="dialog-cancel-btn" style="display:none">Cancel</button>
@@ -200,6 +198,7 @@
   <script type="module" src="assets/js/pages/monitor.js"></script>
   <script type="module" src="assets/js/pages/settings.js"></script>
   <script type="module" src="assets/js/app.js"></script>
+  <script type="module" src="assets/js/col-resize.js"></script>
 
 </body>
 

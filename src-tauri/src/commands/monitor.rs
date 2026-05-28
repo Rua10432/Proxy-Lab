@@ -1,0 +1,21 @@
+// ─── Monitor Commands ────────────────────────────────────────────────────────
+// Thin Tauri wrappers — delegates to service layer.
+
+use crate::service;
+use crate::types::{MonitorData, MemoryInfo, LocalProxyPort};
+use crate::AppState;
+
+#[tauri::command]
+pub fn get_tcp_connections(state: tauri::State<'_, AppState>) -> MonitorData {
+    service::get_tcp_connections(&state)
+}
+
+#[tauri::command]
+pub fn get_local_proxy_ports() -> Vec<LocalProxyPort> {
+    service::get_local_proxy_ports()
+}
+
+#[tauri::command]
+pub fn shittim_mem_task() -> MemoryInfo {
+    service::get_memory_info()
+}

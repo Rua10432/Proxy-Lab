@@ -36,6 +36,25 @@ function startScan() {
   clearFieldError($('#scan-network').closest('.input-wrap'));
   if (!isTauriAvailable()) return;
 
+  // Validate port range
+  const startPort = parseInt($('#scan-start-port').value) || 0;
+  const endPort = parseInt($('#scan-end-port').value) || 0;
+  if (startPort < 1 || startPort > 65535) {
+    setFieldError($('#scan-start-port').closest('.input-wrap'), '端口范围 1-65535');
+    return;
+  }
+  clearFieldError($('#scan-start-port').closest('.input-wrap'));
+  if (endPort < 1 || endPort > 65535) {
+    setFieldError($('#scan-end-port').closest('.input-wrap'), '端口范围 1-65535');
+    return;
+  }
+  clearFieldError($('#scan-end-port').closest('.input-wrap'));
+  if (startPort > endPort) {
+    setFieldError($('#scan-end-port').closest('.input-wrap'), '结束端口不能小于起始端口');
+    return;
+  }
+  clearFieldError($('#scan-end-port').closest('.input-wrap'));
+
   AppState.scanStatus = 'scanning';
   AppState.scanResults = [];
   AppState.scanStats = { scanned: 0, total: 0, portsOpen: 0, found: 0, avgLatency: 0, speed: 0 };
@@ -49,8 +68,6 @@ function startScan() {
   renderLogConsole();
 
   const mask = $('#scan-mask').value.trim() || '255.255.255.0';
-  const startPort = parseInt($('#scan-start-port').value) || 1;
-  const endPort = parseInt($('#scan-end-port').value) || 65535;
   const concurrent = parseInt($('#scan-concurrent').value) || 250;
   const synTimeout = parseInt($('#scan-syn-timeout').value) || 500;
   const verifyConcurrent = parseInt($('#scan-verify-concurrent').value) || 50;
@@ -63,17 +80,21 @@ function startScan() {
   });
 }
 
+let _scanProgressThrottle = 0;
 function onScanProgress(payload) {
   AppState.scanStats.scanned = payload.scanned;
   AppState.scanStats.total = payload.total;
-  AppState.scanStats.found = payload.found;
+
+  const now = Date.now();
+  if (now - _scanProgressThrottle < 33) return; // throttle DOM to ~30fps
+  _scanProgressThrottle = now;
 
   const total = payload.total || 1;
   const pct = ((payload.scanned / total) * 100).toFixed(1);
   $('#scan-progress-label').textContent = `Scanned: ${payload.scanned} / ${payload.total}`;
   $('#scan-ring-pct').textContent = pct + '%';
   $('#scan-progress-fill').style.width = pct + '%';
-  $('#scan-found-label').textContent = `Found: ${payload.found}`;
+  $('#scan-found-label').textContent = `Open: ${payload.found}`;
   updateScanStats();
 }
 
@@ -93,18 +114,10 @@ function onScanFound(payload) {
   });
   AppState.scanStats.found++;
   renderScanTable();
+  updateScanStats();
   appendLog('ok', `Found: ${payload.ip}:${payload.port} (${payload.protocol}) — ${payload.latency_ms}ms`);
   renderLogConsole();
 
-  AppState.proxyPool.push({
-    id: genId(),
-    host: payload.ip,
-    port: payload.port,
-    protocol: payload.protocol,
-    latency: payload.latency_ms,
-    status: 'ok',
-  });
-  saveToStorage('proxyPool', AppState.proxyPool);
 }
 
 function finishScan() {
@@ -135,7 +148,7 @@ function clearScan() {
   $('#scan-progress-label').textContent = 'Scanned: 0 / 0';
   $('#scan-ring-pct').textContent = '0%';
   $('#scan-progress-fill').style.width = '0%';
-  $('#scan-found-label').textContent = 'Found: 0';
+  $('#scan-found-label').textContent = 'Open: 0';
   showSnackbar('Scan results cleared', 'success');
 }
 

@@ -76,7 +76,7 @@
                   <span class="icon icon-sm">lan</span> Connections
                 </button>
                 <button class="monitor-tab-btn" data-tab="rules">
-                  <span class="icon icon-sm">rule</span> Proxy Rules
+                  <span class="icon icon-sm">rule</span> <span data-i18n="monitor.proxyrules">Proxy Rules</span>
                 </button>
               </div>
 
@@ -88,7 +88,7 @@
                     <div class="input-field" style="margin-top:0">
                       <div class="input-wrap">
                         <span class="icon icon-sm leading-icon">search</span>
-                        <input type="text" id="mon-filter" data-i18n-placeholder="monitor.searchPlaceholder" placeholder="Filter by process or address...">
+                        <input type="text" id="mon-filter" data-i18n-placeholder="monitor.searchPlaceholder" placeholder="Filter by process or address..." autocomplete="off">
                       </div>
                     </div>
                   </div>
@@ -127,7 +127,13 @@
                           <th style="width:60px">Action</th>
                         </tr>
                       </thead>
-                      <tbody id="monitor-table-body"></tbody>
+                      <tbody id="monitor-table-body">
+                        <tr><td colspan="8"><div class="skeleton-text" style="width:30%;margin:4px 0"></div></td></tr>
+                        <tr><td colspan="8"><div class="skeleton-text" style="width:45%;margin:4px 0"></div></td></tr>
+                        <tr><td colspan="8"><div class="skeleton-text" style="width:35%;margin:4px 0"></div></td></tr>
+                        <tr><td colspan="8"><div class="skeleton-text" style="width:50%;margin:4px 0"></div></td></tr>
+                        <tr><td colspan="8"><div class="skeleton-text" style="width:28%;margin:4px 0"></div></td></tr>
+                      </tbody>
                     </table>
                   </div>
                   <div class="table-empty" id="monitor-empty-state">
@@ -136,7 +142,7 @@
                     <div class="empty-sub">Click Refresh to fetch current TCP connections</div>
                   </div>
                 </div>
-              </div>
+              
 
               <!-- Rules Tab -->
               <div class="monitor-tab-content" id="mon-tab-rules">

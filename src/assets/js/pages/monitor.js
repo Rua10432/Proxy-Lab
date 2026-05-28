@@ -114,7 +114,7 @@ function renderConnectionsTable() {
   if (_monitorFilter === 'proxy') {
     conns = conns.filter(c => c.is_proxy_traffic);
   } else if (_monitorFilter === 'direct') {
-    conns = conns.filter(c => !c.is_proxy_traffic && c.state === 'ESTABLISHED');
+    conns = conns.filter(c => !c.is_proxy_traffic && (c.state === 'ESTABLISHED' || c.state === '' || c.state === 'UDP'));
   } else if (_monitorFilter === 'listen') {
     conns = conns.filter(c => c.state === 'LISTENING');
   }
@@ -132,7 +132,7 @@ function renderConnectionsTable() {
   // Sort: proxy traffic first, then by process name
   conns.sort((a, b) => {
     if (a.is_proxy_traffic !== b.is_proxy_traffic) return a.is_proxy_traffic ? -1 : 1;
-    const stateOrder = { 'ESTABLISHED': 0, 'LISTENING': 1, 'CLOSE_WAIT': 2, 'TIME_WAIT': 3 };
+    const stateOrder = { '': 0, 'UDP': 0, 'ESTABLISHED': 1, 'LISTENING': 2, 'CLOSE_WAIT': 3, 'TIME_WAIT': 4 };
     const sa = stateOrder[a.state] || 99;
     const sb = stateOrder[b.state] || 99;
     if (sa !== sb) return sa - sb;
@@ -323,7 +323,7 @@ function createAddRuleForm() {
       <label>Application Path</label>
       <div class="input-wrap">
         <span class="icon icon-sm leading-icon">terminal</span>
-        <input type="text" id="rule-path-input" placeholder="C:\\Program Files\\App\\app.exe">
+        <input type="text" id="rule-path-input" placeholder="C:\\Program Files\\App\\app.exe" autocomplete="off">
       </div>
       <span class="text-caption" style="color:var(--color-text-subtle);margin-top:4px;display:block">
         Enter the full path to the executable you want to force through the proxy.

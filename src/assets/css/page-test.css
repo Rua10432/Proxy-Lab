@@ -75,6 +75,29 @@
 .pool-table-container {
   margin-top: var(--space-4);
 }
+.pool-table-container .table-wrapper {
+  max-height: calc(100vh - 420px);
+  min-height: 200px;
+}
+
+/* Filter row */
+.pool-filter-row {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  align-items: flex-end;
+}
+.pool-filter-row .filter-field {
+  margin-top: 0;
+  flex: 1;
+  max-width: 360px;
+}
+.filter-status-select {
+  min-width: 150px;
+}
+.filter-status-select .select-trigger {
+  height: 36px;
+}
 
 /* Filter field */
 .filter-field {
@@ -118,4 +141,7 @@
   .action-row { flex-direction: column; align-items: stretch; }
   .action-row .spacer { display: none; }
   .recent-grid { grid-template-columns: 1fr; }
+  .pool-filter-row { flex-direction: column; }
+  .pool-filter-row .filter-field { max-width: none; }
+  .filter-status-select { min-width: 0; }
 }

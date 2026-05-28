@@ -1,6 +1,7 @@
 /* ═══════════════════════════════════════════════════════════════════════════════
    Page: Test — Manual Probe + Proxy Pool
    ═══════════════════════════════════════════════════════════════════════════════ */
+import { getSelectValue } from "../navigation.js";
 
 function initTestPage() {
   /* ── Tab Switching ── */
@@ -33,8 +34,9 @@ function initTestPage() {
   $('#btn-pool-test-all').addEventListener('click', startBatchPoolTest);
   $('#btn-pool-stop').addEventListener('click', stopBatchPoolTest);
   $('#btn-pool-fetch').addEventListener('click', fetchPoolSubscription);
+  $('#btn-pool-fetch-clipboard').addEventListener('click', fetchPoolFromClipboard);
   $('#btn-pool-clear').addEventListener('click', clearPool);
-  $('#btn-pool-refresh').addEventListener('click', () => { renderPoolTable(); showSnackbar('Pool refreshed', 'info'); });
+  // btn-pool-refresh was removed from template
 
   /* ── Test History ── */
   $('#btn-clear-test-history').addEventListener('click', () => {
@@ -46,23 +48,40 @@ function initTestPage() {
 
   /* ── Pool Filter ── */
   $('#pool-filter').addEventListener('input', () => renderPoolTable());
+  $('#pool-status-filter').addEventListener('change', () => renderPoolTable());
 
   /* ── Load history from storage ── */
-  AppState.testHistory = loadFromStorage('testHistory', []);
+  AppState.testHistory = loadFromStorage('testHistory', []).filter(e => e && e.host);
   AppState.proxyPool = loadFromStorage('proxyPool', []);
   renderTestHistory();
   renderPoolTable();
 
   /* ── Listen for Tauri ping events ── */
   if (isTauriAvailable()) {
-    tauriListen('ping-result', (e) => onPingResult(e.payload));
-    tauriListen('ping-done', () => finishTest());
-    tauriListen('ping-stopped', () => onPingStopped());
+    tauriListen('ping-result', (e) => {
+      if (e.payload.request_id === _currentRequestId) onPingResult(e.payload);
+    });
+    tauriListen('ping-done', (e) => {
+      if (e.payload.request_id === _currentRequestId) finishTest();
+    });
+    tauriListen('ping-stopped', (e) => {
+      if (e.payload.request_id === _currentRequestId) onPingStopped();
+    });
+
+    /* ── Batch ping events ── */
+    tauriListen('batch-ping-result', (e) => {
+      if (e.payload.request_id === _batchRequestId) onBatchPingResult(e.payload);
+    });
+    tauriListen('batch-ping-done', (e) => {
+      if (e.payload.request_id === _batchRequestId) onBatchPingDone(e.payload);
+    });
   }
 }
 
 let _testMeta = { host: '', port: 0, count: 0, ok: 0, fail: 0, sum: 0, min: Infinity, max: -Infinity };
+let _currentRequestId = null;
 let _batchPoolTestActive = false;
+let _batchRequestId = null;
 
 /* ── Start Test ── */
 function startTest() {
@@ -81,6 +100,8 @@ function startTest() {
 
   $('#btn-test').disabled = true;
   $('#btn-stop').disabled = false;
+  $('#btn-clear-fields').disabled = true;
+  setManualFieldsDisabled(true);
   $('#test-stats-bar').style.display = 'none';
 
   _testMeta = { host, port: parseInt(port) || 7890, count: 0, ok: 0, fail: 0, sum: 0, min: Infinity, max: -Infinity };
@@ -95,11 +116,12 @@ function startTest() {
   renderLogConsole();
 
   if (!isTauriAvailable()) return;
+  _currentRequestId = 'manual-' + Date.now();
   tauriInvoke('start_ping_test', {
     host, port: parseInt(port), protocol: proto,
-    count, timeout_ms: timeout, interval_ms: interval,
+    count, timeoutMs: timeout, intervalMs: interval,
     username: user, password: pass,
-    request_id: 'manual-' + Date.now(),
+    requestId: _currentRequestId,
   });
 }
 
@@ -137,12 +159,16 @@ function updateTestStats() {
 }
 
 function finishTest() {
+  _currentRequestId = null;
   AppState.testStatus = 'done';
   updateTestStatusChip();
   $('#btn-test').disabled = false;
   $('#btn-stop').disabled = true;
+  $('#btn-clear-fields').disabled = false;
+  setManualFieldsDisabled(false);
 
   const { host, port, ok, fail, sum } = _testMeta;
+  if (!host) return;
   const total = ok + fail;
   appendLog(ok > 0 ? 'ok' : 'error', `Test completed: ${ok}/${total} successful${ok > 0 ? ', avg ' + (sum/ok/1000).toFixed(1) + 'ms' : ''}`);
   renderLogConsole();
@@ -172,10 +198,13 @@ function finishTest() {
 }
 
 function onPingStopped() {
+  _currentRequestId = null;
   AppState.testStatus = 'ready';
   updateTestStatusChip();
   $('#btn-test').disabled = false;
   $('#btn-stop').disabled = true;
+  $('#btn-clear-fields').disabled = false;
+  setManualFieldsDisabled(false);
   appendLog('warn', 'Test stopped by user');
   renderLogConsole();
 }
@@ -183,12 +212,7 @@ function onPingStopped() {
 function stopTest() {
   if (!isTauriAvailable()) return;
   tauriInvoke('stop_ping_test');
-  AppState.testStatus = 'ready';
-  updateTestStatusChip();
-  $('#btn-test').disabled = false;
-  $('#btn-stop').disabled = true;
-  appendLog('warn', 'Test stopped by user');
-  renderLogConsole();
+  onPingStopped();
 }
 
 function clearTestFields() {
@@ -248,7 +272,9 @@ function renderPoolTable() {
   const tbody = $('#pool-table-body');
   const emptyState = $('#pool-empty-state');
   const filter = ($('#pool-filter')?.value || '').toLowerCase();
+  const statusFilter = getSelectValue('pool-status-filter') || 'all';
   const pool = AppState.proxyPool.filter(p => {
+    if (statusFilter !== 'all' && p.status !== statusFilter) return false;
     if (!filter) return true;
     return (p.host + ':' + p.port + ' ' + p.protocol).toLowerCase().includes(filter);
   });
@@ -271,21 +297,42 @@ function renderPoolTable() {
       <td><button class="btn btn-text" style="padding:4px 8px;font-size:12px;height:auto" onclick="testSingleProxy('${p.id}')"><span class="icon icon-sm">play_arrow</span></button></td>
     </tr>
   `).join('');
-  $('#pool-count-label').textContent = pool.length + ' Proxies';
+  const totalCount = AppState.proxyPool.length;
+  if (filter || statusFilter !== 'all') {
+    $('#pool-count-label').textContent = pool.length + ' / ' + totalCount + ' Proxies';
+  } else {
+    $('#pool-count-label').textContent = totalCount + ' Proxies';
+  }
 }
 
 function testSingleProxy(id) {
   const proxy = AppState.proxyPool.find(p => p.id === id);
   if (!proxy) return;
   if (!isTauriAvailable()) return;
-  $('#test-host').value = proxy.host;
-  $('#test-port').value = proxy.port;
-  const selectField = $('#test-proto-select');
-  selectField.querySelectorAll('.select-option').forEach(o => {
-    o.classList.toggle('selected', o.dataset.value === proxy.protocol);
+
+  proxy.status = 'testing';
+  renderPoolTable();
+
+  const requestId = 'single-' + Date.now() + '-' + id;
+  let unlisten = null;
+
+  tauriListen('ping-result', function handler(e) {
+    if (e.payload.request_id !== requestId) return;
+    if (unlisten) unlisten();
+    const ms = e.payload.ms != null ? (e.payload.ms / 1000) : null;
+    proxy.latency = ms ? parseFloat(ms.toFixed(1)) : undefined;
+    proxy.status = ms ? 'ok' : 'error';
+    saveToStorage('proxyPool', AppState.proxyPool);
+    renderPoolTable();
+  }).then(fn => { unlisten = fn; });
+
+  const timeout = parseInt($('#pool-timeout').value) || 3000;
+  tauriInvoke('start_ping_test', {
+    host: proxy.host, port: proxy.port, protocol: proxy.protocol,
+    count: 1, timeoutMs: timeout, intervalMs: 0,
+    username: null, password: null,
+    requestId,
   });
-  selectField.querySelector('.select-value').textContent = proxy.protocol;
-  startTest();
 }
 
 /* ── Pool Actions ── */
@@ -318,59 +365,159 @@ async function fetchPoolSubscription() {
   }
 }
 
+async function fetchPoolFromClipboard() {
+  let url;
+  try {
+    url = await navigator.clipboard.readText();
+  } catch (_) {
+    showSnackbar('无法获取剪贴板内容', 'error');
+    return;
+  }
+  if (!url || !url.trim()) {
+    showSnackbar('剪贴板为空，无法获取', 'error');
+    return;
+  }
+  url = url.trim();
+
+  if (AppState.proxyPool.length > 0) {
+    const confirmed = await new Promise(resolve => {
+      showDialog({
+        title: '替换代理池',
+        icon: 'warning',
+        body: '从剪贴板获取链接将替换现有代理池中的所有代理，是否继续？',
+        actions: [
+          { label: '取消', class: 'btn-text', onClick: () => resolve(false) },
+          { label: '替换', class: 'btn-primary', onClick: () => resolve(true) },
+        ],
+      });
+    });
+    if (!confirmed) return;
+  }
+
+  if (!isTauriAvailable()) return;
+  showSnackbar('正在从链接获取代理...', 'info');
+  try {
+    const entries = await tauriInvoke('fetch_proxies_from_url', { url });
+    if (entries && entries.length > 0) {
+      AppState.proxyPool = entries.map(e => ({
+        id: genId(),
+        host: e.ip,
+        port: e.port,
+        protocol: e.protocol || 'HTTP',
+        latency: e.latency_ms || undefined,
+        status: 'untested',
+      }));
+      saveToStorage('proxyPool', AppState.proxyPool);
+      renderPoolTable();
+      showSnackbar(`已导入 ${entries.length} 个代理并替换原有代理池`, 'success');
+    } else {
+      showSnackbar('链接中未找到有效代理', 'error');
+    }
+  } catch (_) {
+    showSnackbar('获取代理失败', 'error');
+  }
+}
+
 function startBatchPoolTest() {
   const pool = AppState.proxyPool;
   if (pool.length === 0) { showSnackbar('Pool is empty', 'error'); return; }
   if (!isTauriAvailable()) return;
+
   _batchPoolTestActive = true;
+  const timeout = parseInt($('#pool-timeout').value) || 3000;
+  const requestId = 'batch-' + Date.now();
+
   $('#btn-pool-test-all').disabled = true;
   $('#btn-pool-stop').disabled = false;
-  showSnackbar(`Testing ${pool.length} proxies...`, 'info');
+  setPoolFieldsDisabled(true);
+  showSnackbar(`Testing ${pool.length} proxies (timeout: ${timeout}ms)...`, 'info');
 
-  let idx = 0;
-  function testNext() {
-    if (!_batchPoolTestActive || idx >= pool.length) {
-      finishBatchPoolTest();
-      return;
-    }
-    const p = pool[idx];
-    tauriInvoke('start_ping_test', {
-      host: p.host, port: p.port, protocol: p.protocol,
-      count: 1, timeout_ms: 3000, interval_ms: 0,
-      username: null, password: null,
-      request_id: 'batch-' + Date.now() + '-' + idx,
-    });
-    const unlisten = tauriListen('ping-result', function handler() {
-      unlisten();
-      setTimeout(() => { idx++; testNext(); }, 100);
-    });
-  }
-  testNext();
+  // Reset all proxy statuses
+  pool.forEach(p => {
+    p.status = 'testing';
+    p.latency = undefined;
+  });
+  renderPoolTable();
+
+  const proxies = pool.map((p, i) => ({
+    host: p.host,
+    port: p.port,
+    protocol: p.protocol,
+    index: i,
+  }));
+
+  _batchRequestId = requestId;
+  tauriInvoke('start_batch_ping_test', { proxies, timeoutMs: timeout, requestId });
 }
 
 function stopBatchPoolTest() {
   if (!isTauriAvailable()) return;
   _batchPoolTestActive = false;
-  tauriInvoke('stop_ping_test');
+  _batchRequestId = null;
+  tauriInvoke('stop_batch_ping_test');
   $('#btn-pool-test-all').disabled = false;
   $('#btn-pool-stop').disabled = true;
+  setPoolFieldsDisabled(false);
+  saveToStorage('proxyPool', AppState.proxyPool);
   showSnackbar('Batch test stopped', 'warn');
 }
 
 function finishBatchPoolTest() {
   _batchPoolTestActive = false;
+  _batchRequestId = null;
   $('#btn-pool-test-all').disabled = false;
   $('#btn-pool-stop').disabled = true;
+  setPoolFieldsDisabled(false);
   saveToStorage('proxyPool', AppState.proxyPool);
-  showSnackbar('Batch test complete', 'success');
 }
 
 function clearPool() {
+  if (_batchPoolTestActive) { showSnackbar('Cannot clear while testing', 'error'); return; }
   AppState.proxyPool = [];
   saveToStorage('proxyPool', AppState.proxyPool);
   if (isTauriAvailable()) tauriInvoke('clear_proxies');
   renderPoolTable();
   showSnackbar('Pool cleared', 'success');
+}
+
+// ─── Field Disable Helpers ──────────────────────────────────────────────────
+
+function setManualFieldsDisabled(disabled) {
+  ['test-host', 'test-port', 'test-count', 'test-timeout', 'test-interval', 'test-user', 'test-pass'].forEach(id => {
+    const el = $('#' + id);
+    if (el) el.disabled = disabled;
+  });
+  const protoSelect = $('#test-proto-select');
+  if (protoSelect) {
+    protoSelect.style.pointerEvents = disabled ? 'none' : '';
+    protoSelect.style.opacity = disabled ? '0.5' : '';
+  }
+}
+
+function setPoolFieldsDisabled(disabled) {
+  ['pool-sub-url', 'pool-filter', 'pool-timeout'].forEach(id => {
+    const el = $('#' + id);
+    if (el) el.disabled = disabled;
+  });
+  $('#btn-pool-fetch').disabled = disabled;
+  $('#btn-pool-fetch-clipboard').disabled = disabled;
+  $('#btn-pool-clear').disabled = disabled;
+}
+
+// ─── Batch Ping Handlers ────────────────────────────────────────────────────
+
+function onBatchPingResult(payload) {
+  const proxy = AppState.proxyPool[payload.index];
+  if (!proxy) return;
+  proxy.latency = payload.latency_ms ?? undefined;
+  proxy.status = payload.latency_ms != null ? 'ok' : 'error';
+  renderPoolTable();
+}
+
+function onBatchPingDone(payload) {
+  finishBatchPoolTest();
+  const msg = `Batch test done: ${payload.ok}/${payload.total} ok`;
+  showSnackbar(msg, payload.ok > 0 ? 'success' : 'error');
 }
 
 window.initTestPage = initTestPage;

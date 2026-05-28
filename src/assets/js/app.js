@@ -2,6 +2,17 @@ import { initNavigation,initSelects,initSwitches,initSnackbar, showDialog } from
 import { appendLog,$, $$  } from "./utils.js";
 import { AppState } from "./state.js";
 document.addEventListener('DOMContentLoaded', () => {
+  /* ── Block Browser Context Menu (dev mode: right-click to inspect) ── */
+  const isDev = window.location.port === '5173' || window.location.port === '1420';
+  if (!isDev) {
+    document.addEventListener('contextmenu', (e) => e.preventDefault());
+  }
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'F5' || (e.ctrlKey && e.key === 'r') || (e.ctrlKey && e.key === 'R')) {
+      e.preventDefault();
+    }
+  });
+
   /* ── Initialize All Systems ── */
   initNavigation();
   initSelects();
@@ -20,7 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
       loadingScreen.classList.add('fade-out');
       setTimeout(() => {
         loadingScreen.style.display = 'none';
-      }, 500);
+      }, 200);
     }
     AppState.isLoading = false;
 
@@ -28,10 +39,18 @@ document.addEventListener('DOMContentLoaded', () => {
     $$('#sidebar, #main-content, #status-bar').forEach((el, i) => {
       el.classList.add('stagger-entry', `stagger-delay-${i + 1}`);
     });
-  }, 1200);
+  }, 400);
 
   /* ── Window Controls (Desktop Titlebar) ── */
   initWindowControls();
+
+  // Apply saved theme and color
+  const savedTheme = loadFromStorage('theme', 'dark');
+  const savedColor = loadFromStorage('primaryColor', '#9eddc8');
+  AppState.theme = savedTheme;
+  AppState.primaryColor = savedColor;
+  applyTheme(savedTheme);
+  applyPrimaryColor(savedColor);
 
   // Apply saved title bar mode (system/custom)
   const savedMode = loadFromStorage('titleBarMode', 'custom');
@@ -39,6 +58,14 @@ document.addEventListener('DOMContentLoaded', () => {
   if (typeof applyTitleBarMode === 'function') {
     applyTitleBarMode(savedMode);
   }
+
+  // Auto-init validation for data-validate inputs
+  document.addEventListener('input', (e) => {
+    if (e.target.dataset.validate) validateAndStyle(e.target);
+  });
+  document.addEventListener('blur', (e) => {
+    if (e.target.dataset.validate) validateAndStyle(e.target);
+  });
 
   // Intercept native close (system title bar / Alt+F4) to minimize to tray
   if (window.__TAURI__?.window?.getCurrentWindow) {
@@ -75,9 +102,9 @@ async function tauriInvoke(cmd, args = {}) {
   }
 }
 
-function tauriListen(event, handler) {
+async function tauriListen(event, handler) {
   if (window.__TAURI__?.event?.listen) {
-    window.__TAURI__.event.listen(event, handler);
+    return window.__TAURI__.event.listen(event, handler);
   }
 }
 
@@ -129,16 +156,17 @@ export function initWindowControls() {
   const titlebar = $('#titlebar');
   if (titlebar) {
     titlebar.addEventListener('mousedown', (e) => {
-      // Only drag if the click is on the drag region and not on a button
       if (e.target.closest('.win-btn')) return;
+      if (e.detail > 1) return; // double-click — let dblclick handle maximize
 
-      if (window.__TAURI__?.window?.getCurrentWindow) {
-        window.__TAURI__.window.getCurrentWindow().startDragging();
-      } else if (window.__TAURI__?.webviewWindow?.getCurrentWebviewWindow) {
-        window.__TAURI__.webviewWindow.getCurrentWebviewWindow().startDragging();
-      } else {
-        tauriInvoke('win_start_drag');
-      }
+      // Use Tauri command to start dragging (handles maximized check in Rust)
+      tauriInvoke('win_start_drag');
+    });
+
+    // Double-click titlebar to toggle maximize (standard Windows behavior)
+    titlebar.addEventListener('dblclick', (e) => {
+      if (e.target.closest('.win-btn')) return;
+      tauriInvoke('win_toggle_maximize');
     });
   }
 
@@ -149,6 +177,39 @@ export function initWindowControls() {
     tauriInvoke('win_toggle_maximize');
   });
   $('#win-close')?.addEventListener('click', handleCloseClick);
+
+  // Sync maximize/restore button icon with window state
+  updateMaximizeIcon();
+
+  if (isTauriAvailable()) {
+    try {
+      const win = window.__TAURI__.window?.getCurrentWindow?.();
+      if (win) {
+        const onResize = () => updateMaximizeIcon();
+        if (win.onResized) {
+          win.onResized(onResize);
+        } else if (win.listen) {
+          win.listen('tauri://resize', onResize);
+        }
+      }
+    } catch (_) { /* ignore */ }
+  }
+}
+
+function updateMaximizeIcon() {
+  const icon = document.querySelector('#win-maximize .icon');
+  if (!icon) return;
+
+  if (isTauriAvailable()) {
+    try {
+      const win = window.__TAURI__.window?.getCurrentWindow?.();
+      if (win?.isMaximized) {
+        win.isMaximized().then((maximized) => {
+          icon.textContent = maximized ? 'filter_none' : 'crop_square';
+        }).catch(() => {});
+      }
+    } catch (_) { /* ignore */ }
+  }
 }
 
 function handleCloseClick() {
@@ -210,7 +271,36 @@ function showCloseDialog() {
   });
 }
 
+/* ── Theme / Color ── */
+function applyTheme(theme) {
+  const root = document.documentElement;
+  if (window._themeMq) {
+    window._themeMq.removeEventListener('change', window._themeHandler);
+    window._themeMq = null;
+    window._themeHandler = null;
+  }
+
+  if (theme === 'dark') {
+    root.classList.add('dark');
+  } else if (theme === 'light') {
+    root.classList.remove('dark');
+  } else {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    root.classList.toggle('dark', mq.matches);
+    window._themeMq = mq;
+    window._themeHandler = (e) => root.classList.toggle('dark', e.matches);
+    mq.addEventListener('change', window._themeHandler);
+  }
+}
+
+function applyPrimaryColor(color) {
+  document.documentElement.style.setProperty('--color-accent-green', color);
+  document.documentElement.style.setProperty('--color-status-active', color);
+}
+
 window.tauriInvoke = tauriInvoke;
 window.tauriListen = tauriListen;
 window.isTauriAvailable = isTauriAvailable;
+window.applyTheme = applyTheme;
+window.applyPrimaryColor = applyPrimaryColor;
 

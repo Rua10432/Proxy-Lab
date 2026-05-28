@@ -1,9 +1,9 @@
-/* ═══════════════════════════════════════════════════════════════════════════════
-   Page: Config — System Proxy Setup
-   ═══════════════════════════════════════════════════════════════════════════════ */
 import { getSelectValue } from "../navigation";
 
+let _testedOk = false;
+
 function initConfigPage() {
+  $('#btn-test-config').addEventListener('click', testProxyConfig);
   $('#btn-config').addEventListener('click', applyProxyConfig);
   $('#btn-config-disconnect').addEventListener('click', disconnectProxy);
   $('#btn-clear-recent').addEventListener('click', () => {
@@ -12,11 +12,84 @@ function initConfigPage() {
     showSnackbar('Config history cleared', 'success');
   });
 
+  // Field change listeners — reset test state when form changes
+  ['config-host', 'config-port', 'config-user', 'config-pass'].forEach(id => {
+    $('#' + id).addEventListener('input', resetTestState);
+  });
+  // Protocol select changes via click on options
+  $('#config-proto-select').addEventListener('click', () => {
+    setTimeout(resetTestState, 50); // defer so select value updates first
+  });
+
   AppState.configHistory = loadFromStorage('configHistory', []);
   renderConfigHistory();
   checkProxyStatus();
   scanLocalProxyPorts();
   $('#btn-refresh-local-proxy').addEventListener('click', scanLocalProxyPorts);
+}
+
+function resetTestState() {
+  _testedOk = false;
+  $('#btn-config').disabled = true;
+  $('#test-result').className = 'test-result';
+  $('#test-result').textContent = '';
+}
+
+function testProxyConfig() {
+  const host = $('#config-host').value.trim();
+  const port = $('#config-port').value.trim();
+  const proto = getSelectValue('config-proto-select');
+  const user = $('#config-user').value.trim() || null;
+  const pass = $('#config-pass').value.trim() || null;
+
+  if (!host) {
+    setFieldError($('#config-host').closest('.input-wrap'), 'Address is required');
+    return;
+  }
+  if (!port) {
+    setFieldError($('#config-port').closest('.input-wrap'), 'Port is required');
+    return;
+  }
+  clearFieldError($('#config-host').closest('.input-wrap'));
+  clearFieldError($('#config-port').closest('.input-wrap'));
+
+  const btn = $('#btn-test-config');
+  const result = $('#test-result');
+
+  btn.disabled = true;
+  result.className = 'test-result loading';
+  result.innerHTML = '<span class="icon icon-sm spin">sync</span> <span data-i18n="config.testing">Testing...</span>';
+  applyLanguage(getCurrentLang());
+
+  if (!isTauriAvailable()) {
+    btn.disabled = false;
+    result.className = 'test-result error';
+    result.innerHTML = '<span class="icon icon-sm">error</span> 仅在桌面应用中可用';
+    return;
+  }
+
+  tauriInvoke('test_proxy_connectivity', {
+    host, port: parseInt(port), protocol: proto,
+    username: user, password: pass,
+  }).then((latencyMs) => {
+    _testedOk = true;
+    $('#btn-config').disabled = false;
+    btn.disabled = false;
+    result.className = 'test-result success';
+    result.innerHTML = '<span class="icon icon-sm">check_circle</span> ' +
+      t('config.test_success').replace('{0}', latencyMs) +
+      ' <span class="test-latency">' + latencyMs + 'ms</span>';
+    showSnackbar('Proxy connectivity OK (' + latencyMs + 'ms)', 'success');
+  }).catch((err) => {
+    _testedOk = false;
+    $('#btn-config').disabled = true;
+    btn.disabled = false;
+    result.className = 'test-result error';
+    const msg = typeof err === 'string' ? err : 'Connection failed';
+    result.innerHTML = '<span class="icon icon-sm">error</span> ' +
+      t('config.test_failed') + ': ' + msg;
+    showSnackbar('Proxy test failed', 'error');
+  });
 }
 
 function applyProxyConfig() {
@@ -69,6 +142,7 @@ function disconnectProxy() {
     appendLog('ok', result || 'Proxy disconnected');
     renderLogConsole();
     showSnackbar('Proxy disconnected', 'success');
+    resetTestState();
   });
 }
 
@@ -87,6 +161,12 @@ async function checkProxyStatus() {
         selectField.querySelector('.select-value').textContent = status.protocol;
         $('#btn-config-disconnect').disabled = false;
         updateAdminLock(true);
+        // Proxy already active — test passes, enable Apply
+        _testedOk = true;
+        $('#btn-config').disabled = false;
+        $('#test-result').className = 'test-result success';
+        $('#test-result').innerHTML = '<span class="icon icon-sm">check_circle</span> ' +
+          t('config.test_success').replace('{0}', '—');
       }
     } catch (_) {}
   }
@@ -150,14 +230,17 @@ function renderConfigHistory() {
         o.classList.toggle('selected', o.dataset.value === item.protocol);
       });
       selectField.querySelector('.select-value').textContent = item.protocol;
+        resetTestState();
     });
     list.appendChild(card);
   });
 }
 
+
+
+
 // ─── Local Proxy Port Detection ────────────────────────────────────────────
 
-// 常见代理端口 → 默认协议映射（主要用于提示）
 const PROXY_PORT_PROTOCOLS = {
   1080: 'SOCKS5', 1081: 'SOCKS5', 1088: 'SOCKS5',
   3128: 'HTTP', 3129: 'HTTP',
@@ -187,37 +270,52 @@ async function scanLocalProxyPorts() {
       return;
     }
 
+    const knownProxies = ports.filter(p => p.is_known_proxy);
+
     list.innerHTML = '';
-    ports.forEach(p => {
-      const proto = PROXY_PORT_PROTOCOLS[p.port] || (p.protocol === 'TCP6' ? 'HTTP' : 'SOCKS5');
-      const card = createElement('div', { className: 'local-proxy-card' });
-      card.innerHTML = `
-        <div class="lpc-left">
-          <span class="lpc-port">${p.port}</span>
-          <span class="lpc-proto-badge">${proto}</span>
-        </div>
-        <div class="lpc-right">
-          <span class="lpc-proc">${p.process_name}</span>
-          <span class="lpc-state">${p.state}</span>
-        </div>
-      `;
-      // 点击填充到配置表单
-      card.addEventListener('click', () => {
-        $('#config-host').value = '127.0.0.1';
-        $('#config-port').value = p.port;
-        const selectField = $('#config-proto-select');
-        selectField.querySelectorAll('.select-option').forEach(o => {
-          o.classList.toggle('selected', o.dataset.value === proto);
-        });
-        selectField.querySelector('.select-value').textContent = proto;
-        showSnackbar(`已填入 127.0.0.1:${p.port} (${proto})`, 'success');
-      });
-      list.appendChild(card);
-    });
+
+    // ── Proxy Service Cards ──
+    if (knownProxies.length > 0) {
+      const grid = createElement('div', { className: 'local-proxy-grid' });
+      knownProxies.forEach(p => grid.appendChild(createProxyCard(p)));
+      list.appendChild(grid);
+    }
+
   } catch (err) {
     list.innerHTML = `<div class="local-proxy-empty" style="color:var(--color-accent-red)">检测失败: ${err}</div>`;
   }
 }
 
-window.initConfigPage = initConfigPage;
+function createProxyCard(p) {
+  const proto = PROXY_PORT_PROTOCOLS[p.port] || (p.protocol === 'TCP6' ? 'HTTP' : 'SOCKS5');
+  const addrText = p.local_addr === '0.0.0.0' || p.local_addr === '::' ? '*' : p.local_addr;
+  const card = createElement('div', { className: 'local-proxy-card' });
+  card.innerHTML = `
+    <div class="lpc-left">
+      <span class="lpc-port">${p.port}</span>
+      <span class="lpc-proto-badge">${proto}</span>
+    </div>
+    <div class="lpc-mid">
+      <span class="lpc-proc">${p.process_name || 'Unknown'}</span>
+      <span class="lpc-pid">PID ${p.process_pid || '?'}</span>
+    </div>
+    <div class="lpc-right">
+      <span class="lpc-addr">${addrText}</span>
+      <span class="lpc-state">${p.state}</span>
+    </div>
+  `;
+  card.addEventListener('click', () => {
+    $('#config-host').value = '127.0.0.1';
+    $('#config-port').value = p.port;
+    const selectField = $('#config-proto-select');
+    selectField.querySelectorAll('.select-option').forEach(o => {
+      o.classList.toggle('selected', o.dataset.value === proto);
+    });
+    selectField.querySelector('.select-value').textContent = proto;
+    showSnackbar(`已填入 127.0.0.1:${p.port} (${proto})`, 'success');
+    resetTestState();
+  });
+  return card;
+}
 
+window.initConfigPage = initConfigPage;

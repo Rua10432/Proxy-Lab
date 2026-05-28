@@ -1,5 +1,6 @@
 [target.x86_64-pc-windows-gnu]
 linker = "rust-lld"
+rustflags = ["-C", "link-arg=-L", "-C", "link-arg=C:\\Windows\\System32"]
 
 [build]
 rustc-wrapper = "sccache"

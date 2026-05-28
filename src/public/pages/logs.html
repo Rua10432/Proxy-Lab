@@ -10,15 +10,15 @@
                     <div class="input-field">
                       <div class="input-wrap">
                         <span class="icon icon-sm leading-icon">search</span>
-                        <input type="text" id="log-filter" placeholder="Filter...">
+                        <input type="text" id="log-filter" placeholder="Filter..." data-i18n-placeholder="logs.filter" autocomplete="off">
                       </div>
                     </div>
                   </div>
                   <div class="level-chips" id="level-chips">
-                    <button class="level-chip active" data-level="all">All</button>
-                    <button class="level-chip" data-level="info">Info</button>
-                    <button class="level-chip" data-level="ok">OK</button>
-                    <button class="level-chip" data-level="error">Error</button>
+                    <button class="level-chip active" data-level="all" data-i18n="logs.levelAll">All</button>
+                    <button class="level-chip" data-level="info" data-i18n="logs.levelInfo">Info</button>
+                    <button class="level-chip" data-level="ok" data-i18n="logs.levelOk">OK</button>
+                    <button class="level-chip" data-level="error" data-i18n="logs.levelError">Error</button>
                   </div>
                 </div>
                 <div class="log-toolbar-right">
@@ -30,26 +30,26 @@
                   <div class="switch-wrap">
                     <div class="toolbar-actions">
                       <div class="copy-dropdown-wrap">
-                        <button class="btn-icon" id="btn-copy-log" title="Copy">
+                        <button class="btn-icon" id="btn-copy-log" data-i18n-title="logs.tooltipCopy">
                           <span class="icon icon-sm">content_copy</span>
                         </button>
                         <div class="copy-dropdown" id="copy-dropdown">
                           <div class="copy-dropdown-item" data-copy-mode="all">
-                            <span class="icon icon-sm">select_all</span> Copy All
+                            <span class="icon icon-sm">select_all</span> <span data-i18n="logs.copyAll">Copy All</span>
                           </div>
                           <div class="copy-dropdown-item" data-copy-mode="visible">
-                            <span class="icon icon-sm">visibility</span> Copy Visible
+                            <span class="icon icon-sm">visibility</span> <span data-i18n="logs.copyVisible">Copy Visible</span>
                           </div>
                         </div>
                       </div>
-                      <button class="btn-icon" id="btn-clear-global-log" title="Clear">
+                      <button class="btn-icon" id="btn-clear-global-log" data-i18n-title="logs.tooltipClear">
                         <span class="icon icon-sm">delete</span>
                       </button>
                     </div>
                     <div class="switch on" id="switch-auto-scroll">
                       <div class="thumb"></div>
                     </div>
-                    <span class="switch-label">Auto-scroll</span>
+                    <span class="switch-label" data-i18n="logs.autoScroll">Auto-scroll</span>
                   </div>
                 </div>
               </div>
@@ -59,13 +59,13 @@
                 <div class="console-log" id="global-log">
                   <div class="log-empty" id="log-empty-state">
                     <span class="icon empty-icon">terminal</span>
-                    <div class="empty-title">No log entries</div>
-                    <div class="empty-sub">Run a test or scan to see output here</div>
+                    <div class="empty-title" data-i18n="logs.emptyTitle">No log entries</div>
+                    <div class="empty-sub" data-i18n="logs.emptySub">Run a test or scan to see output here</div>
                   </div>
                 </div>
                 <button class="new-entries-float" id="new-entries-float">
                   <span class="icon icon-sm">arrow_downward</span>
-                  <span id="new-entries-count">0</span> new
+                  <span id="new-entries-count">0</span> <span data-i18n="logs.newEntries">new</span>
                 </button>
               </div>
             </div>

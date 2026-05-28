@@ -3,6 +3,31 @@
    Based on DESIGN.md specification
    ═══════════════════════════════════════════════════════════════════════════════ */
 
+/* ── Font Face Declarations ── */
+@font-face {
+  font-family: 'Noto Serif';
+  src: url('../fonts/noto-serif-latin-400-normal.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Noto Serif SC';
+  src: url('../fonts/noto-serif-sc-chinese-simplified-400-normal.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Noto Serif JP';
+  src: url('../fonts/noto-serif-jp-japanese-400-normal.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   /* ── Core Backgrounds ── */
   --color-bg:              #1a1a1b;
@@ -13,12 +38,12 @@
   --color-surface-warm:    #f7f4ee;
 
   /* ── Text Colors ── */
-  --color-text-primary:    #314255;
-  --color-text-heading:    #314255;
-  --color-text-body:       #29292b;
-  --color-text-muted:      #47474a;
-  --color-text-subtle:     #56575d;
-  --color-text-dim:        #666666;
+  --color-text-primary:    #f7f3ee;
+  --color-text-heading:    #ffffff;
+  --color-text-body:       #d2d2d2;
+  --color-text-muted:      #a1a1aa;
+  --color-text-subtle:     #87878d;
+  --color-text-dim:        #71717a;
   --color-text-ink:        #d2d2d2;
   --color-text-light:      #f7f3ee;
   --color-text-white:      #ffffff;
@@ -36,9 +61,9 @@
   --color-ink-850:         #181819;
   --color-ink-800:         #1f1f21;
   --color-ink-700:         #29292b;
-  --color-ink-600:         #47474a;
-  --color-ink-500:         #56575d;
-  --color-ink-400:         #666666;
+  --color-ink-600:         #a1a1aa;
+  --color-ink-500:         #87878d;
+  --color-ink-400:         #71717a;
   --color-ink-82:          #d2d2d2;
   --color-ink-97:          #f6f6f7;
 
@@ -52,8 +77,8 @@
   /* ── Button Colors ── */
   --color-btn-bg:          #000000;
   --color-btn-text:        #ffffff;
-  --color-btn-secondary-text: #29292b;
-  --color-btn-tertiary-text:  #47474a;
+  --color-btn-secondary-text: #d2d2d2;
+  --color-btn-tertiary-text:  #a1a1aa;
 
   /* ── Surface / Overlay ── */
   --color-surface-dark:          #080b12eb;
@@ -64,11 +89,11 @@
 
   /* ── Console / Terminal ── */
   --color-console-bg:      #0c0e14;
-  --color-console-text:    #56575d;
+  --color-console-text:    #a1a1aa;
   --color-console-border:  #29292b;
 
   /* ── Status Colors ── */
-  --color-status-ready:    #56575d;
+  --color-status-ready:    #87878d;
   --color-status-active:   #9eddc8;
   --color-status-error:    #f4a7b9;
   --color-status-warn:     #f5e9b5;
@@ -85,8 +110,8 @@
   --radius-pill:           999px;
 
   /* ── Typography ── */
-  --font-primary:          'Noto Sans TC', sans-serif;
-  --font-secondary:        'Noto Serif TC', serif;
+  --font-primary:          'Noto Serif', 'Noto Serif SC', 'Noto Serif JP', serif;
+  --font-secondary:        'Noto Serif', 'Noto Serif SC', 'Noto Serif JP', serif;
   --font-mono:             'JetBrains Mono', 'Fira Code', monospace;
   --font-icon:             'Material Symbols Outlined';
 

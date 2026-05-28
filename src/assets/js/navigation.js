@@ -207,8 +207,9 @@ export function showDialog({ title, icon, body, actions, onBackdropClick }) {
     if (onBackdropClick !== false) closeDialog();
   };
 
-  // Close button
-  $('#dialog-close').onclick = closeDialog;
+  // Close button (may not exist)
+  const closeBtn = $('#dialog-close');
+  if (closeBtn) closeBtn.onclick = closeDialog;
 }
 
 export function closeDialog() {
