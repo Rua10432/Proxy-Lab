@@ -1,7 +1,10 @@
 // ─── Config Commands ─────────────────────────────────────────────────────────
 // Thin Tauri wrappers — delegates to service layer.
 
-use crate::config::{AppConfig, ProxyEntry, ScanPreferences};
+use crate::config::{
+    AppConfig, FrontendConfigHistoryItem, FrontendProxyPoolItem,
+    FrontendTestHistoryItem, ProxyEntry, ScanPreferences, UiPreferences,
+};
 use crate::service;
 use crate::AppState;
 
@@ -78,4 +81,36 @@ pub fn add_scan_history(
     network: String,
 ) -> Result<(), String> {
     service::add_scan_history(&app, &state, network)
+}
+
+#[tauri::command]
+pub fn save_full_config(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, AppState>,
+    ui_preferences: UiPreferences,
+    test_history: Vec<FrontendTestHistoryItem>,
+    config_history: Vec<FrontendConfigHistoryItem>,
+    proxy_pool: Vec<FrontendProxyPoolItem>,
+) -> Result<(), String> {
+    service::save_full_config(&app, &state, ui_preferences, test_history, config_history, proxy_pool)
+}
+
+#[tauri::command]
+pub fn save_ui_preference(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, AppState>,
+    key: String,
+    value: String,
+) -> Result<(), String> {
+    service::save_ui_preference(&app, &state, &key, &value)
+}
+
+#[tauri::command]
+pub fn save_frontend_key(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, AppState>,
+    key: String,
+    value: String,
+) -> Result<(), String> {
+    service::save_frontend_key(&app, &state, &key, &value)
 }

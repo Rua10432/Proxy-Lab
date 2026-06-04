@@ -1,16 +1,9 @@
-/* ═══════════════════════════════════════════════════════════════════════════════
-   Base Styles — Reset, Layout, Scrollbar, Animations
-   ═══════════════════════════════════════════════════════════════════════════════ */
-
-/* ── Reset ── */
 *,
 *::before,
 *::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  user-select: none;
-  -webkit-user-select: none;
 }
 
 html,
@@ -28,6 +21,9 @@ body {
   color: var(--color-text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* 优化：将全局禁止选中改为仅布局元素禁止，允许正文文本被选中复制 */
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 a {
@@ -51,8 +47,13 @@ textarea {
   font-size: inherit;
   color: inherit;
   outline: none;
-  user-select: auto;
-  -webkit-user-select: auto;
+  user-select: text; /* 确保输入框内容可选中 */
+  -webkit-user-select: text;
+}
+
+p, span, .selectable {
+  user-select: text; /* 允许正文文本选中 */
+  -webkit-user-select: text;
 }
 
 table {
@@ -71,6 +72,7 @@ input:-webkit-autofill:active {
 }
 
 /* ── Scrollbar ── */
+/* 优化：对齐 MD 硬朗风格，滚动条使用直角 */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -82,7 +84,7 @@ input:-webkit-autofill:active {
 
 ::-webkit-scrollbar-thumb {
   background: var(--color-ink-700);
-  border-radius: 3px;
+  border-radius: 0px; /* 原为 3px，改为 0px 契合直角系统 */
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -90,6 +92,7 @@ input:-webkit-autofill:active {
 }
 
 /* ── App Shell Layout ── */
+/* 优化：移除 16px 大圆角和内阴影，采用 MD 偏好的直角/微圆角与边框色 */
 #app-wrapper {
   display: flex;
   flex-direction: column;
@@ -97,8 +100,8 @@ input:-webkit-autofill:active {
   width: 100vw;
   overflow: hidden;
   background: var(--color-bg);
-  border-radius: 16px;
-  box-shadow: inset 0 0 0 1px var(--color-ink-600);
+  border-radius: 0px; /* MD: 避免过大的圆角，保持画布硬朗 */
+  box-shadow: inset 0 0 0 1px var(--color-ink-700); /* 使用更贴合色阶的边框 */
 }
 
 #app-root {
@@ -110,6 +113,8 @@ input:-webkit-autofill:active {
 
 #main-content {
   flex: 1;
+  display: flex;
+  flex-direction: column;
   overflow-y: auto;
   overflow-x: hidden;
   padding: var(--space-6);
@@ -117,10 +122,8 @@ input:-webkit-autofill:active {
 }
 
 #pages-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  min-height: 100%;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }
@@ -183,25 +186,11 @@ input:-webkit-autofill:active {
   animation: staggerFadeIn 0.4s ease-out forwards;
 }
 
-.stagger-delay-1 {
-  animation-delay: 0.08s;
-}
-
-.stagger-delay-2 {
-  animation-delay: 0.16s;
-}
-
-.stagger-delay-3 {
-  animation-delay: 0.24s;
-}
-
-.stagger-delay-4 {
-  animation-delay: 0.32s;
-}
-
-.stagger-delay-5 {
-  animation-delay: 0.40s;
-}
+.stagger-delay-1 { animation-delay: 0.08s; }
+.stagger-delay-2 { animation-delay: 0.16s; }
+.stagger-delay-3 { animation-delay: 0.24s; }
+.stagger-delay-4 { animation-delay: 0.32s; }
+.stagger-delay-5 { animation-delay: 0.40s; }
 
 /* ── Loading Screen ── */
 #loading-screen {
@@ -223,6 +212,7 @@ input:-webkit-autofill:active {
 }
 
 /* ── Interactive Hover Animations ── */
+/* 优化：移除 scale 弹跳，严格限制阴影层级，贴合 MD“克制、扁平”理念 */
 .btn,
 .nav-item,
 .mobile-nav-item,
@@ -239,20 +229,24 @@ input:-webkit-autofill:active {
 .level-chip:hover,
 .nav-item:hover,
 .mobile-nav-item:hover {
-  transform: translateY(-1px) scale(1.02);
+  transform: translateY(-1px); /* 移除了 scale(1.02) */
 }
 
 .btn:active:not(:disabled),
 .btn-icon:active,
 .nav-item:active {
-  transform: translateY(0) scale(0.96);
+  transform: translateY(0); /* 移除了 scale(0.96)，回归平实 */
 }
 
 .card-elevated:hover,
-.stat-card:hover,
-.table-card:hover {
+.stat-card:hover {
   transform: translateY(-2px);
-  box-shadow: var(--shadow-standard), 0 8px 16px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-standard); /* 修正：仅使用 MD 规定的 Level 2 阴影，不叠加额外阴影 */
+}
+
+.table-card:hover {
+  /* 表格容器不适用位移，仅作视觉反馈 */
+  border-color: var(--color-ink-600);
 }
 
 .nav-item .icon,
@@ -274,31 +268,17 @@ input:-webkit-autofill:active {
   width: 4px;
   height: 24px;
   background: var(--color-accent-green);
-  border-radius: 2px;
+  border-radius: 0px; /* 优化：加载条改为直角，契合系统风格 */
   animation: loaderPulse 1.2s ease-in-out infinite;
 }
 
-.loader-bar:nth-child(1) {
-  animation-delay: 0s;
-}
-
-.loader-bar:nth-child(2) {
-  animation-delay: 0.15s;
-}
-
-.loader-bar:nth-child(3) {
-  animation-delay: 0.3s;
-}
-
-.loader-bar:nth-child(4) {
-  animation-delay: 0.45s;
-}
+.loader-bar:nth-child(1) { animation-delay: 0s; }
+.loader-bar:nth-child(2) { animation-delay: 0.15s; }
+.loader-bar:nth-child(3) { animation-delay: 0.3s; }
+.loader-bar:nth-child(4) { animation-delay: 0.45s; }
 
 @keyframes loaderPulse {
-
-  0%,
-  80%,
-  100% {
+  0%, 80%, 100% {
     transform: scale(0.6);
     opacity: 0.4;
   }
@@ -333,105 +313,46 @@ input:-webkit-autofill:active {
   vertical-align: middle;
 }
 
-.icon-sm {
-  font-size: 16px;
-}
-
-.icon-lg {
-  font-size: 24px;
-}
-
-.icon-xl {
-  font-size: 28px;
-}
+.icon-sm { font-size: 16px; }
+.icon-lg { font-size: 24px; }
+.icon-xl { font-size: 28px; }
 
 /* ── Utility ── */
-.flex {
-  display: flex;
-}
-
-.flex-col {
-  flex-direction: column;
-}
-
-.items-center {
-  align-items: center;
-}
-
-.justify-between {
-  justify-content: space-between;
-}
-
-.gap-1 {
-  gap: var(--space-1);
-}
-
-.gap-2 {
-  gap: var(--space-2);
-}
-
-.gap-3 {
-  gap: var(--space-3);
-}
-
-.gap-4 {
-  gap: var(--space-4);
-}
-
-.gap-6 {
-  gap: var(--space-6);
-}
-
-.gap-8 {
-  gap: var(--space-8);
-}
-
-.flex-1 {
-  flex: 1;
-}
-
-.w-full {
-  width: 100%;
-}
-
-.text-center {
-  text-align: center;
-}
-
-.overflow-hidden {
-  overflow: hidden;
-}
-
-.truncate {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.select-none {
-  user-select: none;
-}
-
-.relative {
-  position: relative;
-}
-
-.absolute {
-  position: absolute;
-}
-
-.hidden {
-  display: none !important;
-}
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.gap-1 { gap: var(--space-1); }
+.gap-2 { gap: var(--space-2); }
+.gap-3 { gap: var(--space-3); }
+.gap-4 { gap: var(--space-4); }
+.gap-6 { gap: var(--space-6); }
+.gap-8 { gap: var(--space-8); }
+.flex-1 { flex: 1; }
+.w-full { width: 100%; }
+.text-center { text-align: center; }
+.overflow-hidden { overflow: hidden; }
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.select-none { user-select: none; }
+.relative { position: relative; }
+.absolute { position: absolute; }
+.hidden { display: none !important; }
 
 /* ── Responsive ── */
+/* 优化：加入 MD 规定的 960px 断点，并统一间距缩减逻辑 */
+@media (max-width: 960px) {
+  #main-content {
+    padding: var(--space-5);
+  }
+}
+
 @media (max-width: 768px) {
   #main-content {
     padding: var(--space-4);
   }
 }
 
-@media (max-width: 600px) {
+@media (max-width: 480px) { /* 对齐之前组件的移动端断点 */
   #main-content {
     padding: var(--space-3);
   }

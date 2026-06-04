@@ -200,6 +200,25 @@
                     <div class="select-option" data-value="untested" data-i18n="test.statusUntested">Untested</div>
                   </div>
                 </div>
+                <!-- Export Proxy Pool -->
+            <div class="config-export-section">
+              <div class="config-export-header">
+                <span class="icon icon-sm">file_download</span>
+                <span data-i18n="config.exportPool">Export Proxy Pool</span>
+                <span class="export-count-badge" id="export-pool-count">0</span>
+              </div>
+              <div class="config-export-row">
+                <button class="btn btn-tonal btn-sm" onclick="exportPoolData('json')">
+                  <span class="icon icon-sm">data_object</span> JSON
+                </button>
+                <button class="btn btn-tonal btn-sm" onclick="exportPoolData('xml')">
+                  <span class="icon icon-sm">code</span> XML
+                </button>
+                <button class="btn btn-tonal btn-sm" onclick="exportPoolData('xlsx')">
+                  <span class="icon icon-sm">table_chart</span> XLSX
+                </button>
+              </div>
+            </div>
               </div>
               <div class="table-card pool-table-container" style="margin-top:16px">
                 <div class="table-wrapper">
@@ -219,7 +238,7 @@
                   </table>
                 </div>
                 <div class="table-empty" id="pool-empty-state">
-                  <span class="icon empty-icon">cloud_off</span>
+                  <img src="assets/img/111.png" alt="No data" class="empty-state-img">
                   <div class="empty-title" data-i18n="test.poolEmpty">Proxy Pool Empty</div>
                   <div class="empty-sub" data-i18n="test.poolEmptySub">Add proxies in the Config page or Scan for new ones</div>
                 </div>

@@ -135,3 +135,14 @@ pub struct LocalProxyPort {
     pub is_known_proxy: bool,
     pub local_addr: String,
 }
+
+// ─── UWP App Info ─────────────────────────────────────────────────────────────
+
+#[derive(Clone, Serialize, Debug)]
+pub struct UwpAppInfo {
+    pub package_family_name: String,
+    pub package_full_name: Option<String>,
+    pub pid: u32,
+    pub process_name: String,
+    pub executable_path: String,
+}

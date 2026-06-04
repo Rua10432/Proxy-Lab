@@ -70,10 +70,28 @@
               <div class="settings-card" id="close-behavior-card">
                 <div>
                   <div class="settings-card-label" data-i18n="settings.closeBehavior.label">Close Button Behavior</div>
-                  <div class="settings-card-desc" data-i18n="settings.closeBehavior.desc">When enabled, closing shows confirmation before exit</div>
+                  <div class="settings-card-desc" data-i18n="settings.closeBehavior.desc">When enabled, closing shows a dialog asking to minimize to tray or exit</div>
                 </div>
                 <div class="switch on" id="close-confirm-switch">
                   <div class="thumb"></div>
+                </div>
+              </div>
+              <div class="settings-card" id="export-path-card">
+                <div>
+                  <div class="settings-card-label" data-i18n="settings.exportDir.label">Export Directory</div>
+                  <div class="settings-card-desc" data-i18n="settings.exportDir.desc">All exported files (JSON, XML, XLSX) will be saved to this folder. Leave empty to use browser default download.</div>
+                </div>
+                <div class="export-path-row">
+                  <div class="input-wrap export-path-input" style="flex:1;height:36px;overflow:hidden">
+                    <span class="icon icon-sm leading-icon">folder</span>
+                    <input type="text" id="export-directory" readonly data-i18n-placeholder="settings.exportDir.empty" placeholder="Not set — uses browser download" style="cursor:pointer;font-size:13px">
+                  </div>
+                  <button class="btn btn-tonal btn-sm" id="btn-browse-export-path" style="flex-shrink:0">
+                    <span class="icon icon-sm">folder_open</span> <span data-i18n="settings.exportDir.browse">Browse</span>
+                  </button>
+                  <button class="btn btn-text btn-sm" id="btn-clear-export-path" style="flex-shrink:0;color:var(--color-accent-pink)">
+                    <span class="icon icon-sm">close</span>
+                  </button>
                 </div>
               </div>
             </div>

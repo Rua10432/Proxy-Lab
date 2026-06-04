@@ -23,8 +23,8 @@
 
 .monitor-summary-card {
   background: var(--color-surface-elevated);
-  border: 1px solid var(--color-ink-700);
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-ink-82); /* MD: 标志性高频浅色边框 #d2d2d2 */
+  border-radius: 0; /* MD: 容器偏好硬朗直角 */
   padding: var(--space-3);
   display: flex;
   align-items: center;
@@ -32,14 +32,14 @@
   transition: all var(--transition-normal);
 }
 .monitor-summary-card:hover {
-  border-color: var(--color-ink-600);
+  border-color: var(--color-accent-green); /* 悬停时边框变为薄荷绿，增强交互反馈 */
   transform: translateY(-1px);
 }
 
 .msc-icon {
   width: 36px;
   height: 36px;
-  border-radius: var(--radius-sm);
+  border-radius: 0; /* 对齐直角规范 */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -74,8 +74,8 @@
   align-items: center;
   gap: var(--space-3);
   padding: 10px 16px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--color-ink-700);
+  border-radius: 0; /* 对齐直角规范 */
+  border: 1px solid var(--color-ink-82); /* MD: 浅色边框 */
   background: var(--color-ink-800);
 }
 .proxy-status-bar.active {
@@ -98,13 +98,21 @@
   font-size: var(--text-small);
   color: var(--color-text-subtle);
 }
+
+.proxy-status-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
 .proxy-status-bar.active .proxy-status-text { color: var(--color-accent-green); }
 .proxy-status-bar.inactive .proxy-status-text { color: var(--color-accent-pink); }
 
 /* Monitor Tabs */
 .monitor-tabs {
   display: flex;
-  border-bottom: 1px solid var(--color-ink-700);
+  border-bottom: 1px solid var(--color-ink-82); /* MD: 浅色边框分割线 */
   gap: 4px;
 }
 
@@ -164,7 +172,7 @@
   display: flex;
   gap: 4px;
   background: var(--color-ink-800);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-pill); /* MD: 胶囊选择器保留 999px */
   padding: 3px;
 }
 
@@ -189,7 +197,7 @@
 /* Monitor Table Container */
 .monitor-table-container {
   flex: 1;
-  min-height: 0;
+  min-height: 240px;
   min-width: 0;
   width: 100%;
   max-width: 100%;
@@ -245,7 +253,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-sm);
+  border-radius: 0; /* 对齐直角规范 */
   color: var(--color-ink-500);
   cursor: pointer;
   transition: all var(--transition-fast);
@@ -279,17 +287,17 @@
   align-items: center;
   gap: var(--space-3);
   padding: 10px 14px;
-  border: 1px solid var(--color-ink-700);
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-ink-82); /* MD: 浅色边框 */
+  border-radius: 0; /* 对齐直角规范 */
   transition: all var(--transition-fast);
 }
 .rules-list-item + .rules-list-item { margin-top: 8px; }
-.rules-list-item:hover { border-color: var(--color-ink-600); }
+.rules-list-item:hover { border-color: var(--color-accent-green); } /* 悬停高亮边框 */
 
 .rules-item-icon {
   width: 36px;
   height: 36px;
-  border-radius: var(--radius-sm);
+  border-radius: 0; /* 对齐直角规范 */
   background: rgba(158, 221, 200, 0.08);
   color: var(--color-accent-green);
   display: flex;
@@ -368,4 +376,48 @@
   .monitor-summary-row {
     grid-template-columns: 1fr 1fr;
   }
+}
+
+/* ── UWP Apps Tab ── */
+
+.monitor-toolbar-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  font-size: var(--text-small);
+  color: var(--color-text-subtle);
+}
+
+.uwp-table-container {
+  flex: 1;
+  min-height: 240px;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.uwp-table-container .table-wrapper {
+  overflow: auto;
+  flex: 1;
+  min-height: 0;
+}
+#uwp-table {
+  min-width: 860px;
+}
+
+.uwp-count-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  font-size: var(--text-small);
+  font-weight: var(--weight-semibold);
+  color: var(--color-accent-blue); /* 规范化：替换原 cyan 为 MD 冰蓝色 #9fd4ff */
+  border-bottom: 1px solid var(--color-ink-82); /* MD: 浅色边框分割线 */
+}
+
+.uwp-count-bar .icon {
+  font-size: 16px;
 }

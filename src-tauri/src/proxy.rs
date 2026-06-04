@@ -170,12 +170,32 @@ pub async fn check_proxy(ip: IpAddr, port: u16, verify_timeout_ms: u64) -> Optio
                     let is_html = lower_resp.contains("<html")
                         || lower_resp.contains("content-type: text/html");
 
-                    if is_200 && !is_html {
-                        let latency = start.elapsed().as_millis() as u64;
-                        return Some(("HTTP", latency));
-                    } else if is_407 {
+                    if is_407 {
                         let latency = start.elapsed().as_millis() as u64;
                         return Some(("HTTP (Auth)", latency));
+                    }
+
+                    if is_200 && !is_html {
+                        // 检查响应中是否有代理特征关键字
+                        let has_proxy_keywords = lower_resp.contains("connection established");
+
+                        if has_proxy_keywords {
+                            let latency = start.elapsed().as_millis() as u64;
+                            return Some(("HTTP", latency));
+                        }
+
+                        // 没有明确代理关键词时，通过隧道实际发请求验证
+                        let tunnel_test = b"GET / HTTP/1.1\r\nHost: 1.1.1.1\r\nConnection: close\r\n\r\n";
+                        if stream.write_all(tunnel_test).await.is_ok() {
+                            let mut tunnel_buf = [0u8; 256];
+                            if let Ok(Ok(tn)) = timeout(Duration::from_millis(2000), stream.read(&mut tunnel_buf)).await {
+                                if tn > 0 {
+                                    // 隧道确实能传输数据 — 是真代理
+                                    let latency = start.elapsed().as_millis() as u64;
+                                    return Some(("HTTP", latency));
+                                }
+                            }
+                        }
                     }
                 }
             }

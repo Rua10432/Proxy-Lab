@@ -1,28 +1,139 @@
-/* ═══════════════════════════════════════════════════════════════════════════════
-   Asola: Star's Prayer — Design Token System
-   Based on DESIGN.md specification
-   ═══════════════════════════════════════════════════════════════════════════════ */
+/* ==========================================================================
+   1. Noto Sans (无衬线 - 英文 Latin)
+   ========================================================================== */
+@font-face {
+  font-family: 'Noto Sans';
+  src: url('https://cdn.jsdelivr.net/npm/@fontsource/noto-sans@5.0.0/files/noto-sans-latin-400-normal.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Noto Sans';
+  src: url('https://cdn.jsdelivr.net/npm/@fontsource/noto-sans@5.0.0/files/noto-sans-latin-500-normal.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Noto Sans';
+  src: url('https://cdn.jsdelivr.net/npm/@fontsource/noto-sans@5.0.0/files/noto-sans-latin-700-normal.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
 
-/* ── Font Face Declarations ── */
+/* ==========================================================================
+   2. Noto Sans SC (无衬线 - 简体中文)
+   注意：中文字体必须指向官方的 subsets 切片，这里默认指向第一个核心切片 [0]，
+   浏览器会自动根据内部声明去索引其他切片，防止 404
+   ========================================================================== */
+@font-face {
+  font-family: 'Noto Sans SC';
+  src: url('https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-sc@5.0.0/files/noto-sans-sc-chinese-simplified-400-normal.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Noto Sans SC';
+  src: url('https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-sc@5.0.0/files/noto-sans-sc-chinese-simplified-500-normal.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Noto Sans SC';
+  src: url('https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-sc@5.0.0/files/noto-sans-sc-chinese-simplified-700-normal.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ==========================================================================
+   3. Noto Sans TC (无衬线 - 繁体中文)
+   ========================================================================== */
+@font-face {
+  font-family: 'Noto Sans TC';
+  src: url('https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-tc@5.0.0/files/noto-sans-tc-chinese-traditional-400-normal.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Noto Sans TC';
+  src: url('https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-tc@5.0.0/files/noto-sans-tc-chinese-traditional-500-normal.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Noto Sans TC';
+  src: url('https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-tc@5.0.0/files/noto-sans-tc-chinese-traditional-700-normal.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ==========================================================================
+   4. Noto Sans JP (无衬线 - 日文)
+   ========================================================================== */
+@font-face {
+  font-family: 'Noto Sans JP';
+  src: url('https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-jp@5.0.0/files/noto-sans-jp-japanese-400-normal.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Noto Sans JP';
+  src: url('https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-jp@5.0.0/files/noto-sans-jp-japanese-500-normal.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Noto Sans JP';
+  src: url('https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-jp@5.0.0/files/noto-sans-jp-japanese-700-normal.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+
+/* ==========================================================================
+   5. Secondary Font: Noto Serif (衬线全家桶 - 修正了 npm 包名)
+   ========================================================================== */
+/* 英文 */
 @font-face {
   font-family: 'Noto Serif';
-  src: url('../fonts/noto-serif-latin-400-normal.woff2') format('woff2');
+  src: url('https://cdn.jsdelivr.net/npm/@fontsource/noto-serif@5.0.0/files/noto-serif-latin-400-normal.woff2') format('woff2');
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
-
+/* 简体中文 */
 @font-face {
   font-family: 'Noto Serif SC';
-  src: url('../fonts/noto-serif-sc-chinese-simplified-400-normal.woff2') format('woff2');
+  src: url('https://cdn.jsdelivr.net/npm/@fontsource/noto-serif-sc@5.0.0/files/noto-serif-sc-chinese-simplified-400-normal.woff2') format('woff2');
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 
+/* 繁体中文 */
+@font-face {
+  font-family: 'Noto Serif TC';
+  src: url('https://cdn.jsdelivr.net/npm/@fontsource/noto-serif-tc@5.0.0/files/noto-serif-tc-chinese-traditional-500-normal.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* 日文 */
 @font-face {
   font-family: 'Noto Serif JP';
-  src: url('../fonts/noto-serif-jp-japanese-400-normal.woff2') format('woff2');
+  src: url('https://cdn.jsdelivr.net/npm/@fontsource/noto-serif-jp@5.0.0/files/noto-serif-jp-japanese-400-normal.woff2') format('woff2');
   font-weight: 400;
   font-style: normal;
   font-display: swap;
@@ -35,20 +146,20 @@
   --color-footer-bg:       #1a1a1b;
   --color-surface:         #000000;
   --color-surface-elevated:#1f1f21;
-  --color-surface-warm:    #f7f4ee;
+  --color-surface-warm:    #f7f4ee; /* MD: 浅色表面/背景色 */
 
   /* ── Text Colors ── */
-  --color-text-primary:    #f7f3ee;
+  --color-text-primary:    #f7f3ee; /* 深色背景上的主文本 */
   --color-text-heading:    #ffffff;
   --color-text-body:       #d2d2d2;
   --color-text-muted:      #a1a1aa;
   --color-text-subtle:     #87878d;
   --color-text-dim:        #71717a;
-  --color-text-ink:        #d2d2d2;
+  --color-text-ink:        #314255; /* MD: 用于浅色表面上的文本/链接 */
   --color-text-light:      #f7f3ee;
   --color-text-white:      #ffffff;
 
-  /* ── Accent Colors ── */
+  /* ── Accent Colors (魔法强调色) ── */
   --color-accent:          #d2d2d2;
   --color-accent-green:    #9eddc8;
   --color-accent-pink:     #f4a7b9;
@@ -56,14 +167,14 @@
   --color-accent-blue:     #9fd4ff;
   --color-accent-blue-dark:#74a5ff;
 
-  /* ── Neutral / Ink Scale ── */
+  /* ── Neutral / Ink Scale (精准对齐 MD 色阶) ── */
   --color-ink-900:         #141516;
   --color-ink-850:         #181819;
   --color-ink-800:         #1f1f21;
   --color-ink-700:         #29292b;
-  --color-ink-600:         #a1a1aa;
-  --color-ink-500:         #87878d;
-  --color-ink-400:         #71717a;
+  --color-ink-600:         #47474a; /* MD: 中性色 28% */
+  --color-ink-500:         #56575d; /* MD: 中性色 35% */
+  --color-ink-400:         #666666; /* MD: 中性色 40% */
   --color-ink-82:          #d2d2d2;
   --color-ink-97:          #f6f6f7;
 
@@ -77,8 +188,8 @@
   /* ── Button Colors ── */
   --color-btn-bg:          #000000;
   --color-btn-text:        #ffffff;
-  --color-btn-secondary-text: #d2d2d2;
-  --color-btn-tertiary-text:  #a1a1aa;
+  --color-btn-secondary-text: #47474a; /* 对齐 MD 色阶 */
+  --color-btn-tertiary-text:  #56575d; /* 对齐 MD 色阶 */
 
   /* ── Surface / Overlay ── */
   --color-surface-dark:          #080b12eb;
@@ -98,24 +209,26 @@
   --color-status-error:    #f4a7b9;
   --color-status-warn:     #f5e9b5;
 
-  /* ── Shadows ── */
+  /* ── Shadows (对齐 MD 阴影系统) ── */
   --shadow-subtle:         rgba(0, 0, 0, 0.4) 0px 1px 2px 0px;
   --shadow-standard:       rgba(0, 0, 0, 0.6) 0px 4px 8px 0px;
 
-  /* ── Border Radius ── */
+  /* ── Border Radius (对齐 MD 圆角规范) ── */
   --radius-none:           0px;
   --radius-sm:             4px;
   --radius-md:             12px;
   --radius-lg:             17px;
   --radius-pill:           999px;
 
-  /* ── Typography ── */
-  --font-primary:          'Noto Serif', 'Noto Serif SC', 'Noto Serif JP', serif;
-  --font-secondary:        'Noto Serif', 'Noto Serif SC', 'Noto Serif JP', serif;
+  /* ── Typography (对齐 MD 排版系统 & 多语言回退) ── */
+  /* 遵循 MD 主字体 Noto Sans TC，加入 SC, JP, Latin 确保四语正确渲染 */
+  --font-primary:          'Noto Sans TC', 'Noto Sans SC', 'Noto Sans JP', 'Noto Sans', sans-serif;
+  /* 遵循 MD 次要字体 Noto Serif TC，加入 SC, JP, Latin */
+  --font-secondary:        'Noto Serif TC', 'Noto Serif SC', 'Noto Serif JP', 'Noto Serif', serif;
   --font-mono:             'JetBrains Mono', 'Fira Code', monospace;
   --font-icon:             'Material Symbols Outlined';
 
-  /* ── Font Sizes ── */
+  /* ── Font Sizes (对齐 MD 字号阶梯) ── */
   --text-hero:             60px;
   --text-section:          52px;
   --text-title:            34px;
@@ -128,7 +241,7 @@
   --text-small:            14px;
   --text-caption:          12px;
 
-  /* ── Font Weights ── */
+  /* ── Font Weights (MD 规定仅使用 400, 500, 600, 700) ── */
   --weight-regular:        400;
   --weight-medium:         500;
   --weight-semibold:       600;
@@ -139,7 +252,7 @@
   --leading-normal:        1.5;
   --leading-relaxed:       1.65;
 
-  /* ── Spacing Scale ── */
+  /* ── Spacing Scale (4px 基础单位) ── */
   --space-1:               4px;
   --space-2:               8px;
   --space-3:               12px;
@@ -193,14 +306,14 @@
   --color-surface-warm:    #f7f4ee;
 
   /* ── Text Colors ── */
-  --color-text-primary:    #1f2937;
-  --color-text-heading:    #111827;
-  --color-text-body:       #374151;
-  --color-text-muted:      #4b5563;
-  --color-text-subtle:     #6b7280;
-  --color-text-dim:        #9ca3af;
-  --color-text-ink:        #6b7280;
-  --color-text-light:      #374151;
+  --color-text-primary:    #314255;
+  --color-text-heading:    #141516;
+  --color-text-body:       #29292b;
+  --color-text-muted:      #47474a;
+  --color-text-subtle:     #56575d;
+  --color-text-dim:        #666666;
+  --color-text-ink:        #314255;
+  --color-text-light:      #29292b;
   --color-text-white:      #ffffff;
 
   /* ── Ink Scale (inverted) ── */
@@ -216,14 +329,14 @@
 
   /* ── Border Colors ── */
   --color-border:          #c0c0c4;
-  --color-border-warm:     #c8b8a6;
+  --color-border-warm:     #d7c8b5;
   --color-border-accent:   #d8d5d0;
 
   /* ── Button Colors ── */
   --color-btn-bg:          #1f2937;
   --color-btn-text:        #ffffff;
-  --color-btn-secondary-text: #4b5563;
-  --color-btn-tertiary-text:  #6b7280;
+  --color-btn-secondary-text: #47474a;
+  --color-btn-tertiary-text:  #56575d;
 
   /* ── Surface / Overlay ── */
   --color-surface-dark:          #ffffffeb;
@@ -234,7 +347,7 @@
 
   /* ── Console / Terminal ── */
   --color-console-bg:      #fafafc;
-  --color-console-text:    #6b7280;
+  --color-console-text:    #56575d;
   --color-console-border:  #dddde0;
 
   /* ── Shadows for light background ── */

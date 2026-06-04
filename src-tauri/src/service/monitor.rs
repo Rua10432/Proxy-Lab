@@ -75,6 +75,8 @@ pub fn get_tcp_connections(state: &AppState) -> MonitorData {
 }
 
 pub fn get_local_proxy_ports() -> Vec<LocalProxyPort> {
+    #[cfg(windows)]
+    use std::os::windows::process::CommandExt;
     use std::process::Command as ProcCmd;
 
     let pid_name: HashMap<u32, String> = platform::get_process_map();
@@ -83,6 +85,7 @@ pub fn get_local_proxy_ports() -> Vec<LocalProxyPort> {
     let pid_path: HashMap<u32, String> = {
         let mut m = HashMap::new();
         if let Ok(output) = ProcCmd::new("wmic")
+            .creation_flags(0x08000000)
             .args(["process", "get", "processid,executablepath", "/format:csv"])
             .output()
         {
@@ -106,7 +109,7 @@ pub fn get_local_proxy_ports() -> Vec<LocalProxyPort> {
     let mut found: Vec<(String, u16, String, u32, String)> = Vec::new();
 
     #[cfg(windows)]
-    if let Ok(output) = ProcCmd::new("netstat").args(["-ano"]).output() {
+    if let Ok(output) = ProcCmd::new("netstat").creation_flags(0x08000000).args(["-ano"]).output() {
         let stdout = String::from_utf8_lossy(&output.stdout);
         for line in stdout.lines().skip(4) {
             let parts: Vec<&str> = line.split_whitespace().collect();

@@ -49,6 +49,17 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             let cfg = config::load_config(&app.handle());
+
+            // Re-apply UWP loopback exemptions on startup
+            #[cfg(windows)]
+            for rule in &cfg.uwp_proxy_rules {
+                if rule.enabled {
+                    if let Err(e) = platform::add_loopback_exemption(&rule.package_family_name) {
+                        eprintln!("[startup] Failed to re-apply UWP exemption for {}: {}", rule.app_name, e);
+                    }
+                }
+            }
+
             app.manage(AppState {
                 stop_flag: Arc::new(AtomicBool::new(false)),
                 scan_stop_flag: Arc::new(AtomicBool::new(false)),
@@ -122,6 +133,7 @@ pub fn run() {
             commands::win_minimize,
             commands::win_toggle_maximize,
             commands::win_close,
+            commands::win_hide_to_tray,
             commands::win_start_drag,
             commands::win_is_maximized,
             commands::win_set_decorations,
@@ -134,9 +146,29 @@ pub fn run() {
             commands::get_local_proxy_ports,
             commands::disconnect_proxy,
             commands::shittim_mem_task,
+            commands::get_uwp_apps,
+            commands::get_uwp_proxy_rules,
+            commands::add_uwp_proxy_rule,
+            commands::remove_uwp_proxy_rule,
+            commands::toggle_uwp_proxy_rule,
             commands::test_proxy_connectivity,
             commands::is_admin,
             commands::get_app_version,
+            commands::write_export_file,
+            commands::save_full_config,
+            commands::save_ui_preference,
+            commands::save_frontend_key,
+            commands::set_force_all_proxy,
+            commands::get_force_all_proxy,
+            commands::get_proxy_mode,
+            commands::set_proxy_mode,
+            commands::get_pac_rules,
+            commands::get_pac_enabled,
+            commands::set_pac_enabled,
+            commands::update_pac_rules,
+            commands::add_pac_rule,
+            commands::remove_pac_rule,
+            commands::get_pac_content,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

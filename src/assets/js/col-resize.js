@@ -9,11 +9,12 @@ let _resizing = null;
 document.addEventListener('mousedown', (e) => {
   // Ignore if already resizing or clicking interactive elements
   if (_resizing) return;
-  if (e.target.closest('a, button, input, select, textarea, .sortable, .btn, .icon')) return;
+  if (e.target.closest('a, button, input, select, textarea, .btn, .icon')) return;
 
   const th = e.target.closest('.data-table thead th');
   if (!th) return;
 
+  // Check if click is in the resize hit zone (right edge)
   const rect = th.getBoundingClientRect();
   if (rect.right - e.clientX > HIT_ZONE) return;
 

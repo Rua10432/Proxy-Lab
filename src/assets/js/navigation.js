@@ -5,6 +5,38 @@ import { $$,$,createElement } from "./utils.js";
 import { AppState } from "./state.js";
 const LoadedPages = new Set();
 
+/* ── First-page-ready signal for loading screen ── */
+let _resolveFirstPage;
+export const firstPageReady = new Promise((resolve) => { _resolveFirstPage = resolve; });
+
+/* ── Lazy-load page JS modules only when first needed ── */
+const PAGE_MODULES = {
+  test: () => import('./pages/test.js'),
+  scan: () => import('./pages/scan.js'),
+  config: () => import('./pages/config.js'),
+  logs: () => import('./pages/logs.js'),
+  monitor: () => import('./pages/monitor.js'),
+  settings: () => import('./pages/settings.js'),
+};
+/* Pages with tables also get column resizer */
+const TABLE_PAGES = new Set(['test', 'scan', 'monitor']);
+let _colResizeLoaded = false;
+
+// Lazy load page-specific CSS (returns promise that resolves when loaded)
+const _loadedCSS = new Set();
+function loadPageCSS(pageName) {
+  if (_loadedCSS.has(pageName)) return Promise.resolve();
+  _loadedCSS.add(pageName);
+  return new Promise((resolve) => {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = `assets/css/page-${pageName}.css`;
+    link.onload = resolve;
+    link.onerror = resolve; // don't block on error
+    document.head.appendChild(link);
+  });
+}
+
 async function renderPageFromHash() {
   let hash = window.location.hash.substring(1);
   if (!hash) {
@@ -17,19 +49,39 @@ async function renderPageFromHash() {
 
   if (!LoadedPages.has(hash)) {
     try {
+      // Lazy load page CSS before injecting HTML
+      await loadPageCSS(hash);
+
       const response = await fetch(`/pages/${hash}.html`);
       if (!response.ok) throw new Error(`Failed to load page: ${hash}`);
       const html = await response.text();
-      
+
       const temp = document.createElement('div');
       temp.innerHTML = html;
       // Vite dev server injects <script type="module" src="/@vite/client"></script> at the top.
       // We must explicitly extract the actual .page container.
       const pageEl = temp.querySelector('.page');
       if (!pageEl) throw new Error(`Valid page structure not found in ${hash}.html`);
-      
+
       container.appendChild(pageEl);
       LoadedPages.add(hash);
+
+      // Lazy load page JS module (cached by browser after first import)
+      if (PAGE_MODULES[hash]) {
+        await PAGE_MODULES[hash]();
+      }
+      // Lazy load column resizer for table-heavy pages
+      if (TABLE_PAGES.has(hash) && !_colResizeLoaded) {
+        await import('./col-resize.js');
+        _colResizeLoaded = true;
+      }
+
+      // Ensure DOM is synced
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      initSelects(pageEl);
+      initSwitches(pageEl);
 
       const PAGE_INIT_MAP = {
         test: typeof window.initTestPage !== 'undefined' ? window.initTestPage : null,
@@ -40,18 +92,17 @@ async function renderPageFromHash() {
         settings: typeof window.initSettingsPage !== 'undefined' ? window.initSettingsPage : null,
       };
 
-      // Ensure DOM is synced
-      await new Promise(resolve => requestAnimationFrame(resolve));
-      await new Promise(resolve => setTimeout(resolve, 0));
-
-      initSelects(pageEl);
-      initSwitches(pageEl);
-
       const initFn = PAGE_INIT_MAP[hash];
       if (initFn) initFn();
 
       // Apply language to newly loaded page
       if (typeof applyLanguage !== 'undefined') applyLanguage();
+
+      // Resolve first-page-ready signal (only fires once, on first navigation)
+      if (_resolveFirstPage) {
+        _resolveFirstPage();
+        _resolveFirstPage = null;
+      }
     } catch (err) {
       console.error(err);
       if (typeof showSnackbar !== 'undefined') showSnackbar(`Navigation error: ${err.message}`, 'error');

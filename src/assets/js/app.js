@@ -1,4 +1,4 @@
-import { initNavigation,initSelects,initSwitches,initSnackbar, showDialog } from "./navigation.js";
+import { initNavigation,initSelects,initSwitches,initSnackbar, showDialog, firstPageReady } from "./navigation.js";
 import { appendLog,$, $$  } from "./utils.js";
 import { AppState } from "./state.js";
 document.addEventListener('DOMContentLoaded', () => {
@@ -13,51 +13,61 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  /* ── Initialize All Systems ── */
-  initNavigation();
-  initSelects();
-  initSwitches();
-  initSnackbar();
+  /* ── Restore persisted data before pages load ── */
+  // Use an IIFE so we await disk I/O before triggering page init
+  (async () => {
+    await loadFullConfig();
+
+    // Apply saved theme and color (must happen after loadFullConfig populates cache)
+    const savedTheme = loadFromStorage('theme', 'dark');
+    const savedColor = loadFromStorage('primaryColor', '#9eddc8');
+    AppState.theme = savedTheme;
+    AppState.primaryColor = savedColor;
+    applyTheme(savedTheme);
+    applyPrimaryColor(savedColor);
+
+    // Apply saved language (i18n initLanguage ran before loadFullConfig, so re-apply)
+    const savedLang = loadFromStorage('language', 'en');
+    if (savedLang) applyLanguage(savedLang);
+
+    // Apply saved title bar mode (system/custom)
+    const savedMode = loadFromStorage('titleBarMode', 'custom');
+    AppState.titleBarMode = savedMode;
+    if (typeof applyTitleBarMode === 'function') {
+      applyTitleBarMode(savedMode);
+    }
+
+    /* ── Initialize All Systems ── */
+    initNavigation();
+    initSelects();
+    initSwitches();
+    initSnackbar();
+
+    /* ── Wait for first page to be ready, then hide loading screen ── */
+    firstPageReady.then(() => {
+      const loadingScreen = $('#loading-screen');
+      if (loadingScreen) {
+        loadingScreen.classList.add('fade-out');
+        setTimeout(() => {
+          loadingScreen.style.display = 'none';
+        }, 200);
+      }
+      AppState.isLoading = false;
+
+      // Add stagger entry animations
+      $$('#sidebar, #main-content, #status-bar').forEach((el, i) => {
+        el.classList.add('stagger-entry', `stagger-delay-${i + 1}`);
+      });
+    });
+  })();
 
   // Page-specific initializations are now handled on-demand by the router
 
   /* ── Performance Monitor ── */
   initPerfMonitor();
 
-  /* ── Loading Screen ── */
-  setTimeout(() => {
-    const loadingScreen = $('#loading-screen');
-    if (loadingScreen) {
-      loadingScreen.classList.add('fade-out');
-      setTimeout(() => {
-        loadingScreen.style.display = 'none';
-      }, 200);
-    }
-    AppState.isLoading = false;
-
-    // Add stagger entry animations
-    $$('#sidebar, #main-content, #status-bar').forEach((el, i) => {
-      el.classList.add('stagger-entry', `stagger-delay-${i + 1}`);
-    });
-  }, 400);
-
   /* ── Window Controls (Desktop Titlebar) ── */
   initWindowControls();
-
-  // Apply saved theme and color
-  const savedTheme = loadFromStorage('theme', 'dark');
-  const savedColor = loadFromStorage('primaryColor', '#9eddc8');
-  AppState.theme = savedTheme;
-  AppState.primaryColor = savedColor;
-  applyTheme(savedTheme);
-  applyPrimaryColor(savedColor);
-
-  // Apply saved title bar mode (system/custom)
-  const savedMode = loadFromStorage('titleBarMode', 'custom');
-  AppState.titleBarMode = savedMode;
-  if (typeof applyTitleBarMode === 'function') {
-    applyTitleBarMode(savedMode);
-  }
 
   // Auto-init validation for data-validate inputs
   document.addEventListener('input', (e) => {
@@ -74,7 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const closeConfirm = loadFromStorage('closeConfirm', true);
       const dontAskDate = loadFromStorage('dontAskDate', '');
       if (!closeConfirm || dontAskDate === new Date().toDateString()) {
-        tauriInvoke('win_close');
+        tauriInvoke('win_hide_to_tray');
         return;
       }
       showCloseDialog();
@@ -223,14 +233,14 @@ function handleCloseClick() {
   // Check if close confirmation is enabled
   const closeConfirm = loadFromStorage('closeConfirm', true);
   if (!closeConfirm) {
-    tauriInvoke('win_close');
+    tauriInvoke('win_hide_to_tray');
     return;
   }
 
   // Check "don't ask again today"
   const dontAskDate = loadFromStorage('dontAskDate', '');
   if (dontAskDate === new Date().toDateString()) {
-    tauriInvoke('win_close');
+    tauriInvoke('win_hide_to_tray');
     return;
   }
 
@@ -239,30 +249,38 @@ function handleCloseClick() {
 
 function showCloseDialog() {
   const bodyEl = createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '16px' } }, [
-    createElement('p', { textContent: 'Are you sure you want to exit Proxy Tester?' }),
+    createElement('p', { textContent: '是否最小化到系统托盘？关闭窗口后应用将在后台继续运行。' }),
     createElement('label', { className: 'dont-ask-label' }, [
       createElement('input', { type: 'checkbox', id: 'dont-ask-checkbox', className: 'dont-ask-checkbox' }),
-      createElement('span', { textContent: "Don't ask again today" }),
+      createElement('span', { textContent: '今日不再提示' }),
     ]),
   ]);
 
   showDialog({
-    title: 'Exit Application',
-    icon: 'warning',
+    title: '关闭提示',
+    icon: 'info',
     body: bodyEl,
     actions: [
       {
-        label: 'Cancel',
-        class: 'btn-text',
-        onClick: () => { tauriInvoke('win_minimize'); },
-      },
-      {
-        label: 'Exit',
+        label: '最小化到托盘',
         class: 'btn-primary',
         onClick: () => {
           const checkbox = $('#dont-ask-checkbox');
           if (checkbox?.checked) {
-            saveToStorage('dontAskDate', new Date().toDateString());
+            const date = new Date().toDateString();
+            saveToStorage('dontAskDate', date);
+          }
+          tauriInvoke('win_hide_to_tray');
+        },
+      },
+      {
+        label: '退出应用',
+        class: 'btn-danger',
+        onClick: () => {
+          const checkbox = $('#dont-ask-checkbox');
+          if (checkbox?.checked) {
+            const date = new Date().toDateString();
+            saveToStorage('dontAskDate', date);
           }
           tauriInvoke('win_close');
         },

@@ -9,6 +9,7 @@ mod ping;
 mod proxy;
 mod rules;
 mod scan;
+mod uwp;
 
 pub use config::*;
 pub use monitor::*;
@@ -17,3 +18,4 @@ pub use ping::*;
 pub use proxy::*;
 pub use rules::*;
 pub use scan::*;
+pub use uwp::*;

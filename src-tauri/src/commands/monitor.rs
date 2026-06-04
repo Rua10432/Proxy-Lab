@@ -2,7 +2,8 @@
 // Thin Tauri wrappers — delegates to service layer.
 
 use crate::service;
-use crate::types::{MonitorData, MemoryInfo, LocalProxyPort};
+use crate::types::{MonitorData, MemoryInfo, LocalProxyPort, UwpAppInfo};
+use crate::platform;
 use crate::AppState;
 
 #[tauri::command]
@@ -18,4 +19,9 @@ pub fn get_local_proxy_ports() -> Vec<LocalProxyPort> {
 #[tauri::command]
 pub fn shittim_mem_task() -> MemoryInfo {
     service::get_memory_info()
+}
+
+#[tauri::command]
+pub fn get_uwp_apps() -> Vec<UwpAppInfo> {
+    platform::get_uwp_processes()
 }

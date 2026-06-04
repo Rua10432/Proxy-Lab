@@ -4,8 +4,8 @@
 
 .scan-params {
   background: var(--color-surface-elevated);
-  border: 1px solid var(--color-ink-700);
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-ink-82); /* MD: 标志性高频浅色边框 */
+  border-radius: 0 40px 0 0; /* MD: 注入灵魂右上大圆角 */
   padding: var(--space-4);
 }
 
@@ -44,13 +44,26 @@
   color: var(--color-text-subtle);
   white-space: nowrap;
 }
+.spacer { flex: 1; }
+.scan-export-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
 
 .scan-table-container {
   margin-top: var(--space-3);
+  flex: 1;
+  min-height: 240px;
+  display: flex;
+  flex-direction: column;
 }
 .scan-table-container .table-wrapper {
-  max-height: calc(100vh - 420px);
-  min-height: 200px;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
 }
 
 /* Progress Area */
@@ -62,8 +75,8 @@
   margin-top: var(--space-4);
   padding: var(--space-3) var(--space-4);
   background: var(--color-surface-elevated);
-  border: 1px solid var(--color-ink-700);
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-ink-82); /* MD: 浅色边框 */
+  border-radius: 0; /* 数据条保持直角 */
 }
 .progress-info {
   flex: 1;
@@ -102,19 +115,19 @@
 }
 .scan-stat-card {
   background: var(--color-bg);
-  border: 1px solid var(--color-ink-700);
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-ink-82); /* MD: 浅色边框 */
+  border-radius: 0; /* 统计卡片保持直角 */
   padding: var(--space-4);
   display: flex;
   align-items: center;
   gap: var(--space-3);
   transition: border-color var(--transition-normal);
 }
-.scan-stat-card:hover { border-color: var(--color-ink-600); }
+.scan-stat-card:hover { border-color: var(--color-accent-green); } /* 悬停高亮 */
 .scan-stat-icon {
   width: 40px;
   height: 40px;
-  border-radius: var(--radius-sm);
+  border-radius: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -125,7 +138,7 @@
 .scan-stat-value { font-size: 20px; font-weight: var(--weight-bold); color: var(--color-text-primary); }
 
 /* Responsive */
-@media (max-width: 1024px) {
+@media (max-width: 960px) { /* 对齐 MD 平板断点 */
   .scan-params-grid { grid-template-columns: 1fr 1fr; }
   .scan-stats-grid { grid-template-columns: repeat(3, 1fr); }
 }

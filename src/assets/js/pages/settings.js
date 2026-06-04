@@ -105,6 +105,45 @@ function initSettingsPage() {
     });
   });
 
+  /* ── Export Directory ── */
+  const exportDirInput = $('#export-directory');
+  const browseBtn = $('#btn-browse-export-path');
+  const clearBtn = $('#btn-clear-export-path');
+
+  const savedExportDir = loadFromStorage('exportDirectory', '');
+  if (savedExportDir) exportDirInput.value = savedExportDir;
+
+  if (browseBtn) {
+    browseBtn.addEventListener('click', async () => {
+      if (!window.__TAURI__?.dialog) {
+        showSnackbar('Folder picker is only available in desktop app', 'error');
+        return;
+      }
+      try {
+        const selected = await window.__TAURI__.dialog.open({
+          directory: true,
+          multiple: false,
+          title: 'Select Export Directory',
+        });
+        if (selected && typeof selected === 'string') {
+          exportDirInput.value = selected;
+          saveToStorage('exportDirectory', selected);
+          showSnackbar('Export directory set', 'success');
+        }
+      } catch (err) {
+        showSnackbar('Failed to select directory: ' + err, 'error');
+      }
+    });
+  }
+
+  if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+      exportDirInput.value = '';
+      saveToStorage('exportDirectory', '');
+      showSnackbar('Export directory cleared — using browser download', 'info');
+    });
+  }
+
   // Apply language to this page
   applyLanguage();
 }

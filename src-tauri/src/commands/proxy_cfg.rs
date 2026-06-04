@@ -1,7 +1,7 @@
 // ─── Proxy Config Commands ───────────────────────────────────────────────────
 // Thin Tauri wrappers — delegates to service layer.
 
-use crate::config::ProxyEntry;
+use crate::config::{PacRule, ProxyEntry, ProxyMode};
 use crate::service;
 use crate::types::ProxyStatus;
 use crate::AppState;
@@ -25,8 +25,8 @@ pub fn config_proxy(
 }
 
 #[tauri::command]
-pub fn disconnect_proxy() -> Result<String, String> {
-    service::disconnect_proxy()
+pub fn disconnect_proxy(state: tauri::State<'_, AppState>) -> Result<String, String> {
+    service::disconnect_proxy(&state)
 }
 
 #[tauri::command]
@@ -60,4 +60,88 @@ pub async fn test_proxy_connectivity(
 #[tauri::command]
 pub async fn fetch_proxies_from_url(url: String) -> Result<Vec<ProxyEntry>, String> {
     service::fetch_proxies_from_url(&url).await
+}
+
+#[tauri::command]
+pub fn set_force_all_proxy(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, AppState>,
+    enabled: bool,
+) -> Result<(), String> {
+    service::set_force_all_proxy(&app, &state, enabled)
+}
+
+#[tauri::command]
+pub fn get_force_all_proxy(state: tauri::State<'_, AppState>) -> bool {
+    service::get_force_all_proxy(&state)
+}
+
+// ─── Proxy Mode ───────────────────────────────────────────────────────────
+
+#[tauri::command]
+pub fn get_proxy_mode(state: tauri::State<'_, AppState>) -> ProxyMode {
+    service::get_proxy_mode(&state)
+}
+
+#[tauri::command]
+pub fn set_proxy_mode(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, AppState>,
+    mode: ProxyMode,
+) -> Result<(), String> {
+    service::set_proxy_mode(&app, &state, mode)
+}
+
+// ─── PAC Rules ────────────────────────────────────────────────────────────
+
+#[tauri::command]
+pub fn get_pac_rules(state: tauri::State<'_, AppState>) -> Vec<PacRule> {
+    service::get_pac_rules(&state)
+}
+
+#[tauri::command]
+pub fn get_pac_enabled(state: tauri::State<'_, AppState>) -> bool {
+    service::get_pac_enabled(&state)
+}
+
+#[tauri::command]
+pub fn set_pac_enabled(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, AppState>,
+    enabled: bool,
+) -> Result<(), String> {
+    service::set_pac_enabled(&app, &state, enabled)
+}
+
+#[tauri::command]
+pub fn update_pac_rules(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, AppState>,
+    rules: Vec<PacRule>,
+) -> Result<(), String> {
+    service::update_pac_rules(&app, &state, rules)
+}
+
+#[tauri::command]
+pub fn add_pac_rule(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, AppState>,
+    rule: PacRule,
+) -> Result<(), String> {
+    service::add_pac_rule(&app, &state, rule)
+}
+
+#[tauri::command]
+pub fn remove_pac_rule(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, AppState>,
+    index: usize,
+) -> Result<(), String> {
+    service::remove_pac_rule(&app, &state, index)
+}
+
+#[tauri::command]
+pub fn get_pac_content(state: tauri::State<'_, AppState>) -> String {
+    let rules = service::get_pac_rules(&state);
+    service::generate_pac_content(&rules)
 }

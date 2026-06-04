@@ -12,18 +12,13 @@
   <link rel="preload" href="assets/fonts/noto-serif-jp-japanese-400-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="assets/fonts/noto-serif-tc-chinese-traditional-400-normal.woff2" as="font" type="font/woff2" crossorigin>
 
-  <!-- Stylesheets -->
+  <!-- Stylesheets (core) -->
   <link rel="stylesheet" href="assets/css/icons.css">
   <link rel="stylesheet" href="assets/css/variables.css">
   <link rel="stylesheet" href="assets/css/base.css">
   <link rel="stylesheet" href="assets/css/components.css">
   <link rel="stylesheet" href="assets/css/layout.css">
-  <link rel="stylesheet" href="assets/css/page-test.css">
-  <link rel="stylesheet" href="assets/css/page-scan.css">
-  <link rel="stylesheet" href="assets/css/page-config.css">
-  <link rel="stylesheet" href="assets/css/page-logs.css">
-  <link rel="stylesheet" href="assets/css/page-monitor.css">
-  <link rel="stylesheet" href="assets/css/page-settings.css">
+  <!-- Page-specific CSS is loaded on-demand via JS -->
 </head>
 
 <body>
@@ -37,7 +32,7 @@
       <div id="titlebar-filament"></div>
       <div class="titlebar-left">
         <span class="icon icon-lg titlebar-icon" aria-hidden="true">network_check</span>
-        <span class="titlebar-title">Proxy Tester</span>
+        <span class="titlebar-title">Proxy Lab</span>
       </div>
       <div class="titlebar-right">
         <button class="win-btn" id="win-minimize" aria-label="Minimize">
@@ -191,14 +186,7 @@
   <script type="module" src="assets/js/utils.js"></script>
   <script type="module" src="assets/js/i18n.js"></script>
   <script type="module" src="assets/js/navigation.js"></script>
-  <script type="module" src="assets/js/pages/test.js"></script>
-  <script type="module" src="assets/js/pages/scan.js"></script>
-  <script type="module" src="assets/js/pages/config.js"></script>
-  <script type="module" src="assets/js/pages/logs.js"></script>
-  <script type="module" src="assets/js/pages/monitor.js"></script>
-  <script type="module" src="assets/js/pages/settings.js"></script>
   <script type="module" src="assets/js/app.js"></script>
-  <script type="module" src="assets/js/col-resize.js"></script>
 
 </body>
 

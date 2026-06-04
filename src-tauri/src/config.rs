@@ -19,21 +19,27 @@ pub struct ProxyEntry {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct ScanPreferences {
+    #[serde(alias = "default_mask")]
     pub default_mask: String,
+    #[serde(alias = "default_start_port")]
     pub default_start_port: u16,
+    #[serde(alias = "default_end_port")]
     pub default_end_port: u16,
+    #[serde(alias = "default_concurrent")]
     pub default_concurrent: usize,
+    #[serde(alias = "timeout_ms")]
     pub timeout_ms: u64,
-    #[serde(default = "default_syn_timeout")]
+    #[serde(default = "default_syn_timeout", alias = "syn_timeout_ms")]
     pub syn_timeout_ms: u64,
-    #[serde(default = "default_verify_concurrent")]
+    #[serde(default = "default_verify_concurrent", alias = "verify_concurrent")]
     pub verify_concurrent: usize,
     /// 代理检测时需要匹配的响应头列表（HTTP 代理）
-    #[serde(default = "default_detection_headers")]
+    #[serde(default = "default_detection_headers", alias = "detection_headers")]
     pub detection_headers: Vec<String>,
     /// 是否启用严格模式：要求至少匹配一个 detection_headers 才算 HTTP 代理
-    #[serde(default)]
+    #[serde(default, alias = "strict_detection")]
     pub strict_detection: bool,
 }
 
@@ -66,12 +72,115 @@ impl Default for ScanPreferences {
     }
 }
 
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub enum ProxyMode {
+    System,
+    AppOnly,
+    Pac,
+}
+
+impl Default for ProxyMode {
+    fn default() -> Self { Self::System }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct PacRule {
+    pub domain_pattern: String,
+    pub proxy: String,          // e.g. "PROXY 127.0.0.1:7890" or "SOCKS5 127.0.0.1:1080" or "DIRECT"
+    pub enabled: bool,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ProxyRule {
     pub app_path: String,
     pub app_name: String,
     pub enabled: bool,
     pub added_at: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct UwpProxyRule {
+    pub package_family_name: String,
+    pub package_full_name: String,
+    pub app_name: String,
+    pub enabled: bool,
+    pub added_at: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct UiPreferences {
+    #[serde(default = "default_theme")]
+    pub theme: String,
+    #[serde(default = "default_primary_color")]
+    pub primary_color: String,
+    #[serde(default = "default_title_bar_mode")]
+    pub title_bar_mode: String,
+    #[serde(default = "default_close_confirm")]
+    pub close_confirm: bool,
+    #[serde(default)]
+    pub language: String,
+    #[serde(default)]
+    pub export_directory: String,
+    #[serde(default)]
+    pub dont_ask_date: String,
+}
+
+fn default_theme() -> String { "dark".to_string() }
+fn default_primary_color() -> String { "#9eddc8".to_string() }
+fn default_title_bar_mode() -> String { "custom".to_string() }
+fn default_close_confirm() -> bool { true }
+
+impl Default for UiPreferences {
+    fn default() -> Self {
+        Self {
+            theme: default_theme(),
+            primary_color: default_primary_color(),
+            title_bar_mode: default_title_bar_mode(),
+            close_confirm: default_close_confirm(),
+            language: String::new(),
+            export_directory: String::new(),
+            dont_ask_date: String::new(),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct FrontendTestHistoryItem {
+    pub id: String,
+    pub host: String,
+    pub port: u16,
+    pub protocol: String,
+    #[serde(default)]
+    pub avg_latency: Option<u64>,
+    pub timestamp: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct FrontendConfigHistoryItem {
+    pub id: String,
+    pub host: String,
+    pub port: u16,
+    pub protocol: String,
+    #[serde(default)]
+    pub username: Option<String>,
+    pub timestamp: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct FrontendProxyPoolItem {
+    pub id: String,
+    pub host: String,
+    pub port: u16,
+    pub protocol: String,
+    #[serde(default)]
+    pub latency: Option<f64>,
+    #[serde(default)]
+    pub status: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -85,6 +194,24 @@ pub struct AppConfig {
     pub recent_tests: Vec<ProxyEntry>,
     #[serde(default)]
     pub proxy_rules: Vec<ProxyRule>,
+    #[serde(default)]
+    pub uwp_proxy_rules: Vec<UwpProxyRule>,
+    #[serde(default)]
+    pub ui_preferences: UiPreferences,
+    #[serde(default)]
+    pub frontend_test_history: Vec<FrontendTestHistoryItem>,
+    #[serde(default)]
+    pub frontend_config_history: Vec<FrontendConfigHistoryItem>,
+    #[serde(default)]
+    pub frontend_proxy_pool: Vec<FrontendProxyPoolItem>,
+    #[serde(default)]
+    pub force_all_proxy: bool,
+    #[serde(default)]
+    pub proxy_mode: ProxyMode,
+    #[serde(default)]
+    pub pac_rules: Vec<PacRule>,
+    #[serde(default)]
+    pub pac_enabled: bool,
 }
 
 impl Default for AppConfig {
@@ -96,6 +223,15 @@ impl Default for AppConfig {
             recent_configs: Vec::new(),
             recent_tests: Vec::new(),
             proxy_rules: Vec::new(),
+            uwp_proxy_rules: Vec::new(),
+            ui_preferences: UiPreferences::default(),
+            frontend_test_history: Vec::new(),
+            frontend_config_history: Vec::new(),
+            frontend_proxy_pool: Vec::new(),
+            force_all_proxy: false,
+            proxy_mode: ProxyMode::default(),
+            pac_rules: Vec::new(),
+            pac_enabled: false,
         }
     }
 }

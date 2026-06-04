@@ -68,12 +68,23 @@
                 <div class="proxy-status-text">
                   <span id="proxy-status-msg">Checking proxy status...</span>
                 </div>
+                <div class="proxy-status-actions">
+                  <div class="switch-wrap">
+                    <div class="switch" id="switch-force-proxy">
+                      <div class="thumb"></div>
+                    </div>
+                    <span class="switch-label">Force All</span>
+                  </div>
+                </div>
               </div>
 
-              <!-- Main Content: Tabs for Connections + Rules -->
+              <!-- Main Content: Tabs for Connections + Rules + UWP -->
               <div class="monitor-tabs">
                 <button class="monitor-tab-btn active" data-tab="connections">
                   <span class="icon icon-sm">lan</span> Connections
+                </button>
+                <button class="monitor-tab-btn" data-tab="uwp">
+                  <span class="icon icon-sm">grid_view</span> UWP Apps
                 </button>
                 <button class="monitor-tab-btn" data-tab="rules">
                   <span class="icon icon-sm">rule</span> <span data-i18n="monitor.proxyrules">Proxy Rules</span>
@@ -142,7 +153,7 @@
                     <div class="empty-sub">Click Refresh to fetch current TCP connections</div>
                   </div>
                 </div>
-              
+              </div>
 
               <!-- Rules Tab -->
               <div class="monitor-tab-content" id="mon-tab-rules">
@@ -163,6 +174,47 @@
                     <div class="empty-sub">Add applications to force them through the proxy</div>
                   </div>
                   <div id="rules-list"></div>
+                </div>
+              </div>
+
+              <!-- UWP Apps Tab -->
+              <div class="monitor-tab-content" id="mon-tab-uwp">
+                <div class="monitor-toolbar">
+                  <div class="monitor-toolbar-info">
+                    <span class="icon icon-sm" style="color:var(--color-accent-green)">info</span>
+                    <span>Running UWP (Universal Windows Platform) applications detected on this system.</span>
+                  </div>
+                  <button class="btn-pill" id="btn-refresh-uwp">
+                    <span class="icon icon-sm">refresh</span> Refresh UWP
+                  </button>
+                </div>
+
+                <div class="table-card uwp-table-container">
+                  <div class="uwp-count-bar" id="uwp-count-bar">
+                    <span class="icon icon-sm">grid_view</span>
+                    <span id="uwp-count-text">0 UWP apps running</span>
+                  </div>
+                  <div class="table-wrapper" id="uwp-table-wrapper" style="display:none">
+                    <table class="data-table" id="uwp-table">
+                      <thead>
+                        <tr>
+                          <th style="width:36px"></th>
+                          <th style="width:160px">Process</th>
+                          <th style="width:80px">PID</th>
+                          <th>Package Family</th>
+                          <th>Package Full Name</th>
+                          <th>Path</th>
+                          <th style="width:60px">Proxy</th>
+                        </tr>
+                      </thead>
+                      <tbody id="uwp-table-body"></tbody>
+                    </table>
+                  </div>
+                  <div class="table-empty" id="uwp-empty-state">
+                    <span class="icon empty-icon">grid_view</span>
+                    <div class="empty-title">No UWP apps running</div>
+                    <div class="empty-sub">UWP (Universal Windows Platform) applications with network access will appear here</div>
+                  </div>
                 </div>
               </div>
 

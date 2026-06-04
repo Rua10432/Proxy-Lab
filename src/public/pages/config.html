@@ -2,27 +2,42 @@
              Page: Config
              ═══════════════════════════════════════════════════════════════════════ -->
           <div class="page" id="page-config">
-            <div class="config-card">
+            <!-- Mode Selector -->
+            <div class="config-mode-selector" id="config-mode-selector">
+              <button class="mode-tab active" data-mode="System">
+                <span class="icon icon-sm">settings_applications</span> 系统代理
+              </button>
+              <button class="mode-tab" data-mode="AppOnly">
+                <span class="icon icon-sm">storage</span> 应用内部
+              </button>
+              <button class="mode-tab" data-mode="Pac">
+                <span class="icon icon-sm">dns</span> PAC 模式
+              </button>
+            </div>
+
+            <div class="config-card" id="config-card-proxy">
               <div class="config-card-header">
-                <span class="icon">router</span> <span data-i18n="config.systemSetup">System Proxy Setup</span>
+                <span class="icon">router</span>
+                <span class="config-title-text" id="config-title-text">系统代理设置</span>
+                <span class="config-mode-badge" id="config-mode-badge">系统代理</span>
               </div>
               <div class="config-form-row">
                 <div class="input-field f-address">
-                  <label data-i18n="config.proxyAddress">Address</label>
+                  <label>地址</label>
                   <div class="input-wrap">
                     <span class="icon icon-sm leading-icon">dns</span>
-                    <input type="text" id="config-host" placeholder="127.0.0.1" data-i18n-placeholder="config.placeholderHost" data-validate="ip" autocomplete="off">
+                    <input type="text" id="config-host" placeholder="127.0.0.1" data-validate="ip" autocomplete="off">
                   </div>
                 </div>
                 <div class="input-field f-port">
-                  <label data-i18n="config.proxyPort">Port</label>
+                  <label>端口</label>
                   <div class="input-wrap">
                     <span class="icon icon-sm leading-icon">settings_ethernet</span>
                     <input type="number" id="config-port" min="1" max="65535" data-validate="port" autocomplete="off">
                   </div>
                 </div>
                 <div class="input-field f-proto">
-                  <label data-i18n="config.proxyProtocol">Protocol</label>
+                  <label>协议</label>
                   <div class="select-field" id="config-proto-select">
                     <div class="select-trigger">
                       <span class="select-value">HTTP</span>
@@ -37,50 +52,111 @@
               </div>
               <div class="config-form-row">
                 <div class="input-field f-user">
-                  <label data-i18n="config.proxyUsername">Username</label>
+                  <label>用户名</label>
                   <div class="input-wrap">
                     <span class="icon icon-sm leading-icon">person</span>
-                    <input type="text" id="config-user" placeholder="Optional" data-i18n-placeholder="config.placeholderOptional" autocomplete="off">
+                    <input type="text" id="config-user" placeholder="可选" autocomplete="off">
                   </div>
                 </div>
                 <div class="input-field f-pass">
-                  <label data-i18n="config.proxyPassword">Password</label>
+                  <label>密码</label>
                   <div class="input-wrap">
                     <span class="icon icon-sm leading-icon">key</span>
-                    <input type="password" id="config-pass" placeholder="Optional" data-i18n-placeholder="config.placeholderOptional" autocomplete="new-password">
+                    <input type="password" id="config-pass" placeholder="可选" autocomplete="new-password">
                   </div>
                 </div>
               </div>
               <div class="action-row">
                 <button class="btn btn-outline" id="btn-test-config" style="flex:1">
-                  <span class="icon icon-sm">network_check</span> <span data-i18n="config.test_connectivity">Test Connection</span>
+                  <span class="icon icon-sm">network_check</span> 连通性测试
                 </button>
                 <button class="btn btn-primary" id="btn-config" disabled style="flex:1">
-                  <span class="icon icon-sm">check_circle</span> <span data-i18n="config.apply">Apply Proxy</span>
+                  <span class="icon icon-sm">check_circle</span> <span id="btn-config-text">应用系统代理</span>
                 </button>
                 <button class="btn btn-tonal" id="btn-config-disconnect" disabled style="flex:1">
-                  <span class="icon icon-sm">link_off</span> <span data-i18n="config.disconnect">Disconnect Proxy</span>
+                  <span class="icon icon-sm">link_off</span> 断开代理
                 </button>
                 <span class="icon admin-lock-icon" id="admin-lock-icon"
-                  data-i18n-title="config.adminLockTitle">lock</span>
+                  data-i18n-title="管理员权限状态">lock</span>
               </div>
               <div class="test-result" id="test-result"></div>
+            </div>
+
+            <!-- PAC Editor -->
+            <div class="pac-editor-section" id="pac-editor-section" style="display:none">
+              <div class="config-card">
+                <div class="config-card-header">
+                  <span class="icon">dns</span> PAC 规则配置
+                  <label class="toggle-label" style="margin-left:auto">
+                    <input type="checkbox" id="pac-toggle">
+                    <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                    <span id="pac-toggle-text">启用 PAC</span>
+                  </label>
+                </div>
+
+                <div class="pac-rule-controls">
+                  <button class="btn btn-text" id="btn-add-pac-rule">
+                    <span class="icon icon-sm">add</span> 添加规则
+                  </button>
+                  <button class="btn btn-text" id="btn-preview-pac">
+                    <span class="icon icon-sm">code</span> 预览 PAC
+                  </button>
+                </div>
+
+                <div class="pac-rules-list" id="pac-rules-list">
+                  <div class="pac-rules-empty">暂无规则，添加新规则或直接配置代理服务器后会自动创建默认规则</div>
+                </div>
+
+                <!-- PAC Rule Form (hidden) -->
+                <div class="pac-rule-form" id="pac-rule-form" style="display:none">
+                  <div class="pac-rule-form-row">
+                    <div class="input-field" style="flex:2">
+                      <label>域名模式</label>
+                      <div class="input-wrap">
+                        <input type="text" id="pac-rule-domain" placeholder="*.google.com, example.com, 或 * 表示全部">
+                      </div>
+                    </div>
+                    <div class="input-field" style="flex:2">
+                      <label>代理目标</label>
+                      <div class="input-wrap">
+                        <input type="text" id="pac-rule-proxy" placeholder="PROXY 127.0.0.1:7890 或 SOCKS5 ... 或 DIRECT">
+                      </div>
+                    </div>
+                    <div class="pac-rule-form-actions">
+                      <button class="btn btn-primary" id="btn-save-pac-rule" style="font-size:12px;padding:4px 12px">保存</button>
+                      <button class="btn btn-text" id="btn-cancel-pac-rule" style="font-size:12px">取消</button>
+                    </div>
+                  </div>
+                  <div class="pac-rule-hint">
+                    提示：<code>*</code> 匹配所有域名，<code>*.example.com</code> 匹配子域名。代理格式: <code>PROXY host:port</code>、<code>SOCKS5 host:port</code> 或 <code>DIRECT</code>
+                  </div>
+                </div>
+
+                <!-- PAC Preview -->
+                <div class="pac-preview" id="pac-preview" style="display:none">
+                  <div class="pac-preview-header">
+                    <span>PAC 脚本预览</span>
+                    <button class="btn btn-text" id="btn-close-pac-preview" style="font-size:12px">关闭</button>
+                  </div>
+                  <pre class="pac-preview-content" id="pac-preview-content"></pre>
+                </div>
+              </div>
             </div>
 
             <!-- Local Proxy Detection -->
             <div class="local-proxy-section" id="local-proxy-section">
               <div class="recent-configs-label">
                 <div class="label-text">
-                  <span class="icon icon-sm">radar</span> <span data-i18n="config.localProxyDetect">本地代理端口检测</span>
+                  <span class="icon icon-sm">radar</span> 本地代理端口检测
                 </div>
-                <button class="btn btn-text" id="btn-refresh-local-proxy" style="font-size:12px"><span data-i18n="config.refreshLocal">刷新</span></button>
+                <button class="btn btn-text" id="btn-refresh-local-proxy" style="font-size:12px">刷新</button>
               </div>
-              <div class="local-proxy-hint" data-i18n="config.localProxyDesc">
+              <div class="local-proxy-hint">
                 自动扫描本机常见代理端口，检测正在运行的代理服务。
                 点击端口或进程名可以直接填入上方配置表单。
               </div>
               <div class="local-proxy-list" id="local-proxy-list">
-                <div class="local-proxy-empty" data-i18n="config.localProxyChecking">正在检测本地代理服务...</div>
+                <div class="local-proxy-empty">正在检测本地代理服务...</div>
               </div>
             </div>
 
@@ -88,9 +164,9 @@
             <div class="recent-configs-section" id="recent-configs-section">
               <div class="recent-configs-label">
                 <div class="label-text">
-                  <span class="icon icon-sm">history</span> <span data-i18n="config.recentConfigs">RECENT CONFIGURATIONS</span>
+                  <span class="icon icon-sm">history</span> 最近配置
                 </div>
-                <button class="btn btn-text" id="btn-clear-recent" style="font-size:12px"><span data-i18n="config.clearHistory">CLEAR HISTORY</span></button>
+                <button class="btn btn-text" id="btn-clear-recent" style="font-size:12px">清除历史</button>
               </div>
               <div class="recent-configs-grid" id="recent-configs-list"></div>
             </div>

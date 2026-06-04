@@ -15,7 +15,7 @@ pub fn set_app_proxy_rule(
     app: tauri::AppHandle,
     state: tauri::State<'_, AppState>,
     app_path: String,
-) -> Result<config::ProxyRule, String> {
+) -> Result<service::AddRuleResult, String> {
     service::set_app_proxy_rule(&app, &state, &app_path)
 }
 

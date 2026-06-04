@@ -55,5 +55,38 @@ fn main() {
         }
     }
 
+    // ── Generate default config.json ──────────────────────────────────────
+    let default_config = r##"{
+  "proxies": [],
+  "scan_preferences": {
+    "defaultMask": "255.255.255.0",
+    "defaultStartPort": 1,
+    "defaultEndPort": 65535,
+    "defaultConcurrent": 250,
+    "timeoutMs": 1500,
+    "synTimeoutMs": 500,
+    "verifyConcurrent": 50,
+    "detectionHeaders": ["Via", "X-Cache", "X-Proxy", "Proxy-Connection", "X-Proxy-Agent"],
+    "strictDetection": false
+  },
+  "scan_history": [],
+  "recent_configs": [],
+  "recent_tests": [],
+  "proxy_rules": [],
+  "ui_preferences": {
+    "theme": "dark",
+    "primaryColor": "#9eddc8",
+    "titleBarMode": "custom",
+    "closeConfirm": true,
+    "language": "",
+    "exportDirectory": "",
+    "dontAskDate": ""
+  },
+  "frontend_test_history": [],
+  "frontend_config_history": [],
+  "frontend_proxy_pool": []
+}"##;
+    std::fs::write(build_root.join("config.json"), default_config).ok();
+
     tauri_build::build()
 }

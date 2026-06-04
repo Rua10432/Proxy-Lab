@@ -13,7 +13,7 @@ pub fn display() -> String {
 }
 
 /// Short display: "v1.0.0"
-#[warn(unused)]
+#[allow(dead_code)]
 pub fn short() -> String {
     format!("v{}", PUBLIC)
 }

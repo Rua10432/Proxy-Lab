@@ -282,9 +282,13 @@ function renderPoolTable() {
   if (pool.length === 0) {
     tbody.innerHTML = '';
     emptyState.style.display = '';
+    const wrapper = $('.pool-table-container .table-wrapper');
+    if (wrapper) wrapper.style.display = 'none';
     return;
   }
   emptyState.style.display = 'none';
+  const wrapper = $('.pool-table-container .table-wrapper');
+  if (wrapper) wrapper.style.display = '';
 
   tbody.innerHTML = pool.map((p, i) => `
     <tr>

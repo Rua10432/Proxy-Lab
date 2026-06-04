@@ -123,6 +123,7 @@ mod platform {
     use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
     use std::ptr;
     use std::process::Command;
+    use std::os::windows::process::CommandExt;
 
     const INVALID_HANDLE_VALUE: isize = -1;
     pub const IP_SUCCESS: u32 = 0;
@@ -235,6 +236,7 @@ mod platform {
     fn ping_ip_v6(dest: Ipv6Addr, timeout_ms: u32) -> Option<u32> {
         let w = timeout_ms.to_string();
         let output = Command::new("ping")
+            .creation_flags(0x08000000)
             .args(["-6", "-n", "1", "-w", &w, &dest.to_string()])
             .output().ok()?;
         let stdout = String::from_utf8_lossy(&output.stdout);
@@ -260,6 +262,7 @@ mod platform {
         let mut hops = Vec::new();
         for ttl in 1..=max_hops {
             let output = Command::new("ping")
+                .creation_flags(0x08000000)
                 .args(["-6", "-n", "1", "-i", &ttl.to_string(), "-w", &w, &dest.to_string()])
                 .output().map_err(|e| format!("ping failed: {}", e))?;
             let stdout = String::from_utf8_lossy(&output.stdout);

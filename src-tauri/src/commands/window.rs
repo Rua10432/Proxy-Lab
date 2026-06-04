@@ -23,13 +23,19 @@ pub fn win_close(app: tauri::AppHandle) {
 }
 
 #[tauri::command]
+pub fn win_hide_to_tray(window: tauri::Window) {
+    let _ = window.hide();
+}
+
+#[tauri::command]
 pub fn win_start_drag(window: tauri::Window) {
-    // Don't start drag when maximized — avoids freeze on restore
+    // Unmaximize first if maximized — standard Windows: dragging titlebar restores the window
     if let Ok(max) = window.is_maximized() {
-        if !max {
-            let _ = window.start_dragging();
+        if max {
+            let _ = window.unmaximize();
         }
     }
+    let _ = window.start_dragging();
 }
 
 #[tauri::command]

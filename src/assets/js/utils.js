@@ -258,18 +258,165 @@ function escapeHtml(str) {
     .replace(/'/g, '&#39;');
 }
 
-/* ── LocalStorage Helpers ── */
+/* ── In-Memory Config Cache (backed by config.json via IPC) ── */
+const _configCache = {
+  theme: 'dark',
+  primaryColor: '#9eddc8',
+  titleBarMode: 'custom',
+  closeConfirm: true,
+  language: 'en',
+  exportDirectory: '',
+  dontAskDate: '',
+  testHistory: [],
+  configHistory: [],
+  proxyPool: [],
+  scanPreferences: {
+    defaultMask: '255.255.255.0',
+    defaultStartPort: 1,
+    defaultEndPort: 65535,
+    defaultConcurrent: 250,
+    timeoutMs: 1500,
+    synTimeoutMs: 500,
+    verifyConcurrent: 50,
+  },
+};
+
 function saveToStorage(key, data) {
-  try {
-    localStorage.setItem('proxy-tester-' + key, JSON.stringify(data));
-  } catch (e) { /* ignore */ }
+  _configCache[key] = data;
+  if (window.tauriInvoke) {
+    window.tauriInvoke('save_frontend_key', { key, value: JSON.stringify(data) }).catch(() => {});
+  }
 }
 
 function loadFromStorage(key, fallback) {
+  return key in _configCache ? _configCache[key] : fallback;
+}
+
+/**
+ * Load config.json from disk and populate the in-memory cache.
+ * Call this early in app init, before pages read their data.
+ */
+async function loadFullConfig() {
+  if (!window.tauriInvoke) return;
   try {
-    const raw = localStorage.getItem('proxy-tester-' + key);
-    return raw ? JSON.parse(raw) : fallback;
-  } catch (e) { return fallback; }
+    const cfg = await window.tauriInvoke('get_config');
+    if (!cfg) return;
+
+    const ui = cfg.ui_preferences || {};
+    _configCache.theme = ui.theme ?? 'dark';
+    _configCache.primaryColor = ui.primaryColor ?? '#9eddc8';
+    _configCache.titleBarMode = ui.titleBarMode ?? 'custom';
+    _configCache.closeConfirm = ui.closeConfirm ?? true;
+    _configCache.language = ui.language ?? 'en';
+    _configCache.exportDirectory = ui.exportDirectory ?? '';
+    _configCache.dontAskDate = ui.dontAskDate ?? '';
+
+    if (cfg.frontend_test_history) _configCache.testHistory = cfg.frontend_test_history;
+    if (cfg.frontend_config_history) _configCache.configHistory = cfg.frontend_config_history;
+    if (cfg.frontend_proxy_pool) _configCache.proxyPool = cfg.frontend_proxy_pool;
+    if (cfg.scan_preferences) _configCache.scanPreferences = { ..._configCache.scanPreferences, ...cfg.scan_preferences };
+  } catch (e) {
+    console.warn('Failed to load config from disk, using defaults:', e);
+  }
+}
+
+/* ── Export Helpers (JSON / XML / XLSX) ── */
+function downloadBlob(content, filename, mimeType) {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+async function saveExportFile(content, filename, mimeType) {
+  const exportDir = loadFromStorage('exportDirectory', '');
+  if (exportDir && window.tauriInvoke) {
+    try {
+      const fullPath = exportDir.replace(/\\$/, '') + '\\' + filename;
+      await window.tauriInvoke('write_export_file', { path: fullPath, content });
+      return true;
+    } catch (err) {
+      console.warn('Tauri file write failed, falling back to browser download:', err);
+    }
+  }
+  downloadBlob(content, filename, mimeType);
+  return false;
+}
+
+async function exportAsJSON(data, filename) {
+  const json = JSON.stringify(data, null, 2);
+  await saveExportFile(json, filename, 'application/json;charset=utf-8');
+}
+
+async function exportAsXML(data, rootTag, itemTag, fields, filename) {
+  let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+  xml += `<${rootTag}>\n`;
+  (data || []).forEach(item => {
+    xml += `  <${itemTag}>\n`;
+    fields.forEach(f => {
+      const val = item[f.key] !== undefined && item[f.key] !== null ? item[f.key] : '';
+      xml += `    <${f.key}>${escapeXml(String(val))}</${f.key}>\n`;
+    });
+    xml += `  </${itemTag}>\n`;
+  });
+  xml += `</${rootTag}>\n`;
+  await saveExportFile(xml, filename, 'application/xml;charset=utf-8');
+}
+
+function escapeXml(str) {
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+}
+
+async function exportAsXLSX(data, fields, filename) {
+  let table = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
+  table += '<head><meta charset="UTF-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Sheet1</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head>';
+  table += '<body><table>';
+  // Header row
+  table += '<tr>';
+  fields.forEach(f => { table += `<th>${escapeXml(f.label)}</th>`; });
+  table += '</tr>';
+  // Data rows
+  (data || []).forEach(item => {
+    table += '<tr>';
+    fields.forEach(f => {
+      const val = item[f.key] !== undefined && item[f.key] !== null ? item[f.key] : '';
+      table += `<td>${escapeXml(String(val))}</td>`;
+    });
+    table += '</tr>';
+  });
+  table += '</table></body></html>';
+  await saveExportFile(table, filename, 'application/vnd.ms-excel;charset=utf-8');
+}
+
+/* ── Table Render Helper ── */
+/**
+ * Unified table renderer with automatic empty-state toggling.
+ * @param {Array} data        - Data array (may be null/undefined/empty)
+ * @param {HTMLElement} tbody - <tbody> element to populate
+ * @param {HTMLElement} emptyState - .empty-state / .table-empty element
+ * @param {Function} renderRowFn - (item, index) => HTML string for one <tr>
+ * @param {Function} [onAfterRender] - Optional callback after data rendered
+ */
+function renderTable(data, tbody, emptyState, renderRowFn, onAfterRender) {
+  tbody.innerHTML = '';
+  const table = tbody.closest('table');
+
+  if (!data || data.length === 0) {
+    if (table) table.classList.add('hidden');
+    emptyState.classList.remove('hidden');
+    return;
+  }
+
+  if (table) table.classList.remove('hidden');
+  emptyState.classList.add('hidden');
+  tbody.innerHTML = data.map(renderRowFn).join('');
+
+  if (typeof onAfterRender === 'function') onAfterRender(tbody);
 }
 
 window.$ = $;
@@ -291,10 +438,15 @@ window.clearFieldError = clearFieldError;
 window.escapeHtml = escapeHtml;
 window.saveToStorage = saveToStorage;
 window.loadFromStorage = loadFromStorage;
+window.loadFullConfig = loadFullConfig;
 window.isValidIP = isValidIP;
 window.isValidIPv4 = isValidIPv4;
 window.isValidIPv6 = isValidIPv6;
 window.isValidSubnetMask = isValidSubnetMask;
 window.isValidPort = isValidPort;
 window.validateAndStyle = validateAndStyle;
+window.exportAsJSON = exportAsJSON;
+window.exportAsXML = exportAsXML;
+window.exportAsXLSX = exportAsXLSX;
+window.renderTable = renderTable;
 

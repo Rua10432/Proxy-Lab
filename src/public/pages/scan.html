@@ -103,6 +103,21 @@
                 </div>
               </div>
               <span class="scan-count-badge" id="scan-count-badge" data-i18n="scan.resultCount">0 results</span>
+              <div class="spacer"></div>
+              <div class="scan-export-group">
+                <button class="btn btn-text" disabled id="btn-scan-export-label" style="font-size:12px;height:32px;padding:0 8px;color:var(--color-text-muted)">
+                  <span class="icon icon-sm">file_download</span> <span data-i18n="scan.export">Export Results</span>
+                </button>
+                <button class="btn btn-tonal btn-sm" id="btn-scan-export-json" onclick="exportScanData('json')" disabled>
+                  JSON
+                </button>
+                <button class="btn btn-tonal btn-sm" id="btn-scan-export-xml" onclick="exportScanData('xml')" disabled>
+                  XML
+                </button>
+                <button class="btn btn-tonal btn-sm" id="btn-scan-export-xlsx" onclick="exportScanData('xlsx')" disabled>
+                  XLSX
+                </button>
+              </div>
             </div>
 
             <!-- Scan Results Table -->
@@ -127,7 +142,7 @@
                 </table>
               </div>
               <div class="table-empty" id="scan-empty-state">
-                <span class="icon empty-icon">radar</span>
+                <img src="assets/img/111.png" alt="No data" class="empty-state-img">
                 <div class="empty-title" data-i18n="scan.emptyTitle">No proxies found yet</div>
                 <div class="empty-sub" data-i18n="scan.emptySub">Start a scan to discover active proxies on your network</div>
               </div>
@@ -139,6 +154,7 @@
                 <div class="progress-stats">
                   <span id="scan-progress-label" data-i18n="scan.progressLabel">Scanned: 0 / 0</span>
                   <span class="progress-pct" id="scan-ring-pct">0%</span>
+                  <span class="progress-eta" id="scan-eta" style="display:none"></span>
                 </div>
                 <div class="progress-bar">
                   <div class="fill" id="scan-progress-fill" style="width:0%"></div>

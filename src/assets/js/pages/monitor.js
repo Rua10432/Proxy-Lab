@@ -9,6 +9,8 @@ let _monitorFilter = 'all';
 let _monitorSearch = '';
 let _monitorData = null;
 let _monitorRules = [];
+let _uwpAppsData = [];
+let _uwpProxyRules = [];
 
 function initMonitorPage() {
   /* ── Tab Switching ── */
@@ -20,6 +22,7 @@ function initMonitorPage() {
       $$('.monitor-tab-content').forEach(tc => tc.classList.remove('active'));
       $('#mon-tab-' + _monitorTab).classList.add('active');
       if (_monitorTab === 'rules') renderRulesList();
+      if (_monitorTab === 'uwp') renderUwpTable();
     });
   });
 
@@ -57,13 +60,46 @@ function initMonitorPage() {
     }
   });
 
+  /* ── Fix: check initial switch state ── */
+  if (autoSwitch.classList.contains('on')) {
+    startMonitorAutoRefresh();
+  }
+
+  /* ── Force All Proxy Switch ── */
+  const forceSwitch = $('#switch-force-proxy');
+  if (forceSwitch) {
+    tauriInvoke('get_force_all_proxy').then(enabled => {
+      forceSwitch.classList.toggle('on', enabled);
+    });
+    forceSwitch.addEventListener('toggle', (e) => {
+      const enabled = e.detail;
+      tauriInvoke('set_force_all_proxy', { enabled })
+        .then(() => {
+          showSnackbar(enabled ? 'Force all proxy: ON' : 'Force all proxy: OFF', 'success');
+        })
+        .catch(err => {
+          forceSwitch.classList.toggle('on', !enabled);
+          showSnackbar('Failed: ' + err, 'error');
+        });
+    });
+  }
+
   /* ── Add Rule Button ── */
   $('#btn-add-rule').addEventListener('click', () => {
     promptAddRule();
   });
 
+  /* ── UWP Refresh Button ── */
+  const uwpRefreshBtn = $('#btn-refresh-uwp');
+  if (uwpRefreshBtn) {
+    uwpRefreshBtn.addEventListener('click', () => {
+      fetchUwpApps();
+    });
+  }
+
   /* ── Initial Fetch ── */
   fetchMonitorData();
+  fetchUwpApps();
 }
 
 async function fetchMonitorData() {
@@ -142,10 +178,14 @@ function renderConnectionsTable() {
   if (conns.length === 0) {
     tbody.innerHTML = '';
     if (emptyState) emptyState.style.display = '';
+    const wrapper = $('.monitor-table-container .table-wrapper');
+    if (wrapper) wrapper.style.display = 'none';
     return;
   }
 
   if (emptyState) emptyState.style.display = 'none';
+  const wrapper = $('.monitor-table-container .table-wrapper');
+  if (wrapper) wrapper.style.display = '';
 
   const ruledPaths = new Set(_monitorRules.map(r => r.app_path));
   const proxyPort = _monitorData.proxy_port;
@@ -211,12 +251,19 @@ function getProcessIcon(name) {
 
 async function addProxyRule(appPath) {
   try {
-    const rule = await tauriInvoke('set_app_proxy_rule', { appPath });
+    const result = await tauriInvoke('set_app_proxy_rule', { appPath });
+    const rule = result; // flattened: rule fields + running
     _monitorRules = _monitorRules.filter(r => r.app_path !== appPath);
     _monitorRules.push(rule);
     renderConnectionsTable();
     if (_monitorTab === 'rules') renderRulesList();
-    showSnackbar('Proxy rule added for: ' + rule.app_name, 'success');
+    const msg = 'Proxy rule added for: ' + rule.app_name;
+    showSnackbar(msg, 'success');
+    if (rule.running) {
+      setTimeout(() => {
+        showSnackbar('Application is running — restart it for proxy to take full effect', 'info');
+      }, 2000);
+    }
   } catch (err) {
     showSnackbar('Failed to add rule: ' + err, 'error');
   }
@@ -331,6 +378,97 @@ function createAddRuleForm() {
     </div>
   `;
   return div;
+}
+
+async function fetchUwpApps() {
+  try {
+    const [apps, rules] = await Promise.all([
+      tauriInvoke('get_uwp_apps'),
+      tauriInvoke('get_uwp_proxy_rules'),
+    ]);
+    _uwpAppsData = apps;
+    _uwpProxyRules = rules;
+    console.log('[UWP] Fetched', apps ? apps.length : 0, 'UWP processes,', rules ? rules.length : 0, 'rules');
+    renderUwpTable();
+  } catch (err) {
+    console.error('[UWP] Fetch error:', err);
+    appendLog('error', 'Monitor: Failed to fetch UWP apps - ' + err);
+  }
+}
+
+function renderUwpTable() {
+  const tbody = $('#uwp-table-body');
+  const emptyState = $('#uwp-empty-state');
+  const wrapper = $('#uwp-table-wrapper');
+  const countBar = $('#uwp-count-text');
+  if (!tbody) return;
+
+  if (!_uwpAppsData || _uwpAppsData.length === 0) {
+    tbody.innerHTML = '';
+    if (emptyState) emptyState.style.display = '';
+    if (wrapper) wrapper.style.display = 'none';
+    if (countBar) countBar.textContent = '0 UWP apps running';
+    return;
+  }
+
+  if (emptyState) emptyState.style.display = 'none';
+  if (wrapper) wrapper.style.display = '';
+  if (countBar) countBar.textContent = _uwpAppsData.length + ' UWP apps running';
+
+  tbody.innerHTML = _uwpAppsData.map(app => {
+    const pkgFamily = escapeHtml(app.package_family_name);
+    const pkgFull = app.package_full_name ? escapeHtml(app.package_full_name) : '<span class="text-caption" style="color:var(--color-ink-500)">—</span>';
+    const procPath = app.executable_path ? escapeHtml(app.executable_path) : '—';
+    const rule = _uwpProxyRules.find(r => r.package_family_name === app.package_family_name);
+    const hasRule = !!rule;
+    const isEnabled = rule && rule.enabled;
+    return `
+      <tr>
+        <td><span class="icon icon-sm" style="color:var(--color-accent-cyan)">grid_view</span></td>
+        <td><span class="truncate" style="max-width:150px;display:inline-block">${escapeHtml(app.process_name)}</span></td>
+        <td><span style="font-family:var(--font-mono);font-size:12px">${app.pid}</span></td>
+        <td title="${pkgFamily}"><div class="truncate" style="max-width:260px">${pkgFamily}</div></td>
+        <td title="${pkgFull}"><div class="truncate" style="max-width:280px">${pkgFull}</div></td>
+        <td title="${procPath}"><div class="truncate" style="max-width:200px;color:var(--color-ink-500)">${procPath}</div></td>
+        <td>
+          <div class="switch ${isEnabled ? 'on' : ''}"
+               data-pkg-family="${escapeAttr(app.package_family_name)}"
+               data-pkg-full="${escapeAttr(app.package_full_name || '')}"
+               data-app-name="${escapeAttr(app.process_name)}"
+               title="${hasRule ? 'Toggle proxy rule' : 'Add proxy rule'}">
+            <div class="thumb"></div>
+          </div>
+        </td>
+      </tr>`;
+  }).join('');
+
+  // Attach switch handlers
+  tbody.querySelectorAll('.switch').forEach(sw => {
+    sw.addEventListener('click', async () => {
+      const pkgFamily = sw.dataset.pkgFamily;
+      const pkgFull = sw.dataset.pkgFull;
+      const appName = sw.dataset.appName;
+      const enabled = !sw.classList.contains('on');
+      sw.classList.toggle('on');
+      try {
+        if (enabled) {
+          await tauriInvoke('add_uwp_proxy_rule', {
+            packageFamilyName: pkgFamily,
+            packageFullName: pkgFull,
+            appName: appName,
+          });
+        } else {
+          await tauriInvoke('remove_uwp_proxy_rule', {
+            packageFamilyName: pkgFamily,
+          });
+        }
+        showSnackbar(enabled ? 'Proxy rule added for: ' + appName : 'Proxy rule removed: ' + appName, 'success');
+      } catch (err) {
+        sw.classList.toggle('on');
+        showSnackbar('Failed: ' + err, 'error');
+      }
+    });
+  });
 }
 
 function startMonitorAutoRefresh() {

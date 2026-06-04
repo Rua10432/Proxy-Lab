@@ -4,8 +4,8 @@
 
 .settings-section {
   background: var(--color-surface-elevated);
-  border: 1px solid var(--color-ink-700);
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-ink-82); /* MD: 标志性浅色边框 */
+  border-radius: 0 40px 0 0; /* MD: 注入灵魂右上大圆角 */
   padding: var(--space-4);
   display: flex;
   flex-direction: column;
@@ -18,7 +18,7 @@
   justify-content: space-between;
   padding: var(--space-4) var(--space-3);
   gap: var(--space-4);
-  border-bottom: 1px solid var(--color-ink-700);
+  border-bottom: 1px solid var(--color-ink-600); /* 内部分割线使用适中色阶 */
 }
 .settings-card:last-child { border-bottom: none; }
 
@@ -33,6 +33,21 @@
   margin-top: 2px;
 }
 
+.export-path-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  max-width: 420px;
+}
+.export-path-input {
+  cursor: pointer;
+}
+.export-path-input input {
+  cursor: pointer;
+}
+
 @media (max-width: 600px) {
   .settings-card { flex-direction: column; align-items: flex-start; gap: var(--space-3); }
+  .export-path-row { max-width: 100%; width: 100%; }
 }
