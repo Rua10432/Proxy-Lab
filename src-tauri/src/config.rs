@@ -110,6 +110,34 @@ pub struct UwpProxyRule {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
+pub struct AppOnlyConfig {
+    /// 是否在应用启动时自动启动本地代理
+    #[serde(default)]
+    pub auto_start: bool,
+    /// 上次使用的本地代理监听端口（0 = 随机）
+    #[serde(default)]
+    pub listen_port: u16,
+    /// 是否允许局域网共享（绑定 0.0.0.0）
+    #[serde(default)]
+    pub shared: bool,
+    /// 要封锁的目标IP列表（支持具体 IP 和 CIDR 格式）
+    #[serde(default)]
+    pub blocked_ips: Vec<String>,
+}
+
+impl Default for AppOnlyConfig {
+    fn default() -> Self {
+        Self {
+            auto_start: false,
+            listen_port: 0,
+            shared: false,
+            blocked_ips: Vec::new(),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct UiPreferences {
     #[serde(default = "default_theme")]
     pub theme: String,
@@ -212,6 +240,8 @@ pub struct AppConfig {
     pub pac_rules: Vec<PacRule>,
     #[serde(default)]
     pub pac_enabled: bool,
+    #[serde(default)]
+    pub app_only: AppOnlyConfig,
 }
 
 impl Default for AppConfig {
@@ -232,6 +262,7 @@ impl Default for AppConfig {
             proxy_mode: ProxyMode::default(),
             pac_rules: Vec::new(),
             pac_enabled: false,
+            app_only: AppOnlyConfig::default(),
         }
     }
 }

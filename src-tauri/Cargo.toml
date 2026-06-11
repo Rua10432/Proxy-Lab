@@ -13,6 +13,7 @@ base64 = "0.22.1"
 regex = "1.12.3"
 tauri-plugin-dialog = "2.0.0-rc"
 raw-window-handle = "0.6"
+rusqlite = { version = "0.31", features = ["bundled"] }
 
 [target.'cfg(windows)'.dependencies]
 winreg = "0.52"

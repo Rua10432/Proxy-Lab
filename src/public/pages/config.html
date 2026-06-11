@@ -82,6 +82,120 @@
               <div class="test-result" id="test-result"></div>
             </div>
 
+            <!-- Local Proxy Status (AppOnly) -->
+            <div class="local-proxy-status-card" id="local-proxy-status-card" style="display:none">
+              <div class="config-card">
+                <div class="config-card-header">
+                  <span class="icon">storage</span>
+                  <span>本地代理服务器状态</span>
+                  <span class="lps-badge" id="lps-badge">运行中</span>
+                </div>
+                <div class="lps-grid">
+                  <div class="lps-item">
+                    <span class="lps-label">监听地址</span>
+                    <span class="lps-value" id="lps-address">127.0.0.1:—</span>
+                  </div>
+                  <div class="lps-item">
+                    <span class="lps-label">当前连接</span>
+                    <span class="lps-value" id="lps-connections">0</span>
+                  </div>
+                  <div class="lps-item">
+                    <span class="lps-label">转发目标</span>
+                    <span class="lps-value" id="lps-upstream">—</span>
+                  </div>
+                  <div class="lps-item">
+                    <span class="lps-label">协议</span>
+                    <span class="lps-value" id="lps-protocol">—</span>
+                  </div>
+                </div>
+
+                <!-- Active Clients Table -->
+                <div class="lps-clients-section" id="lps-clients-section" style="display:none">
+                  <div class="lps-clients-header">
+                    <span class="icon icon-sm">devices</span>
+                    <span>当前连接的客户端</span>
+                    <span class="lps-clients-count" id="lps-clients-count">0</span>
+                  </div>
+                  <div class="lps-clients-table-wrap">
+                    <table class="lps-clients-table" id="lps-clients-table">
+                      <thead>
+                        <tr>
+                          <th class="col-id">#</th>
+                          <th class="col-ip">IP 地址</th>
+                          <th class="col-up">总上传</th>
+                          <th class="col-down">总下载</th>
+                        </tr>
+                      </thead>
+                      <tbody id="lps-clients-tbody"></tbody>
+                    </table>
+                  </div>
+                  <div class="lps-clients-empty" id="lps-clients-empty">暂无客户端连接</div>
+                </div>
+
+                <div class="lps-shared-row">
+                  <label class="toggle-label" id="lps-shared-toggle-wrap">
+                    <input type="checkbox" id="lps-shared-toggle">
+                    <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                    <span id="lps-shared-text">允许局域网共享</span>
+                  </label>
+                  <span class="lps-shared-hint">启用后监听 <code>0.0.0.0</code>，局域网其他设备可连接</span>
+                </div>
+
+                <!-- Listen Port Config -->
+                <div class="lps-port-row" id="lps-port-row">
+                  <span class="icon icon-sm">settings_ethernet</span>
+                  <span class="lps-port-label">监听端口</span>
+                  <input type="number" id="input-listen-port" min="1024" max="65535" placeholder="随机" autocomplete="off">
+                  <button class="btn btn-text" id="btn-random-port" title="随机生成端口">
+                    <span class="icon icon-sm">casino</span>
+                  </button>
+                  <button class="btn btn-outline btn-sm" id="btn-apply-port" disabled>应用</button>
+                  <span class="lps-port-hint">留空=随机，修改后需重启代理生效</span>
+                </div>
+
+                <!-- Blocked IPs Section -->
+                <div class="lps-blocked-ips-section" id="lps-blocked-ips-section">
+                  <div class="lps-blocked-header">
+                    <span class="icon icon-sm">block</span>
+                    <span>目标 IP 封锁</span>
+                    <span class="lps-blocked-count" id="lps-blocked-count">0</span>
+                  </div>
+                  <div class="lps-blocked-hint">
+                    封锁发往指定 IP 的流量，支持单个 IP（如 <code>192.168.1.100</code>）或 CIDR 网段（如 <code>10.0.0.0/8</code>）。
+                    仅当目标地址为 IP 时生效，域名不影响。修改后需重启本地代理生效。
+                  </div>
+                  <div class="lps-blocked-input-row">
+                    <div class="input-wrap" style="flex:1">
+                      <span class="icon icon-sm leading-icon">block</span>
+                      <input type="text" id="input-blocked-ip" placeholder="输入 IP 或 CIDR，如 10.0.0.0/8" autocomplete="off">
+                    </div>
+                    <button class="btn btn-outline" id="btn-add-blocked-ip" style="flex-shrink:0">
+                      <span class="icon icon-sm">add</span> 添加
+                    </button>
+                  </div>
+                  <div class="lps-blocked-list" id="lps-blocked-list">
+                    <div class="lps-blocked-empty">暂无封锁 IP</div>
+                  </div>
+                </div>
+
+                <div class="action-row">
+                  <button class="btn btn-outline" id="btn-copy-proxy-addr" style="flex:1">
+                    <span class="icon icon-sm">content_copy</span> 复制代理地址
+                  </button>
+                  <button class="btn btn-tonal" id="btn-restart-local-proxy" style="flex:1" disabled>
+                    <span class="icon icon-sm">refresh</span> 重启代理
+                  </button>
+                  <button class="btn btn-tonal" id="btn-stop-local-proxy" style="flex:1">
+                    <span class="icon icon-sm">stop</span> 停止本地代理
+                  </button>
+                </div>
+                <div class="lps-hint" id="lps-hint">
+                  应用内部代理在本机 <code>127.0.0.1</code> 监听。
+                  将代理地址配置到需要走代理的应用中即可使用，不会修改系统代理设置。
+                </div>
+              </div>
+            </div>
+
             <!-- PAC Editor -->
             <div class="pac-editor-section" id="pac-editor-section" style="display:none">
               <div class="config-card">

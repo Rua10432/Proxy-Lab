@@ -62,7 +62,7 @@ function initLogsPage() {
   });
 }
 
-function renderLogConsole() {
+export function renderLogConsole() {
   const container = $('#global-log');
   const emptyState = $('#log-empty-state');
   const consoleArea = $('.console-area');

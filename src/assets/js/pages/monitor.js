@@ -129,10 +129,16 @@ function updateSummaryCards(summary) {
 function updateProxyStatusBar(data) {
   const bar = $('#proxy-status-bar');
   const msgEl = $('#proxy-status-msg');
-  bar.classList.remove('active', 'inactive');
+  bar.classList.remove('active', 'inactive', 'apponly');
   if (data.proxy_active) {
-    bar.classList.add('active');
-    msgEl.textContent = 'System proxy ACTIVE — ' + data.proxy_host + ':' + data.proxy_port;
+    if (data.proxy_is_local) {
+      // AppOnly mode — local proxy is running
+      bar.classList.add('apponly');
+      msgEl.textContent = 'App proxy ACTIVE — ' + data.proxy_host + ':' + data.proxy_port;
+    } else {
+      bar.classList.add('active');
+      msgEl.textContent = 'System proxy ACTIVE — ' + data.proxy_host + ':' + data.proxy_port;
+    }
   } else {
     bar.classList.add('inactive');
     msgEl.textContent = 'System proxy INACTIVE — No proxy configured';
@@ -474,7 +480,6 @@ function renderUwpTable() {
 function startMonitorAutoRefresh() {
   if (_monitorAutoRefresh) return;
   _monitorAutoRefresh = setInterval(fetchMonitorData, _monitorInterval);
-  appendLog('info', 'Monitor: Auto-refresh started');
 }
 
 function stopMonitorAutoRefresh() {

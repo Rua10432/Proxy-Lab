@@ -91,6 +91,7 @@ pub struct MonitorData {
     pub proxy_active: bool,
     pub proxy_host: String,
     pub proxy_port: u16,
+    pub proxy_is_local: bool,
     pub proxy_rules: Vec<config::ProxyRule>,
     pub summary: MonitorSummary,
 }

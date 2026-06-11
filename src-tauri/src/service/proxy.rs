@@ -6,6 +6,7 @@ use chrono::Local;
 use std::time::Duration;
 
 use crate::config::{self, ProxyMode, ProxyEntry, PacRule};
+use crate::local_proxy;
 use crate::platform;
 use crate::types::ProxyStatus;
 use crate::AppState;
@@ -41,7 +42,7 @@ fn save_recent_config(
     config::save_config(app, &cfg)
 }
 
-pub fn config_proxy(
+pub async fn config_proxy(
     app: &tauri::AppHandle,
     state: &AppState,
     host: &str,
@@ -73,10 +74,59 @@ pub fn config_proxy(
             ))
         }
         ProxyMode::AppOnly => {
-            save_recent_config(app, state, host, port, protocol, username, password)?;
+            // ── Embedded local proxy server ──────────────────────────
+            save_recent_config(app, state, host, port, protocol, username.clone(), password.clone())?;
+
+            // Stop existing local proxy if running
+            let old_server = state.local_proxy.lock().unwrap().take();
+            if let Some(old) = old_server {
+                old.stop();
+                tokio::time::sleep(Duration::from_millis(100)).await;
+            }
+
+            let port_u16: u16 = port.trim().parse().unwrap_or(0);
+            if port_u16 == 0 {
+                return Err(format!("[{}] [ERROR] Invalid port number", timestamp));
+            }
+
+            // Read config for AppOnly mode
+            let app_only_cfg = state.config.lock().unwrap().app_only.clone();
+            let shared = app_only_cfg.shared;
+            let blocked_ips = app_only_cfg.blocked_ips;
+            let configured_port = app_only_cfg.listen_port;
+
+            let mut server = local_proxy::LocalProxyServer::new(
+                shared,
+                host.trim().to_string(),
+                port_u16,
+                local_proxy::UpstreamProtocol::from_str(protocol),
+                username,
+                password,
+            );
+            server.set_blocked_ips(blocked_ips);
+
+            // Set connection log directory (relative to current dir)
+            let log_dir = crate::db::get_log_base_dir();
+            eprintln!("[proxy] setting log_dir = {:?}", log_dir);
+            server.set_log_dir(log_dir);
+
+            let listen_port = server.start(configured_port)
+                .await
+                .map_err(|e| format!("[{}] [ERROR] Failed to start local proxy: {}", timestamp, e))?;
+
+            // Save the listen port so the frontend can display it
+            {
+                let mut cfg = state.config.lock().unwrap();
+                cfg.app_only.listen_port = listen_port;
+                let _ = config::save_config(app, &cfg);
+            }
+
+            *state.local_proxy.lock().unwrap() = Some(server);
+
+            let bind_display = if shared { "0.0.0.0" } else { "127.0.0.1" };
             Ok(format!(
-                "[{}] [INFO] App-only proxy saved [{}] {}:{} (no system changes)",
-                timestamp, protocol, host.trim(), port.trim()
+                "[{}] [INFO] Local proxy started [{}] {}:{} → {}:{}",
+                timestamp, protocol, bind_display, listen_port, host.trim(), port.trim()
             ))
         }
         ProxyMode::Pac => {
@@ -129,7 +179,10 @@ pub fn disconnect_proxy(state: &AppState) -> Result<String, String> {
             platform::disable_proxy().map_err(|e| format!("[{}] [ERROR] {}", timestamp, e))?;
         }
         ProxyMode::AppOnly => {
-            // Nothing to undo at system level
+            // Stop the embedded local proxy server
+            if let Some(server) = state.local_proxy.lock().unwrap().take() {
+                server.stop();
+            }
         }
         ProxyMode::Pac => {
             let _ = platform::clear_pac_url();
@@ -424,23 +477,7 @@ pub async fn fetch_proxies_from_url(url: &str) -> Result<Vec<ProxyEntry>, String
 }
 
 pub fn is_admin() -> bool {
-    #[cfg(windows)]
-    {
-        use std::process::Command;
-        use std::os::windows::process::CommandExt;
-        let output = Command::new("net")
-            .arg("session")
-            .creation_flags(0x08000000)
-            .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::null())
-            .status();
-        return match output {
-            Ok(status) => status.success(),
-            Err(_) => false,
-        };
-    }
-    #[cfg(not(windows))]
-    false
+    platform::is_admin()
 }
 
 pub fn set_force_all_proxy(

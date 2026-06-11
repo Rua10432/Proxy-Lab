@@ -66,17 +66,21 @@ async function renderPageFromHash() {
       container.appendChild(pageEl);
       LoadedPages.add(hash);
 
-      // Lazy load page JS module (cached by browser after first import)
+      // 页面 HTML 已渲染，立即隐藏加载屏幕
+      if (_resolveFirstPage) {
+        _resolveFirstPage();
+        _resolveFirstPage = null;
+      }
+
+      // 以下初始化在后台继续执行，不阻塞用户看到界面
       if (PAGE_MODULES[hash]) {
         await PAGE_MODULES[hash]();
       }
-      // Lazy load column resizer for table-heavy pages
       if (TABLE_PAGES.has(hash) && !_colResizeLoaded) {
         await import('./col-resize.js');
         _colResizeLoaded = true;
       }
 
-      // Ensure DOM is synced
       await new Promise(resolve => requestAnimationFrame(resolve));
       await new Promise(resolve => setTimeout(resolve, 0));
 
@@ -95,14 +99,7 @@ async function renderPageFromHash() {
       const initFn = PAGE_INIT_MAP[hash];
       if (initFn) initFn();
 
-      // Apply language to newly loaded page
       if (typeof applyLanguage !== 'undefined') applyLanguage();
-
-      // Resolve first-page-ready signal (only fires once, on first navigation)
-      if (_resolveFirstPage) {
-        _resolveFirstPage();
-        _resolveFirstPage = null;
-      }
     } catch (err) {
       console.error(err);
       if (typeof showSnackbar !== 'undefined') showSnackbar(`Navigation error: ${err.message}`, 'error');

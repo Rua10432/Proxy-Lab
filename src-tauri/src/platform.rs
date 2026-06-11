@@ -104,6 +104,128 @@ const PROCESS_QUERY_LIMITED_INFORMATION: u32 = 0x1000;
 #[cfg(windows)]
 const ERROR_INSUFFICIENT_BUFFER: i32 = 122;
 
+// ─── TCP Table FFI (replaces netstat) ───────────────────────────────────
+
+#[cfg(windows)]
+#[link(name = "iphlpapi")]
+unsafe extern "system" {
+    fn GetExtendedTcpTable(
+        pTcpTable: *mut std::ffi::c_void,
+        pdwSize: *mut u32,
+        bOrder: i32,
+        ulAf: u32,
+        TableClass: u32,
+        Reserved: u32,
+    ) -> u32;
+    fn SendARP(
+        DestIp: u32,
+        SrcIP: u32,
+        pMacAddr: *mut u8,
+        PhyAddrLen: *mut u32,
+    ) -> u32;
+}
+
+#[cfg(windows)]
+const AF_INET: u32 = 2;
+#[cfg(windows)]
+const TCP_TABLE_OWNER_PID_ALL: u32 = 5;
+
+#[cfg(windows)]
+#[repr(C)]
+struct MIB_TCPROW_OWNER_PID {
+    dwState: u32,
+    dwLocalAddr: u32,
+    dwLocalPort: u32,
+    dwRemoteAddr: u32,
+    dwRemotePort: u32,
+    dwOwningPid: u32,
+}
+
+/// Fetch TCP connection table directly via Win32 API (no external process).
+/// Returns (state_str, local_addr_str, local_port, remote_addr_str, remote_port, pid).
+#[cfg(windows)]
+fn get_tcp_table_api() -> Vec<(String, String, u16, String, u16, u32)> {
+    use std::net::Ipv4Addr;
+    let mut result = Vec::new();
+
+    unsafe {
+        let mut size: u32 = 0;
+        let rc = GetExtendedTcpTable(
+            std::ptr::null_mut(),
+            &mut size,
+            0,
+            AF_INET,
+            TCP_TABLE_OWNER_PID_ALL,
+            0,
+        );
+
+        // First call should return ERROR_INSUFFICIENT_BUFFER (122)
+        if rc != 122 {
+            return result;
+        }
+
+        let mut buf: Vec<u8> = vec![0u8; size as usize];
+
+        let rc = GetExtendedTcpTable(
+            buf.as_mut_ptr() as *mut std::ffi::c_void,
+            &mut size,
+            0,
+            AF_INET,
+            TCP_TABLE_OWNER_PID_ALL,
+            0,
+        );
+
+        if rc != 0 {
+            return result;
+        }
+
+        let num_entries = *(buf.as_ptr() as *const u32) as usize;
+        let row_size = std::mem::size_of::<MIB_TCPROW_OWNER_PID>();
+
+        for i in 0..num_entries {
+            let offset = 4 + i * row_size;
+            if offset + row_size > buf.len() {
+                break;
+            }
+            let row = &*(buf.as_ptr().add(offset) as *const MIB_TCPROW_OWNER_PID);
+
+            let local_ip = Ipv4Addr::from(u32::from_be(row.dwLocalAddr));
+            let remote_ip = Ipv4Addr::from(u32::from_be(row.dwRemoteAddr));
+            let local_port = u16::from_be((row.dwLocalPort & 0xFFFF) as u16);
+            let remote_port = u16::from_be((row.dwRemotePort & 0xFFFF) as u16);
+
+            let state_str = match row.dwState {
+                1 => "ESTABLISHED",
+                2 => "SYN_SENT",
+                3 => "SYN_RECV",
+                4 => "FIN_WAIT1",
+                5 => "FIN_WAIT2",
+                6 => "TIME_WAIT",
+                7 => "CLOSE",
+                8 => "CLOSE_WAIT",
+                9 => "LAST_ACK",
+                10 => "LISTENING",
+                11 => "CLOSING",
+                s => {
+                    // Keep the raw code as a debug hint
+                    Box::leak(format!("UNKNOWN({s})").into_boxed_str())
+                }
+            };
+
+            result.push((
+                state_str.to_string(),
+                local_ip.to_string(),
+                local_port,
+                remote_ip.to_string(),
+                remote_port,
+                row.dwOwningPid,
+            ));
+        }
+    }
+
+    result
+}
+
 #[cfg(windows)]
 unsafe extern "system" {
     fn OpenProcess(
@@ -450,8 +572,73 @@ pub fn disable_proxy() -> Result<(), String> {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// Netstat
+// Admin Check (direct Win32 API, no `net session` spawn)
 // ══════════════════════════════════════════════════════════════════════════════
+
+#[cfg(windows)]
+const TOKEN_QUERY: u32 = 0x0008;
+#[cfg(windows)]
+const TOKEN_ELEVATION: u32 = 20;
+
+#[cfg(windows)]
+#[repr(C)]
+struct TOKEN_ELEVATION {
+    TokenIsElevated: u32,
+}
+
+#[cfg(windows)]
+unsafe extern "system" {
+    fn GetCurrentProcess() -> isize;
+    fn OpenProcessToken(
+        TokenHandle: isize,
+        DesiredAccess: u32,
+        TokenHandleOut: *mut isize,
+    ) -> i32;
+    fn GetTokenInformation(
+        TokenHandle: isize,
+        TokenInformationClass: u32,
+        TokenInformation: *mut std::ffi::c_void,
+        TokenInformationLength: u32,
+        ReturnLength: *mut u32,
+    ) -> i32;
+}
+
+/// Check if the current process is running with administrator privileges
+/// using native Win32 API instead of spawning `net session`.
+pub fn is_admin() -> bool {
+    #[cfg(windows)]
+    {
+        unsafe {
+            let h_process = GetCurrentProcess();
+            let mut h_token: isize = 0;
+
+            if OpenProcessToken(h_process, TOKEN_QUERY, &mut h_token) == 0 {
+                return false;
+            }
+
+            let mut elevation = TOKEN_ELEVATION { TokenIsElevated: 0 };
+            let mut return_len: u32 = 0;
+
+            let ok = GetTokenInformation(
+                h_token,
+                TOKEN_ELEVATION,
+                &mut elevation as *mut _ as *mut std::ffi::c_void,
+                std::mem::size_of::<TOKEN_ELEVATION>() as u32,
+                &mut return_len,
+            );
+
+            // CloseHandle is already declared above (UWP FFI)
+            let _ = CloseHandle(h_token);
+
+            ok != 0 && elevation.TokenIsElevated != 0
+        }
+    }
+    #[cfg(not(windows))]
+    false
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Netstat
 
 pub fn get_netstat_connections(
     proxy_rules: &[config::ProxyRule],
@@ -471,63 +658,39 @@ pub fn get_netstat_connections(
             ));
         }
 
-        if let Ok(output) = ProcCmd::new("netstat").creation_flags(0x08000000).arg("-ano").output() {
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            let ruled_paths: HashSet<String> = proxy_rules.iter()
-                .filter(|r| r.enabled)
-                .map(|r| r.app_path.clone())
-                .collect();
+        let ruled_paths: HashSet<String> = proxy_rules.iter()
+            .filter(|r| r.enabled)
+            .map(|r| r.app_path.clone())
+            .collect();
 
-            for line in stdout.lines().skip(4) {
-                let parts: Vec<&str> = line.split_whitespace().collect();
-                if parts.len() < 4 { continue; }
+        // Use direct Win32 API instead of spawning netstat
+        let rows = get_tcp_table_api();
 
-                let protocol = match parts[0] {
-                    "TCP" => {
-                        if parts.len() < 5 { continue; }
-                        "TCP".to_string()
-                    }
-                    "UDP" => "UDP".to_string(),
-                    _ => continue,
-                };
+        for (state, local_addr, local_port, remote_addr, remote_port, pid) in rows {
+            let (proc_name, proc_path) = pid_name.get(&pid)
+                .map(|(n, p)| (n.clone(), p.clone()))
+                .unwrap_or(("Unknown".to_string(), String::new()));
 
-                let local = parse_addr_port(parts[1]);
-                let remote = parse_addr_port(parts[2]);
+            let is_proxy = if proxy_port > 0 && (local_port == proxy_port || remote_port == proxy_port) {
+                true
+            } else if ruled_paths.contains(&proc_path) {
+                true
+            } else {
+                false
+            };
 
-                // UDP has no State column: Proto Local Remote PID
-                let state = if protocol == "UDP" {
-                    "UDP".to_string()
-                } else {
-                    parts[3].to_string()
-                };
-                let pid_str = parts.last().unwrap_or(&"0");
-                let pid: u32 = pid_str.parse().unwrap_or(0);
-
-                let (proc_name, proc_path) = pid_name.get(&pid)
-                    .map(|(n, p)| (n.clone(), p.clone()))
-                    .unwrap_or(("Unknown".to_string(), String::new()));
-
-                let is_proxy = if proxy_port > 0 && (local.1 == proxy_port || remote.1 == proxy_port) {
-                    true
-                } else if ruled_paths.contains(&proc_path) {
-                    true
-                } else {
-                    false
-                };
-
-                result.push(TcpConnection {
-                    local_addr: local.0,
-                    local_port: local.1,
-                    remote_addr: remote.0,
-                    remote_port: remote.1,
-                    state,
-                    pid,
-                    process_name: proc_name,
-                    process_path: proc_path,
-                    is_proxy_traffic: is_proxy,
-                    protocol,
-                });
-            }
+            result.push(TcpConnection {
+                local_addr,
+                local_port,
+                remote_addr,
+                remote_port,
+                state,
+                pid,
+                process_name: proc_name,
+                process_path: proc_path,
+                is_proxy_traffic: is_proxy,
+                protocol: "TCP".to_string(),
+            });
         }
     }
 
@@ -602,23 +765,23 @@ fn tcp_state_str(code: u32) -> String {
     }
 }
 
-pub fn parse_addr_port(s: &str) -> (String, u16) {
-    if s.starts_with('[') {
-        if let Some(bracket_end) = s.find(']') {
-            let addr = s[1..bracket_end].to_string();
-            let port: u16 = s[bracket_end + 2..].parse().unwrap_or(0);
-            (addr, port)
-        } else {
-            (s.to_string(), 0)
-        }
-    } else if let Some(colon) = s.rfind(':') {
-        let addr = s[..colon].to_string();
-        let port: u16 = s[colon + 1..].parse().unwrap_or(0);
-        (addr, port)
-    } else {
-        (s.to_string(), 0)
-    }
-}
+// pub fn parse_addr_port(s: &str) -> (String, u16) {
+//     if s.starts_with('[') {
+//         if let Some(bracket_end) = s.find(']') {
+//             let addr = s[1..bracket_end].to_string();
+//             let port: u16 = s[bracket_end + 2..].parse().unwrap_or(0);
+//             (addr, port)
+//         } else {
+//             (s.to_string(), 0)
+//         }
+//     } else if let Some(colon) = s.rfind(':') {
+//         let addr = s[..colon].to_string();
+//         let port: u16 = s[colon + 1..].parse().unwrap_or(0);
+//         (addr, port)
+//     } else {
+//         (s.to_string(), 0)
+//     }
+// }
 
 /// 常见代理服务端口列表
 pub const PROXY_PORTS: &[u16] = &[
@@ -643,6 +806,57 @@ pub fn get_process_map() -> HashMap<u32, String> {
         pid_name.insert(pid.as_u32(), proc.name().to_string_lossy().to_string());
     }
     pid_name
+}
+
+/// 获取指定 IP 的 MAC 地址字符串。
+/// Windows 使用 SendARP，返回如 "AA:BB:CC:DD:EE:FF" 格式。
+/// 本机地址 (127.0.0.1) 返回 "00:00:00:00:00:00"。
+/// 失败或者 IPv6 地址返回 None。
+/// 内部用 catch_unwind 保护 FFI 调用，确保不 panic。
+#[cfg(windows)]
+pub fn get_mac_address(ip: std::net::IpAddr) -> Option<String> {
+    let result = std::panic::catch_unwind(|| {
+        // Loopback has no real MAC
+        if ip.is_loopback() {
+            return Some("00:00:00:00:00:00".to_string());
+        }
+
+        match ip {
+            std::net::IpAddr::V4(v4) => {
+                unsafe {
+                    let dest_ip = u32::from(v4).to_be(); // network byte order
+                    let mut mac_addr = [0u8; 6];
+                    let mut mac_len = mac_addr.len() as u32;
+
+                    let result = SendARP(dest_ip, 0, mac_addr.as_mut_ptr(), &mut mac_len);
+
+                    if result == 0 && mac_len >= 6 {
+                        Some(format!(
+                            "{:02X}:{:02X}:{:02X}:{:02X}:{:02X}:{:02X}",
+                            mac_addr[0], mac_addr[1], mac_addr[2],
+                            mac_addr[3], mac_addr[4], mac_addr[5]
+                        ))
+                    } else {
+                        None
+                    }
+                }
+            }
+            _ => None,
+        }
+    });
+
+    match result {
+        Ok(val) => val,
+        Err(_) => {
+            eprintln!("[platform] get_mac_address panicked (SendARP)");
+            None
+        }
+    }
+}
+
+#[cfg(not(windows))]
+pub fn get_mac_address(_ip: std::net::IpAddr) -> Option<String> {
+    None
 }
 
 // ══════════════════════════════════════════════════════════════════════════════

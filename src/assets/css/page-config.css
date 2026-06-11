@@ -229,6 +229,91 @@
   color: var(--color-text-muted);
 }
 
+/* ─────── Local Proxy Status (AppOnly) ─────── */
+.local-proxy-status-card {
+  margin-top: var(--space-6);
+}
+.lps-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+.lps-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-ink-800);
+  border: 1px solid var(--color-ink-600);
+  border-radius: 0;
+}
+.lps-label {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.lps-value {
+  font-family: var(--font-mono);
+  font-size: var(--text-body);
+  color: var(--color-text-primary);
+  font-weight: var(--weight-semibold);
+}
+.lps-badge {
+  font-size: 11px;
+  font-weight: var(--weight-semibold);
+  padding: 2px 8px;
+  border-radius: 0;
+  margin-left: auto;
+}
+.lps-badge.running {
+  background: rgba(158, 221, 200, 0.15);
+  color: var(--color-accent-green);
+}
+.lps-badge.stopped {
+  background: rgba(244, 167, 185, 0.15);
+  color: var(--color-accent-pink);
+}
+.lps-shared-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-ink-800);
+  border: 1px solid var(--color-ink-600);
+  border-radius: 0;
+}
+.lps-shared-hint {
+  font-size: 11px;
+  color: var(--color-ink-500);
+  margin-left: auto;
+}
+.lps-shared-hint code {
+  background: var(--color-ink-700);
+  padding: 1px 3px;
+  border-radius: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+.lps-hint {
+  margin-top: var(--space-3);
+  font-size: var(--text-small);
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+.lps-hint code {
+  background: var(--color-ink-700);
+  padding: 1px 4px;
+  border-radius: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+@media (max-width: 600px) {
+  .lps-grid { grid-template-columns: 1fr; }
+}
+
 /* ─────── Proxy Pool Export ─────── */
 .config-export-section {
   margin-top: var(--space-6);
@@ -345,6 +430,256 @@
 
 .pac-editor-section .config-card-header {
   margin-bottom: var(--space-2);
+}
+
+/* ─────── Local Proxy Listen Port Config ─────── */
+.lps-port-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-ink-800);
+  border: 1px solid var(--color-ink-600);
+  border-radius: 0;
+}
+.lps-port-row .icon {
+  font-size: 16px;
+  color: var(--color-ink-500);
+}
+.lps-port-label {
+  font-size: var(--text-small);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+.lps-port-row input {
+  width: 100px;
+  padding: 4px 8px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-ink-600);
+  border-radius: 0;
+  color: var(--color-text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--text-small);
+  text-align: center;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.lps-port-row input:focus {
+  border-color: var(--color-accent-blue, #6ab0f3);
+  outline: none;
+  box-shadow: 0 0 0 1px var(--color-accent-blue, #6ab0f3);
+}
+.lps-port-row input::placeholder {
+  color: var(--color-ink-500);
+  font-family: var(--font-sans);
+}
+/* Hide number spinners */
+.lps-port-row input::-webkit-outer-spin-button,
+.lps-port-row input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.lps-port-row input[type="number"] {
+  -moz-appearance: textfield;
+}
+#btn-random-port {
+  padding: 2px 6px;
+  min-width: unset;
+  color: var(--color-ink-500);
+  font-size: 16px;
+}
+#btn-random-port:hover {
+  color: var(--color-accent-blue);
+  background: var(--color-ink-700);
+}
+.lps-port-hint {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--color-ink-500);
+  white-space: nowrap;
+}
+@media (max-width: 600px) {
+  .lps-port-row { flex-wrap: wrap; }
+  .lps-port-hint { margin-left: 0; width: 100%; }
+}
+
+/* ─────── Local Proxy Blocked IPs ─────── */
+.lps-blocked-ips-section {
+  margin-bottom: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-ink-800);
+  border: 1px solid var(--color-ink-600);
+  border-radius: 0;
+}
+.lps-blocked-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-small);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-2);
+}
+.lps-blocked-header .icon {
+  font-size: 16px;
+  color: var(--color-accent-pink);
+}
+.lps-blocked-count {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: var(--weight-bold);
+  padding: 1px 8px;
+  background: var(--color-ink-700);
+  color: var(--color-accent-pink);
+  border-radius: 0;
+}
+.lps-blocked-hint {
+  font-size: 11px;
+  color: var(--color-ink-500);
+  line-height: 1.4;
+  margin-bottom: var(--space-2);
+}
+.lps-blocked-hint code {
+  background: var(--color-ink-700);
+  padding: 1px 3px;
+  border-radius: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+.lps-blocked-input-row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  margin-bottom: var(--space-2);
+}
+.lps-blocked-input-row .input-wrap {
+  display: flex;
+  align-items: center;
+  background: var(--color-surface);
+  border: 1px solid var(--color-ink-600);
+  border-radius: 0;
+  padding: 0 8px;
+}
+.lps-blocked-input-row .input-wrap .leading-icon {
+  font-size: 16px;
+  color: var(--color-ink-500);
+  margin-right: 4px;
+}
+.lps-blocked-input-row .input-wrap input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--color-text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--text-small);
+  padding: 6px 0;
+}
+.lps-blocked-input-row .input-wrap input::placeholder {
+  color: var(--color-ink-500);
+  font-family: var(--font-sans);
+}
+.lps-blocked-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: var(--space-2);
+}
+.lps-blocked-empty {
+  padding: var(--space-2);
+  text-align: center;
+  color: var(--color-ink-500);
+  font-size: 11px;
+  border: 1px dashed var(--color-ink-600);
+  border-radius: 0;
+}
+.lps-blocked-table-header,
+.lps-blocked-item {
+  display: grid;
+  grid-template-columns: 40px 1fr 48px;
+  gap: 0;
+  padding: 4px 8px;
+  align-items: center;
+}
+.lps-blocked-table-header {
+  font-size: 10px;
+  color: var(--color-ink-500);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--color-ink-700);
+  padding-bottom: 4px;
+  margin-bottom: 2px;
+}
+.lps-blocked-table-header .col-id {
+  text-align: center;
+}
+.lps-blocked-table-header .col-action {
+  text-align: center;
+}
+.lps-blocked-item {
+  background: var(--color-ink-900);
+  border: 1px solid var(--color-ink-700);
+  border-top: none;
+  border-radius: 0;
+  transition: border-color 0.15s;
+}
+.lps-blocked-item:first-of-type {
+  border-top: 1px solid var(--color-ink-700);
+}
+.lps-blocked-item:hover {
+  border-color: var(--color-accent-pink);
+  border-top-color: var(--color-accent-pink);
+}
+.lps-blocked-item:first-of-type:hover {
+  border-top-color: var(--color-accent-pink);
+}
+.lps-blocked-item .col-id {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-ink-500);
+  text-align: center;
+}
+.lps-blocked-item .col-ip {
+  font-family: var(--font-mono);
+  font-size: var(--text-small);
+  color: var(--color-accent-pink);
+  font-weight: var(--weight-medium);
+  word-break: break-all;
+}
+.lps-blocked-item .col-action {
+  display: flex;
+  justify-content: center;
+}
+.lps-blocked-item .btn-remove-ip {
+  background: none;
+  border: none;
+  padding: 2px;
+  cursor: pointer;
+  color: var(--color-ink-500);
+  font-size: 16px;
+  border-radius: 0;
+  transition: all 0.15s;
+  line-height: 1;
+}
+.lps-blocked-item .btn-remove-ip:hover {
+  color: var(--color-accent-pink);
+  background: rgba(244, 167, 185, 0.1);
+}
+.lps-blocked-error {
+  font-size: 11px;
+  color: var(--color-accent-pink);
+  margin-top: 2px;
+  margin-bottom: var(--space-2);
+}
+
+@media (max-width: 600px) {
+  .lps-blocked-input-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .lps-blocked-input-row .btn {
+    width: 100%;
+  }
 }
 
 /* Toggle switch */

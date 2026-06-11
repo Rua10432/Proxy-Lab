@@ -15,10 +15,16 @@ function initConfigPage() {
   });
 
   ['config-host', 'config-port', 'config-user', 'config-pass'].forEach(id => {
-    $('#' + id).addEventListener('input', resetTestState);
+    $('#' + id).addEventListener('input', () => {
+      resetTestState();
+      if (_currentMode === 'AppOnly') enableConfigBtnIfFilled();
+    });
   });
   $('#config-proto-select').addEventListener('click', () => {
-    setTimeout(resetTestState, 50);
+    setTimeout(() => {
+      resetTestState();
+      if (_currentMode === 'AppOnly') enableConfigBtnIfFilled();
+    }, 50);
   });
 
   // Mode selector
@@ -43,12 +49,78 @@ function initConfigPage() {
   checkProxyStatus();
   scanLocalProxyPorts();
   $('#btn-refresh-local-proxy').addEventListener('click', scanLocalProxyPorts);
+
+  // Local proxy control buttons
+  $('#btn-copy-proxy-addr').addEventListener('click', copyLocalProxyAddr);
+  $('#btn-stop-local-proxy').addEventListener('click', stopLocalProxy);
+  $('#btn-restart-local-proxy').addEventListener('click', restartLocalProxy);
+
+  // Shared proxy toggle
+  $('#lps-shared-toggle').addEventListener('change', async (e) => {
+    const shared = e.target.checked;
+    if (isTauriAvailable()) {
+      try {
+        await tauriInvoke('set_app_only_shared', { shared });
+        showSnackbar(shared ? '局域网共享已启用，重启代理后生效' : '局域网共享已禁用', 'info');
+      } catch (err) {
+        showSnackbar('保存失败: ' + err, 'error');
+        e.target.checked = !shared;
+      }
+    }
+  });
+
+  // Load initial shared state
+  if (isTauriAvailable()) {
+    tauriInvoke('get_app_only_shared').then(shared => {
+      $('#lps-shared-toggle').checked = shared;
+    });
+  }
+
   updateExportPoolCount();
+
+  // Blocked IP management (AppOnly)
+  initBlockedIpControls();
+  loadBlockedIps();
+
+  // Listen port config (AppOnly)
+  initListenPortControls();
+  loadListenPort();
 
   loadProxyMode();
 }
 
 // ─── Proxy Mode ──────────────────────────────────────────────────────────
+
+// Per-mode form field state — each mode remembers its own host/port/proto/user/pass
+const _modeFormState = {
+  System: { host: '', port: '', proto: 'HTTP', user: '', pass: '' },
+  AppOnly: { host: '', port: '', proto: 'HTTP', user: '', pass: '' },
+  Pac: { host: '', port: '', proto: 'HTTP', user: '', pass: '' },
+};
+
+function saveCurrentModeForm() {
+  const state = _modeFormState[_currentMode];
+  if (!state) return;
+  state.host = $('#config-host').value;
+  state.port = $('#config-port').value;
+  state.proto = getSelectValue('config-proto-select');
+  state.user = $('#config-user').value;
+  state.pass = $('#config-pass').value;
+}
+
+function loadModeForm(mode) {
+  const state = _modeFormState[mode];
+  if (!state) return;
+  $('#config-host').value = state.host;
+  $('#config-port').value = state.port;
+  $('#config-user').value = state.user;
+  $('#config-pass').value = state.pass;
+  const selectField = $('#config-proto-select');
+  selectField.querySelectorAll('.select-option').forEach(o => {
+    o.classList.toggle('selected', o.dataset.value === state.proto);
+  });
+  selectField.querySelector('.select-value').textContent = state.proto;
+}
 
 async function loadProxyMode() {
   if (!isTauriAvailable()) return;
@@ -57,20 +129,37 @@ async function loadProxyMode() {
     _currentMode = mode;
     applyModeUI(mode);
     highlightModeTab(mode);
+
+    // Auto-fill AppOnly form from last saved config
+    if (mode === 'AppOnly') {
+      const lastCfg = await tauriInvoke('get_last_proxy_config');
+      if (lastCfg) {
+        _modeFormState.AppOnly.host = lastCfg.ip || '';
+        _modeFormState.AppOnly.port = lastCfg.port ? String(lastCfg.port) : '';
+        _modeFormState.AppOnly.proto = lastCfg.protocol || 'HTTP';
+        _modeFormState.AppOnly.user = lastCfg.username || '';
+        _modeFormState.AppOnly.pass = lastCfg.password || '';
+      }
+    }
+
+    loadModeForm(mode);
   } catch (_) {}
 }
 
 async function switchProxyMode(mode) {
   if (mode === _currentMode) return;
+  // Save current form values before switching away
+  saveCurrentModeForm();
   _currentMode = mode;
   highlightModeTab(mode);
+  // Restore target mode's form values
+  loadModeForm(mode);
   applyModeUI(mode);
 
   if (isTauriAvailable()) {
     try {
       await tauriInvoke('set_proxy_mode', { mode });
-      appendLog('info', '切换代理模式: ' + mode);
-      renderLogConsole();
+      window.renderLogConsole?.();
     } catch (err) {
       showSnackbar('切换模式失败: ' + err, 'error');
     }
@@ -93,6 +182,9 @@ function applyModeUI(mode) {
   const btnText = $('#btn-config-text');
   const pacEditor = $('#pac-editor-section');
   const testBtn = $('#btn-test-config');
+  const localProxyCard = $('#local-proxy-status-card');
+
+  resetTestState(); // 先重置按钮状态
 
   switch (mode) {
     case 'System':
@@ -101,6 +193,7 @@ function applyModeUI(mode) {
       btnText.textContent = '应用系统代理';
       pacEditor.style.display = 'none';
       testBtn.style.display = '';
+      localProxyCard.style.display = 'none';
       break;
     case 'AppOnly':
       titleText.textContent = '应用内部代理配置';
@@ -108,6 +201,12 @@ function applyModeUI(mode) {
       btnText.textContent = '保存配置';
       pacEditor.style.display = 'none';
       testBtn.style.display = 'none';
+      localProxyCard.style.display = '';
+      $('#test-result').textContent = '';
+      // AppOnly: 只要 host+port 有内容就启用保存按钮
+      enableConfigBtnIfFilled();
+      // 断开按钮状态由 updateLocalProxyUI 控制
+      pollLocalProxyStatus();
       break;
     case 'Pac':
       titleText.textContent = 'PAC 代理配置';
@@ -115,10 +214,151 @@ function applyModeUI(mode) {
       btnText.textContent = '保存到 PAC';
       pacEditor.style.display = '';
       testBtn.style.display = '';
+      localProxyCard.style.display = 'none';
       break;
   }
+}
 
-  resetTestState();
+function enableConfigBtnIfFilled() {
+  const host = $('#config-host').value.trim();
+  const port = $('#config-port').value.trim();
+  $('#btn-config').disabled = !(host && port);
+}
+
+// ─── Local Proxy Status Polling ────────────────────────────────────────
+
+let _lpsTimer = null;
+
+async function pollLocalProxyStatus() {
+  if (!isTauriAvailable()) return;
+  if (_currentMode !== 'AppOnly') {
+    if (_lpsTimer) { clearInterval(_lpsTimer); _lpsTimer = null; }
+    if (_activeClientsTimer) { clearInterval(_activeClientsTimer); _activeClientsTimer = null; }
+    const section = $('#lps-clients-section');
+    if (section) section.style.display = 'none';
+    return;
+  }
+
+  // Immediate fetch
+  await updateLocalProxyUI();
+
+  // Poll every 3 seconds
+  if (_lpsTimer) clearInterval(_lpsTimer);
+  _lpsTimer = setInterval(updateLocalProxyUI, 3000);
+  startActiveClientsPolling();
+}
+
+async function updateLocalProxyUI() {
+  if (!isTauriAvailable()) return;
+  try {
+    const status = await tauriInvoke('get_local_proxy_status');
+    const badge = $('#lps-badge');
+    const addr = $('#lps-address');
+    const conn = $('#lps-connections');
+    const upstream = $('#lps-upstream');
+    const proto = $('#lps-protocol');
+
+    if (status && status.running) {
+      const bindDisplay = status.shared ? (status.lan_ip || "0.0.0.0") : "127.0.0.1";
+      badge.textContent = '运行中 · ' + status.active_connections + ' 连接';
+      badge.className = 'lps-badge running';
+      addr.textContent = (status.lan_ip ? status.lan_ip + ':' : bindDisplay + ':') + status.listen_port;
+      conn.textContent = status.active_connections + ' / ' + status.total_connections + ' (累计)';
+      upstream.textContent = status.upstream_host + ':' + status.upstream_port;
+      proto.textContent = status.upstream_protocol;
+      // 更新提示文字 — 优先显示运行中服务器的实际状态
+      const hint = $('#lps-hint');
+      const toggleChecked = $('#lps-shared-toggle').checked;
+      const configDiffers = status.shared !== toggleChecked;
+      if (status.shared) {
+        hint.innerHTML = '代理在 <code>0.0.0.0</code> 监听，局域网内其他设备可使用 <code>' +
+          status.lan_ip || window.location.hostname + ':' + status.listen_port + '</code> 连接。' +
+          (configDiffers ? '<br><span style="color:var(--color-accent-pink)">⚠ 共享已关闭，重启代理后生效</span>' : '');
+      } else {
+        hint.innerHTML = '代理仅在 <code>127.0.0.1</code> 监听，仅本机应用可连接。' +
+          (configDiffers ? '<br><span style="color:var(--color-accent-pink)">⚠ 共享已开启，重启代理后生效</span>' : '');
+      }
+      // 本地代理运行中 → 断开/重启按钮可用
+      if (_currentMode === 'AppOnly') {
+        $('#btn-config-disconnect').disabled = false;
+        $('#btn-restart-local-proxy').disabled = false;
+        $('#btn-restart-local-proxy').innerHTML = '<span class="icon icon-sm">refresh</span> 重启代理';
+      }
+    } else {
+      badge.textContent = '未运行';
+      badge.className = 'lps-badge stopped';
+      addr.textContent = '—';
+      conn.textContent = '0';
+      upstream.textContent = '—';
+      proto.textContent = '—';
+      // 恢复默认提示
+      $('#lps-hint').innerHTML = '代理仅在 <code>127.0.0.1</code> 监听，仅本机应用可连接。';
+      // 本地代理未运行 → 断开/重启按钮禁用
+      if (_currentMode === 'AppOnly') {
+        $('#btn-config-disconnect').disabled = true;
+        $('#btn-restart-local-proxy').disabled = true;
+        $('#btn-restart-local-proxy').innerHTML = '<span class="icon icon-sm">refresh</span> 重启代理';
+      }
+    }
+  } catch (_) {}
+}
+
+// ─── Active Clients (real-time connection monitoring) ────────────────────
+
+function formatBytes(bytes) {
+  if (bytes === 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  const val = bytes / Math.pow(1024, i);
+  return val.toFixed(i > 0 ? 1 : 0) + ' ' + units[i];
+}
+
+let _activeClientsTimer = null;
+
+async function pollActiveClients() {
+  if (!isTauriAvailable() || _currentMode !== 'AppOnly') {
+    if (_activeClientsTimer) { clearInterval(_activeClientsTimer); _activeClientsTimer = null; }
+    const section = $('#lps-clients-section');
+    if (section) section.style.display = 'none';
+    return;
+  }
+
+  try {
+    const clients = await tauriInvoke('get_active_clients');
+    const section = $('#lps-clients-section');
+    const tbody = $('#lps-clients-tbody');
+    const count = $('#lps-clients-count');
+    const empty = $('#lps-clients-empty');
+    if (!section || !tbody) return;
+
+    section.style.display = '';
+    count.textContent = clients.length;
+
+    if (!clients || clients.length === 0) {
+      tbody.innerHTML = '';
+      empty.style.display = '';
+      return;
+    }
+
+    empty.style.display = 'none';
+    tbody.innerHTML = '';
+    clients.forEach((c, idx) => {
+      const tr = createElement('tr');
+      tr.innerHTML = `
+        <td class="col-id">${idx + 1}</td>
+        <td class="col-ip">${escapeHtml(c.client_ip)}</td>
+        <td class="col-up">${formatBytes(c.upload_bytes)}</td>
+        <td class="col-down">${formatBytes(c.download_bytes)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } catch (_) {}
+}
+
+function startActiveClientsPolling() {
+  if (_activeClientsTimer) clearInterval(_activeClientsTimer);
+  pollActiveClients(); // immediate
+  _activeClientsTimer = setInterval(pollActiveClients, 3000);
 }
 
 // ─── PAC Rules ───────────────────────────────────────────────────────────
@@ -370,10 +610,10 @@ function applyProxyConfig() {
 
   if (!isTauriAvailable()) return;
 
-  // AppOnly: just save config, no system changes
+  // AppOnly: start embedded local proxy server
   if (_currentMode === 'AppOnly') {
-    appendLog('info', '保存配置: ' + host + ':' + port + ' (' + proto + ')...');
-    renderLogConsole();
+    appendLog('info', '启动本地代理: ' + host + ':' + port + ' (' + proto + ')...');
+    window.renderLogConsole?.();
 
     tauriInvoke('config_proxy', {
       host, port, protocol: proto,
@@ -381,10 +621,11 @@ function applyProxyConfig() {
     }).then((result) => {
       AppState.proxyActive = true;
       appendLog('ok', result);
-      renderLogConsole();
-      showSnackbar('配置已保存（未修改系统代理）', 'success');
-    }).catch(() => {
-      showSnackbar('保存失败', 'error');
+      window.renderLogConsole?.();
+      showSnackbar('本地代理已启动', 'success');
+      updateLocalProxyUI();
+    }).catch((err) => {
+      showSnackbar('启动失败: ' + (typeof err === 'string' ? err : '未知错误'), 'error');
     });
     return;
   }
@@ -396,7 +637,7 @@ function applyProxyConfig() {
   }
 
   appendLog('info', (_currentMode === 'Pac' ? '应用 PAC' : '应用系统代理') + ': ' + host + ':' + port + ' (' + proto + ')...');
-  renderLogConsole();
+  window.renderLogConsole?.();
 
   tauriInvoke('config_proxy', {
     host, port, protocol: proto,
@@ -406,9 +647,11 @@ function applyProxyConfig() {
     $('#btn-config-disconnect').disabled = false;
     updateAdminLock(true);
     appendLog('ok', result);
-    renderLogConsole();
+    window.renderLogConsole?.();
     showSnackbar(_currentMode === 'Pac' ? 'PAC 配置已应用' : '代理已应用', 'success');
     saveConfigHistory(host, parseInt(port), proto, user);
+    // Local proxy (if any) is now stopped by the backend
+    updateLocalProxyUI();
 
     if (_currentMode === 'Pac') {
       loadPacRules();
@@ -421,16 +664,17 @@ function applyProxyConfig() {
 function disconnectProxy() {
   if (!isTauriAvailable()) return;
   appendLog('info', '断开代理...');
-  renderLogConsole();
+  window.renderLogConsole?.();
 
   tauriInvoke('disconnect_proxy').then((result) => {
     AppState.proxyActive = false;
     $('#btn-config-disconnect').disabled = true;
     updateAdminLock(false);
     appendLog('ok', result || '代理已断开');
-    renderLogConsole();
+    window.renderLogConsole?.();
     showSnackbar('代理已断开', 'success');
     resetTestState();
+    updateLocalProxyUI();
   });
 }
 
@@ -440,19 +684,25 @@ async function checkProxyStatus() {
       const status = await tauriInvoke('get_proxy_status');
       if (status && status.is_active) {
         AppState.proxyActive = true;
-        if (status.protocol === 'PAC') {
-          $('#config-host').value = status.host;
-          $('#config-port').value = '';
-        } else {
-          $('#config-host').value = status.host;
-          $('#config-port').value = status.port;
+        // Only auto-fill form in System mode — AppOnly/Pac have their own data
+        if (_currentMode === 'System') {
+          if (status.protocol === 'PAC') {
+            $('#config-host').value = status.host;
+            $('#config-port').value = '';
+          } else {
+            $('#config-host').value = status.host;
+            $('#config-port').value = status.port;
+          }
+          const selectField = $('#config-proto-select');
+          selectField.querySelectorAll('.select-option').forEach(o => {
+            o.classList.toggle('selected', o.dataset.value === status.protocol);
+          });
+          selectField.querySelector('.select-value').textContent = status.protocol;
         }
-        const selectField = $('#config-proto-select');
-        selectField.querySelectorAll('.select-option').forEach(o => {
-          o.classList.toggle('selected', o.dataset.value === status.protocol);
-        });
-        selectField.querySelector('.select-value').textContent = status.protocol;
-        $('#btn-config-disconnect').disabled = false;
+        // 断开按钮：System/PAC 由系统代理状态控制，AppOnly 由本地代理状态控制
+        if (_currentMode !== 'AppOnly') {
+          $('#btn-config-disconnect').disabled = false;
+        }
         updateAdminLock(true);
         _testedOk = true;
         $('#btn-config').disabled = false;
@@ -521,7 +771,9 @@ function renderConfigHistory() {
         o.classList.toggle('selected', o.dataset.value === item.protocol);
       });
       selectField.querySelector('.select-value').textContent = item.protocol;
-        resetTestState();
+      // Sync into current mode's form state so switch doesn't lose it
+      saveCurrentModeForm();
+      resetTestState();
     });
     list.appendChild(card);
   });
@@ -603,10 +855,214 @@ function createProxyCard(p) {
       o.classList.toggle('selected', o.dataset.value === proto);
     });
     selectField.querySelector('.select-value').textContent = proto;
+    saveCurrentModeForm();
     showSnackbar(`已填入 127.0.0.1:${p.port} (${proto})`, 'success');
     resetTestState();
   });
   return card;
+}
+
+async function copyLocalProxyAddr() {
+  const addr = $('#lps-address').textContent;
+  if (!addr || addr === '—') {
+    showSnackbar('本地代理未运行', 'error');
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(addr);
+    showSnackbar('已复制: ' + addr, 'success');
+  } catch (_) {
+    showSnackbar('复制失败', 'error');
+  }
+}
+
+async function stopLocalProxy() {
+  if (!isTauriAvailable()) return;
+  try {
+    await tauriInvoke('stop_local_proxy');
+    showSnackbar('本地代理已停止', 'success');
+    updateLocalProxyUI();
+  } catch (err) {
+    showSnackbar('停止失败: ' + err, 'error');
+  }
+}
+
+async function restartLocalProxy() {
+  if (!isTauriAvailable()) return;
+  const btn = $('#btn-restart-local-proxy');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="icon icon-sm spin">sync</span> 重启中...';
+  try {
+    const result = await tauriInvoke('restart_local_proxy');
+    showSnackbar('本地代理已重启', 'success');
+    appendLog('ok', result);
+    window.renderLogConsole?.();
+    updateLocalProxyUI();
+  } catch (err) {
+    showSnackbar('重启失败: ' + err, 'error');
+    btn.disabled = false;
+    btn.innerHTML = '<span class="icon icon-sm">refresh</span> 重启代理';
+  }
+}
+
+// ─── Listen Port Config (AppOnly) ─────────────────────────────────────────────
+
+let _savedPort = 0;
+
+async function loadListenPort() {
+  if (!isTauriAvailable()) return;
+  try {
+    const port = await tauriInvoke('get_local_proxy_listen_port');
+    _savedPort = port;
+    const input = $('#input-listen-port');
+    if (port > 0) {
+      input.value = port;
+    } else {
+      input.value = '';
+    }
+    $('#btn-apply-port').disabled = true;
+  } catch (_) {}
+}
+
+function initListenPortControls() {
+  const input = $('#input-listen-port');
+  const applyBtn = $('#btn-apply-port');
+  const randomBtn = $('#btn-random-port');
+
+  // Enable apply button when value changes
+  input.addEventListener('input', () => {
+    const val = input.value.trim();
+    if (val === '') {
+      // Empty = random, enable if _savedPort != 0
+      applyBtn.disabled = _savedPort === 0;
+    } else {
+      const num = parseInt(val, 10);
+      applyBtn.disabled = !(num >= 1024 && num <= 65535) || num === _savedPort;
+    }
+  });
+
+  // Apply button
+  applyBtn.addEventListener('click', async () => {
+    const val = input.value.trim();
+    const port = val === '' ? 0 : Math.min(65535, Math.max(0, parseInt(val, 10) || 0));
+    if (port > 0 && port < 1024) {
+      showSnackbar('端口 1024 以下需要管理员权限', 'error');
+      return;
+    }
+    try {
+      await tauriInvoke('set_local_proxy_listen_port', { port });
+      _savedPort = port;
+      applyBtn.disabled = true;
+      showSnackbar(port > 0 ? '监听端口已设为 ' + port : '监听端口已设为随机', 'success');
+    } catch (err) {
+      showSnackbar('保存失败: ' + err, 'error');
+    }
+  });
+
+  // Random button
+  randomBtn.addEventListener('click', () => {
+    const port = Math.floor(Math.random() * 54511) + 10241; // 10241-64751
+    input.value = port;
+    applyBtn.disabled = port === _savedPort;
+    input.focus();
+  });
+}
+
+// ─── Blocked IP Management ───────────────────────────────────────────────────
+
+async function loadBlockedIps() {
+  if (!isTauriAvailable()) return;
+  try {
+    const ips = await tauriInvoke('get_blocked_ips');
+    renderBlockedIps(ips);
+  } catch (_) {}
+}
+
+function renderBlockedIps(ips) {
+  const list = $('#lps-blocked-list');
+  const count = $('#lps-blocked-count');
+  if (!list) return;
+
+  count.textContent = ips.length;
+
+  if (!ips || ips.length === 0) {
+    list.innerHTML = '<div class="lps-blocked-empty">暂无封锁 IP</div>';
+    return;
+  }
+
+  list.innerHTML = '<div class="lps-blocked-table-header">' +
+    '<span class="col-id">#</span>' +
+    '<span class="col-ip">IP 地址</span>' +
+    '<span class="col-action">操作</span>' +
+    '</div>';
+
+  ips.forEach((ip, idx) => {
+    const item = createElement('div', { className: 'lps-blocked-item' });
+    item.innerHTML = `
+      <span class="col-id">${idx + 1}</span>
+      <span class="col-ip"><span class="ip-value">${escapeHtml(ip)}</span></span>
+      <span class="col-action">
+        <button class="btn-remove-ip" title="移除封锁" data-ip="${escapeHtml(ip)}">
+          <span class="icon icon-sm">close</span>
+        </button>
+      </span>
+    `;
+    item.querySelector('.btn-remove-ip').addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const targetIp = e.currentTarget.dataset.ip;
+      try {
+        await tauriInvoke('remove_blocked_ip', { ip: targetIp });
+        showSnackbar('已移除封锁: ' + targetIp, 'success');
+        loadBlockedIps();
+      } catch (err) {
+        showSnackbar('移除失败: ' + err, 'error');
+      }
+    });
+    list.appendChild(item);
+  });
+}
+
+function initBlockedIpControls() {
+  const input = $('#input-blocked-ip');
+  const addBtn = $('#btn-add-blocked-ip');
+  const errorEl = createElement('div', { className: 'lps-blocked-error', id: 'lps-blocked-error' });
+
+  function showError(msg) {
+    errorEl.textContent = msg;
+    if (!errorEl.parentNode) {
+      input.closest('.lps-blocked-input-row').after(errorEl);
+    }
+  }
+
+  function clearError() {
+    errorEl.textContent = '';
+  }
+
+  async function addBlockedIp() {
+    const ip = input.value.trim();
+    if (!ip) {
+      showError('请输入要封锁的 IP 地址');
+      return;
+    }
+    clearError();
+    try {
+      await tauriInvoke('add_blocked_ip', { ip });
+      showSnackbar('已添加封锁: ' + ip, 'success');
+      input.value = '';
+      loadBlockedIps();
+    } catch (err) {
+      showError(typeof err === 'string' ? err : '添加失败');
+    }
+  }
+
+  addBtn.addEventListener('click', addBlockedIp);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addBlockedIp();
+    }
+    clearError();
+  });
 }
 
 // ─── Proxy Pool Export ───────────────────────────────────────────────────

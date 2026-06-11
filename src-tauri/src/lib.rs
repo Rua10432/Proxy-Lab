@@ -1,8 +1,10 @@
 mod config;
+mod db;
 mod mtr;
 mod types;
 mod proxy;
 mod platform;
+mod local_proxy;
 mod commands;
 mod service;
 mod version;
@@ -25,6 +27,7 @@ pub struct AppState {
     pub mtr_stop_flag: Arc<AtomicBool>,
     pub batch_stop_flag: Arc<AtomicBool>,
     pub config: Arc<Mutex<AppConfig>>,
+    pub local_proxy: Arc<Mutex<Option<crate::local_proxy::LocalProxyServer>>>,
 }
 
 // ─── Entry ────────────────────────────────────────────────────────────────────
@@ -50,14 +53,27 @@ pub fn run() {
         .setup(|app| {
             let cfg = config::load_config(&app.handle());
 
-            // Re-apply UWP loopback exemptions on startup
+            // Initialize HostConnectionLog directory (relative to current dir)
+            let log_dir = db::get_log_base_dir();
+            match std::fs::create_dir_all(&log_dir) {
+                Ok(_) => eprintln!("[startup] HostConnectionLog: {:?}", log_dir),
+                Err(e) => eprintln!("[startup] Failed to create HostConnectionLog: {e}"),
+            }
+
+            // Re-apply UWP loopback exemptions on startup — run in background
+            // to avoid blocking the window from appearing.
             #[cfg(windows)]
-            for rule in &cfg.uwp_proxy_rules {
-                if rule.enabled {
-                    if let Err(e) = platform::add_loopback_exemption(&rule.package_family_name) {
-                        eprintln!("[startup] Failed to re-apply UWP exemption for {}: {}", rule.app_name, e);
+            {
+                let rules = cfg.uwp_proxy_rules.clone();
+                std::thread::spawn(move || {
+                    for rule in &rules {
+                        if rule.enabled {
+                            if let Err(e) = platform::add_loopback_exemption(&rule.package_family_name) {
+                                eprintln!("[startup] Failed to re-apply UWP exemption for {}: {}", rule.app_name, e);
+                            }
+                        }
                     }
-                }
+                });
             }
 
             app.manage(AppState {
@@ -66,6 +82,7 @@ pub fn run() {
                 mtr_stop_flag: Arc::new(AtomicBool::new(false)),
                 batch_stop_flag: Arc::new(AtomicBool::new(false)),
                 config: Arc::new(Mutex::new(cfg)),
+                local_proxy: Arc::new(Mutex::new(None)),
             });
 
             // Set dynamic window title with version
@@ -152,6 +169,13 @@ pub fn run() {
             commands::remove_uwp_proxy_rule,
             commands::toggle_uwp_proxy_rule,
             commands::test_proxy_connectivity,
+            commands::get_local_proxy_status,
+            commands::stop_local_proxy,
+            commands::get_active_clients,
+            commands::restart_local_proxy,
+            commands::get_app_only_shared,
+            commands::get_last_proxy_config,
+            commands::set_app_only_shared,
             commands::is_admin,
             commands::get_app_version,
             commands::write_export_file,
@@ -169,6 +193,12 @@ pub fn run() {
             commands::add_pac_rule,
             commands::remove_pac_rule,
             commands::get_pac_content,
+            commands::get_blocked_ips,
+            commands::add_blocked_ip,
+            commands::remove_blocked_ip,
+            commands::clear_blocked_ips,
+            commands::get_local_proxy_listen_port,
+            commands::set_local_proxy_listen_port,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

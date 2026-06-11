@@ -2,10 +2,28 @@
 // Business logic for TCP connection monitoring, proxy port detection, memory info.
 
 use std::collections::{HashMap, HashSet};
+use std::net::UdpSocket;
 use crate::platform;
 use crate::types::{MonitorData, MonitorSummary, MemoryInfo, LocalProxyPort};
 use crate::AppState;
 use sysinfo::System;
+
+/// Get the LAN IP address by doing a dummy UDP "connect".
+/// This doesn't actually send any data — it just asks the kernel which
+/// interface would be used to reach the outside world.
+fn get_lan_ip() -> String {
+    if let Ok(socket) = UdpSocket::bind("0.0.0.0:0") {
+        if socket.connect("8.8.8.8:53").is_ok() {
+            if let Ok(local) = socket.local_addr() {
+                let ip = local.ip().to_string();
+                if ip != "0.0.0.0" && ip != "127.0.0.1" {
+                    return ip;
+                }
+            }
+        }
+    }
+    "127.0.0.1".to_string()
+}
 
 const PROXY_PROC_KEYWORDS: &[&str] = &[
     "clash", "mihomo",
@@ -32,15 +50,31 @@ fn is_known_proxy_process(name: &str) -> bool {
 pub fn get_tcp_connections(state: &AppState) -> MonitorData {
     let cfg = state.config.lock().unwrap();
     let proxy_rules = cfg.proxy_rules.clone();
+    drop(cfg); // release config lock before accessing other state
 
     #[cfg(windows)]
     let (sys_host, sys_port, _sys_proto, sys_active) = platform::detect_system_proxy();
     #[cfg(not(windows))]
     let (sys_host, sys_port, _sys_proto, sys_active) = (String::new(), 0u16, String::new(), false);
 
-    let proxy_active = sys_active || cfg.proxies.iter().any(|p| !p.ip.is_empty());
-    let proxy_host = if !sys_host.is_empty() { sys_host } else { cfg.proxies.first().map(|p| p.ip.clone()).unwrap_or_default() };
-    let proxy_port = if sys_port > 0 { sys_port } else { cfg.proxies.first().map(|p| p.port).unwrap_or(0) };
+    // Check if embedded local proxy is running (AppOnly mode)
+    let (local_running, local_port, _local_upstream_host, local_shared) = {
+        let guard = state.local_proxy.lock().unwrap();
+        guard.as_ref().map(|s| {
+            let stat = s.status();
+            (s.is_running(), stat.listen_port, stat.upstream_host.clone(), stat.shared)
+        }).unwrap_or((false, 0, String::new(), false))
+    };
+
+    let proxy_active = sys_active || local_running;
+    let (proxy_host, proxy_port) = if local_running {
+        // In AppOnly mode — show the actual accessible address
+        (if local_shared { get_lan_ip() } else { "127.0.0.1".to_string() }, local_port)
+    } else if sys_active {
+        (sys_host, sys_port)
+    } else {
+        (String::new(), 0)
+    };
 
     let connections = platform::get_netstat_connections(&proxy_rules, proxy_port);
     let total = connections.len();
@@ -62,6 +96,7 @@ pub fn get_tcp_connections(state: &AppState) -> MonitorData {
         proxy_active,
         proxy_host,
         proxy_port,
+        proxy_is_local: local_running,
         proxy_rules: proxy_rules.to_vec(),
         summary: MonitorSummary {
             total_connections: total,
@@ -74,10 +109,22 @@ pub fn get_tcp_connections(state: &AppState) -> MonitorData {
     }
 }
 
-pub fn get_local_proxy_ports() -> Vec<LocalProxyPort> {
+pub fn get_local_proxy_ports(state: &AppState) -> Vec<LocalProxyPort> {
     #[cfg(windows)]
     use std::os::windows::process::CommandExt;
     use std::process::Command as ProcCmd;
+
+    // Check if the app's own local proxy (AppOnly mode) is running
+    let self_proxy_port: Option<u16> = {
+        let guard = state.local_proxy.lock().unwrap();
+        guard.as_ref().and_then(|s| {
+            if s.is_running() {
+                Some(s.status().listen_port)
+            } else {
+                None
+            }
+        })
+    };
 
     let pid_name: HashMap<u32, String> = platform::get_process_map();
 
@@ -149,6 +196,25 @@ pub fn get_local_proxy_ports() -> Vec<LocalProxyPort> {
             is_known_proxy: is_known,
             local_addr,
         });
+    }
+
+    // Add the app's own local proxy (AppOnly mode) if running and not already listed
+    if let Some(self_port) = self_proxy_port {
+        if !unique.iter().any(|p| p.port == self_port) {
+            // Use the current process PID and name
+            let self_pid = std::process::id();
+            let self_name = pid_name.get(&self_pid).cloned().unwrap_or_else(|| "proxy-tester".to_string());
+            unique.push(LocalProxyPort {
+                port: self_port,
+                protocol: "TCP".to_string(),
+                process_name: self_name,
+                process_pid: self_pid,
+                process_path: String::new(),
+                state: "LISTENING".to_string(),
+                is_known_proxy: true,
+                local_addr: "127.0.0.1".to_string(),
+            });
+        }
     }
 
     unique.sort_by(|a, b| {

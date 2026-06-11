@@ -29,6 +29,7 @@ src-tauri/target/
 src-tauri/gen/
 成品/
 .claude/
+.codegraph
 .antigravitycli/
 src.zip
 src33/

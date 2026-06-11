@@ -92,7 +92,13 @@ export function appendLog(level, content, source) {
 }
 
 function clearLogs() {
-  AppState.logs = [];
+  AppState.logs = [{
+    id: 'cleared-' + Date.now(),
+    level: 'info',
+    content: '----- Message cleared -----',
+    timestamp: new Date(),
+    source: '',
+  }];
 }
 
 /* ── Classification ── */

@@ -12,8 +12,8 @@ pub fn get_tcp_connections(state: tauri::State<'_, AppState>) -> MonitorData {
 }
 
 #[tauri::command]
-pub fn get_local_proxy_ports() -> Vec<LocalProxyPort> {
-    service::get_local_proxy_ports()
+pub fn get_local_proxy_ports(state: tauri::State<'_, AppState>) -> Vec<LocalProxyPort> {
+    service::get_local_proxy_ports(&state)
 }
 
 #[tauri::command]

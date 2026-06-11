@@ -1,6 +1,7 @@
 import { initNavigation,initSelects,initSwitches,initSnackbar, showDialog, firstPageReady } from "./navigation.js";
 import { appendLog,$, $$  } from "./utils.js";
 import { AppState } from "./state.js";
+import { initClickEffect } from "./click-effect.js";
 document.addEventListener('DOMContentLoaded', () => {
   /* ── Block Browser Context Menu (dev mode: right-click to inspect) ── */
   const isDev = window.location.port === '5173' || window.location.port === '1420';
@@ -42,23 +43,29 @@ document.addEventListener('DOMContentLoaded', () => {
     initSelects();
     initSwitches();
     initSnackbar();
-
-    /* ── Wait for first page to be ready, then hide loading screen ── */
+    initClickEffect();
     firstPageReady.then(() => {
+      hideLoadingScreen();
+    });
+
+    // 安全兜底：5秒后强制隐藏，防止初始化卡死导致白屏
+    setTimeout(hideLoadingScreen, 5000);
+
+    function hideLoadingScreen() {
       const loadingScreen = $('#loading-screen');
-      if (loadingScreen) {
-        loadingScreen.classList.add('fade-out');
-        setTimeout(() => {
-          loadingScreen.style.display = 'none';
-        }, 200);
-      }
+      if (!loadingScreen || loadingScreen.style.display === 'none') return;
+      loadingScreen.classList.add('fade-out');
+      setTimeout(() => {
+        loadingScreen.style.display = 'none';
+      }, 200);
       AppState.isLoading = false;
 
-      // Add stagger entry animations
       $$('#sidebar, #main-content, #status-bar').forEach((el, i) => {
-        el.classList.add('stagger-entry', `stagger-delay-${i + 1}`);
+        if (!el.classList.contains('stagger-entry')) {
+          el.classList.add('stagger-entry', `stagger-delay-${i + 1}`);
+        }
       });
-    });
+    }
   })();
 
   // Page-specific initializations are now handled on-demand by the router
@@ -91,10 +98,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Welcome logs
-  appendLog('info', 'Proxy Tester initialized');
-  appendLog('ok', 'System ready — all modules loaded');
-  appendLog('info', 'Navigate using the sidebar to access different tools');
+  // Welcome log
+  appendLog('info', '----- Proxy Tester ready -----');
 });
 
 /* ── Tauri Helpers ── */
