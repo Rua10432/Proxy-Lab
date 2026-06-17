@@ -22,18 +22,24 @@ check_lines.py
 # OS files
 .DS_Store
 Thumbs.db
+design_astraeoratio.md
 
 # Build artifacts & Tauri gen
+.codex-http.err.log
+.codex-http.out.log
+design_astraeoratio.md
 target/
+.codex/
 src-tauri/target/
+
 src-tauri/gen/
 成品/
 .claude/
-.codegraph
+.codegraph/
 .antigravitycli/
 src.zip
 src33/
-
+codex-video-frames/
 # Local database files
 *.db
 *.db-wal

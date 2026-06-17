@@ -1,7 +1,7 @@
 <!-- ═══════════════════════════════════════════════════════════════════════
              Page: Test
              ═══════════════════════════════════════════════════════════════════════ -->
-          <div class="page active" id="page-test">
+          <div class="page" id="page-test">
             <!-- Tabs -->
             <div class="tabs">
               <button class="tab-btn active" data-tab="manual">
@@ -141,33 +141,33 @@
             <!-- Tab: Proxy Pool -->
             <div class="tab-content hidden" id="tab-pool">
               <div class="pool-controls">
-                <div class="field-row" style="margin-bottom:8px">
-                  <div class="input-field" style="flex:1">
+                <div class="field-row pool-subscription-row">
+                  <div class="input-field pool-url-field">
                     <label data-i18n="test.subscriptionUrl">Subscription Link / URL</label>
                     <div class="input-wrap">
                       <span class="icon icon-sm leading-icon">link</span>
                       <input type="text" id="pool-sub-url" placeholder="http://example.com/proxies.txt" data-i18n-placeholder="test.placeholderSubUrl" autocomplete="off">
                     </div>
                   </div>
-                  <button class="btn btn-tonal" id="btn-pool-fetch" style="align-self:flex-end">
-                    <span class="icon icon-sm">cloud_download</span> <span data-i18n="test.fetchImport">Fetch</span> &amp; Import
+                  <button class="btn btn-tonal" id="btn-pool-fetch">
+                    <span class="icon icon-sm">cloud_download</span> <span data-i18n="test.fetchImport">Fetch &amp; Import</span>
                   </button>
-                  <button class="btn btn-tonal" id="btn-pool-fetch-clipboard" style="align-self:flex-end">
+                  <button class="btn btn-tonal" id="btn-pool-fetch-clipboard">
                     <span class="icon icon-sm">content_paste</span> <span data-i18n="test.fetchClipboard">从剪贴板获取</span>
                   </button>
                 </div>
-                <div class="action-row">
+                <div class="action-row pool-action-row">
                   <button class="btn btn-primary" id="btn-pool-test-all">
                     <span class="icon icon-sm">speed</span> <span data-i18n="test.testAll">Test All</span>
                   </button>
                   <button class="btn btn-tonal" id="btn-pool-stop" disabled>
-                    <span class="icon icon-sm">stop</span> Stop
+                    <span class="icon icon-sm">stop</span> <span data-i18n="test.stop">Stop</span>
                   </button>
-                  <div class="input-field f-ms" style="width:140px;margin:0">
+                  <div class="input-field f-ms pool-timeout-field">
                     <label data-i18n="test.timeout">Timeout</label>
-                    <div class="input-wrap" style="height:32px">
+                    <div class="input-wrap">
                       <span class="icon icon-sm leading-icon">timer</span>
-                      <input type="number" id="pool-timeout" value="3000" min="100" style="height:32px" autocomplete="off">
+                      <input type="number" id="pool-timeout" value="3000" min="100" autocomplete="off">
                       <span class="suffix">ms</span>
                     </div>
                   </div>
@@ -201,26 +201,26 @@
                   </div>
                 </div>
                 <!-- Export Proxy Pool -->
-            <div class="config-export-section">
-              <div class="config-export-header">
-                <span class="icon icon-sm">file_download</span>
-                <span data-i18n="config.exportPool">Export Proxy Pool</span>
-                <span class="export-count-badge" id="export-pool-count">0</span>
+                <div class="config-export-section">
+                  <div class="config-export-header">
+                    <span class="icon icon-sm">file_download</span>
+                    <span data-i18n="config.exportPool">Export Proxy Pool</span>
+                    <span class="export-count-badge" id="export-pool-count">0</span>
+                  </div>
+                  <div class="config-export-row">
+                    <button class="btn btn-tonal btn-sm" onclick="exportPoolData('json')">
+                      <span class="icon icon-sm">data_object</span> JSON
+                    </button>
+                    <button class="btn btn-tonal btn-sm" onclick="exportPoolData('xml')">
+                      <span class="icon icon-sm">code</span> XML
+                    </button>
+                    <button class="btn btn-tonal btn-sm" onclick="exportPoolData('xlsx')">
+                      <span class="icon icon-sm">table_chart</span> XLSX
+                    </button>
+                  </div>
+                </div>
               </div>
-              <div class="config-export-row">
-                <button class="btn btn-tonal btn-sm" onclick="exportPoolData('json')">
-                  <span class="icon icon-sm">data_object</span> JSON
-                </button>
-                <button class="btn btn-tonal btn-sm" onclick="exportPoolData('xml')">
-                  <span class="icon icon-sm">code</span> XML
-                </button>
-                <button class="btn btn-tonal btn-sm" onclick="exportPoolData('xlsx')">
-                  <span class="icon icon-sm">table_chart</span> XLSX
-                </button>
-              </div>
-            </div>
-              </div>
-              <div class="table-card pool-table-container" style="margin-top:16px">
+              <div class="table-card pool-table-container">
                 <div class="table-wrapper">
                   <table class="data-table" id="pool-table">
                     <thead>

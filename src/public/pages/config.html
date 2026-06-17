@@ -5,39 +5,40 @@
             <!-- Mode Selector -->
             <div class="config-mode-selector" id="config-mode-selector">
               <button class="mode-tab active" data-mode="System">
-                <span class="icon icon-sm">settings_applications</span> 系统代理
+                <span class="icon icon-sm">settings_applications</span> <span data-i18n="config.modeSystem">系统代理</span>
               </button>
               <button class="mode-tab" data-mode="AppOnly">
-                <span class="icon icon-sm">storage</span> 应用内部
+                <span class="icon icon-sm">storage</span> <span data-i18n="config.modeAppOnly">应用内部</span>
               </button>
               <button class="mode-tab" data-mode="Pac">
-                <span class="icon icon-sm">dns</span> PAC 模式
+                <span class="icon icon-sm">dns</span> <span data-i18n="config.modePac">PAC 模式</span>
               </button>
             </div>
 
+            <div class="config-scroll-body">
             <div class="config-card" id="config-card-proxy">
               <div class="config-card-header">
                 <span class="icon">router</span>
-                <span class="config-title-text" id="config-title-text">系统代理设置</span>
-                <span class="config-mode-badge" id="config-mode-badge">系统代理</span>
+                <span class="config-title-text" id="config-title-text" data-i18n="config.systemSetup">系统代理设置</span>
+                <span class="config-mode-badge" id="config-mode-badge" data-i18n="config.modeSystem">系统代理</span>
               </div>
               <div class="config-form-row">
                 <div class="input-field f-address">
-                  <label>地址</label>
+                  <label data-i18n="config.proxyAddress">地址</label>
                   <div class="input-wrap">
                     <span class="icon icon-sm leading-icon">dns</span>
-                    <input type="text" id="config-host" placeholder="127.0.0.1" data-validate="ip" autocomplete="off">
+                    <input type="text" id="config-host" placeholder="127.0.0.1" data-i18n-placeholder="config.placeholderHost" data-validate="ip" autocomplete="off">
                   </div>
                 </div>
                 <div class="input-field f-port">
-                  <label>端口</label>
+                  <label data-i18n="config.proxyPort">端口</label>
                   <div class="input-wrap">
                     <span class="icon icon-sm leading-icon">settings_ethernet</span>
-                    <input type="number" id="config-port" min="1" max="65535" data-validate="port" autocomplete="off">
+                    <input type="number" id="config-port" placeholder="7890" data-i18n-placeholder="config.placeholderPort" min="1" max="65535" data-validate="port" autocomplete="off">
                   </div>
                 </div>
                 <div class="input-field f-proto">
-                  <label>协议</label>
+                  <label data-i18n="config.proxyProtocol">协议</label>
                   <div class="select-field" id="config-proto-select">
                     <div class="select-trigger">
                       <span class="select-value">HTTP</span>
@@ -52,32 +53,32 @@
               </div>
               <div class="config-form-row">
                 <div class="input-field f-user">
-                  <label>用户名</label>
+                  <label data-i18n="config.proxyUsername">用户名</label>
                   <div class="input-wrap">
                     <span class="icon icon-sm leading-icon">person</span>
-                    <input type="text" id="config-user" placeholder="可选" autocomplete="off">
+                    <input type="text" id="config-user" placeholder="可选" data-i18n-placeholder="config.placeholderOptional" autocomplete="off">
                   </div>
                 </div>
                 <div class="input-field f-pass">
-                  <label>密码</label>
+                  <label data-i18n="config.proxyPassword">密码</label>
                   <div class="input-wrap">
                     <span class="icon icon-sm leading-icon">key</span>
-                    <input type="password" id="config-pass" placeholder="可选" autocomplete="new-password">
+                    <input type="password" id="config-pass" placeholder="可选" data-i18n-placeholder="config.placeholderOptional" autocomplete="new-password">
                   </div>
                 </div>
               </div>
               <div class="action-row">
                 <button class="btn btn-outline" id="btn-test-config" style="flex:1">
-                  <span class="icon icon-sm">network_check</span> 连通性测试
+                  <span class="icon icon-sm">network_check</span> <span data-i18n="config.test_connectivity">连通性测试</span>
                 </button>
                 <button class="btn btn-primary" id="btn-config" disabled style="flex:1">
-                  <span class="icon icon-sm">check_circle</span> <span id="btn-config-text">应用系统代理</span>
+                  <span class="icon icon-sm">check_circle</span> <span id="btn-config-text" data-i18n="config.apply">应用系统代理</span>
                 </button>
                 <button class="btn btn-tonal" id="btn-config-disconnect" disabled style="flex:1">
-                  <span class="icon icon-sm">link_off</span> 断开代理
+                  <span class="icon icon-sm">link_off</span> <span data-i18n="config.disconnect">断开代理</span>
                 </button>
                 <span class="icon admin-lock-icon" id="admin-lock-icon"
-                  data-i18n-title="管理员权限状态">lock</span>
+                  data-i18n-title="config.adminLockTitle">lock</span>
               </div>
               <div class="test-result" id="test-result"></div>
             </div>
@@ -87,24 +88,24 @@
               <div class="config-card">
                 <div class="config-card-header">
                   <span class="icon">storage</span>
-                  <span>本地代理服务器状态</span>
-                  <span class="lps-badge" id="lps-badge">运行中</span>
+                  <span data-i18n="config.localProxyStatus">本地代理服务器状态</span>
+                  <span class="lps-badge" id="lps-badge" data-i18n="config.running">运行中</span>
                 </div>
                 <div class="lps-grid">
                   <div class="lps-item">
-                    <span class="lps-label">监听地址</span>
+                    <span class="lps-label" data-i18n="config.listenAddress">监听地址</span>
                     <span class="lps-value" id="lps-address">127.0.0.1:—</span>
                   </div>
                   <div class="lps-item">
-                    <span class="lps-label">当前连接</span>
+                    <span class="lps-label" data-i18n="config.currentConnections">当前连接</span>
                     <span class="lps-value" id="lps-connections">0</span>
                   </div>
                   <div class="lps-item">
-                    <span class="lps-label">转发目标</span>
+                    <span class="lps-label" data-i18n="config.upstreamTarget">转发目标</span>
                     <span class="lps-value" id="lps-upstream">—</span>
                   </div>
                   <div class="lps-item">
-                    <span class="lps-label">协议</span>
+                    <span class="lps-label" data-i18n="config.proxyProtocol">协议</span>
                     <span class="lps-value" id="lps-protocol">—</span>
                   </div>
                 </div>
@@ -113,7 +114,7 @@
                 <div class="lps-clients-section" id="lps-clients-section" style="display:none">
                   <div class="lps-clients-header">
                     <span class="icon icon-sm">devices</span>
-                    <span>当前连接的客户端</span>
+                    <span data-i18n="config.activeClients">当前连接的客户端</span>
                     <span class="lps-clients-count" id="lps-clients-count">0</span>
                   </div>
                   <div class="lps-clients-table-wrap">
@@ -121,77 +122,156 @@
                       <thead>
                         <tr>
                           <th class="col-id">#</th>
-                          <th class="col-ip">IP 地址</th>
-                          <th class="col-up">总上传</th>
-                          <th class="col-down">总下载</th>
+                          <th class="col-ip" data-i18n="config.colIp">IP 地址</th>
+                          <th class="col-speed" data-i18n="config.uploadSpeed">上传速率</th>
+                          <th class="col-speed" data-i18n="config.downloadSpeed">下载速率</th>
+                          <th class="col-up" data-i18n="config.totalUpload">总上传</th>
+                          <th class="col-down" data-i18n="config.totalDownload">总下载</th>
                         </tr>
                       </thead>
                       <tbody id="lps-clients-tbody"></tbody>
                     </table>
                   </div>
-                  <div class="lps-clients-empty" id="lps-clients-empty">暂无客户端连接</div>
+                  <div class="lps-clients-empty" id="lps-clients-empty" data-i18n="config.noActiveClients">暂无客户端连接</div>
                 </div>
 
                 <div class="lps-shared-row">
                   <label class="toggle-label" id="lps-shared-toggle-wrap">
                     <input type="checkbox" id="lps-shared-toggle">
                     <span class="toggle-track"><span class="toggle-thumb"></span></span>
-                    <span id="lps-shared-text">允许局域网共享</span>
+                    <span id="lps-shared-text" data-i18n="config.allowLanSharing">允许局域网共享</span>
                   </label>
-                  <span class="lps-shared-hint">启用后监听 <code>0.0.0.0</code>，局域网其他设备可连接</span>
+                  <span class="lps-shared-hint" data-i18n="config.allowLanSharingHint">启用后监听 0.0.0.0，局域网其他设备可连接</span>
                 </div>
 
                 <!-- Listen Port Config -->
                 <div class="lps-port-row" id="lps-port-row">
                   <span class="icon icon-sm">settings_ethernet</span>
-                  <span class="lps-port-label">监听端口</span>
-                  <input type="number" id="input-listen-port" min="1024" max="65535" placeholder="随机" autocomplete="off">
-                  <button class="btn btn-text" id="btn-random-port" title="随机生成端口">
+                  <span class="lps-port-label" data-i18n="config.listenPort">监听端口</span>
+                  <input type="number" id="input-listen-port" min="1024" max="65535" placeholder="随机" data-i18n-placeholder="config.random" autocomplete="off">
+                  <button class="btn btn-text" id="btn-random-port" title="随机生成端口" data-i18n-title="config.randomPort">
                     <span class="icon icon-sm">casino</span>
                   </button>
-                  <button class="btn btn-outline btn-sm" id="btn-apply-port" disabled>应用</button>
-                  <span class="lps-port-hint">留空=随机，修改后需重启代理生效</span>
+                  <button class="btn btn-outline btn-sm" id="btn-apply-port" disabled data-i18n="config.applyPort">应用</button>
+                  <span class="lps-port-hint" data-i18n="config.listenPortHint">留空=随机，修改后需重启代理生效</span>
+                </div>
+
+                <!-- Client Authentication -->
+                <div class="lps-auth-section" id="lps-auth-section">
+                  <div class="lps-auth-header">
+                    <label class="toggle-label" id="lps-auth-toggle-wrap">
+                      <input type="checkbox" id="lps-auth-toggle">
+                      <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                      <span id="lps-auth-text" data-i18n="config.localAuth">客户端认证</span>
+                    </label>
+                    <span class="lps-auth-hint" data-i18n="config.localAuthHint">启用后客户端需提供用户名密码才能连接本代理</span>
+                  </div>
+                  <div class="lps-auth-fields" id="lps-auth-fields" style="display:none">
+                    <div class="field-row">
+                      <div class="input-field" style="flex:1">
+                        <label data-i18n="config.proxyUsername">用户名</label>
+                        <div class="input-wrap">
+                          <span class="icon icon-sm leading-icon">person</span>
+                          <input type="text" id="input-auth-username" placeholder="设置用户名" autocomplete="off">
+                        </div>
+                      </div>
+                      <div class="input-field" style="flex:1">
+                        <label data-i18n="config.proxyPassword">密码</label>
+                        <div class="input-wrap">
+                          <span class="icon icon-sm leading-icon">key</span>
+                          <input type="password" id="input-auth-password" placeholder="设置密码" autocomplete="new-password">
+                        </div>
+                      </div>
+                      <button class="btn btn-outline btn-sm" id="btn-save-local-auth" style="margin-top:22px;height:40px" data-i18n="common.save">保存</button>
+                    </div>
+                    <div class="lps-auth-status" id="lps-auth-status"></div>
+                  </div>
                 </div>
 
                 <!-- Blocked IPs Section -->
                 <div class="lps-blocked-ips-section" id="lps-blocked-ips-section">
                   <div class="lps-blocked-header">
+                    <label class="toggle-label" id="lps-blocked-toggle-wrap" style="margin-left:0">
+                      <input type="checkbox" id="lps-blocked-toggle">
+                      <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                    </label>
                     <span class="icon icon-sm">block</span>
-                    <span>目标 IP 封锁</span>
+                    <span data-i18n="config.blockedIps">目标 IP 封锁</span>
                     <span class="lps-blocked-count" id="lps-blocked-count">0</span>
                   </div>
                   <div class="lps-blocked-hint">
-                    封锁发往指定 IP 的流量，支持单个 IP（如 <code>192.168.1.100</code>）或 CIDR 网段（如 <code>10.0.0.0/8</code>）。
-                    仅当目标地址为 IP 时生效，域名不影响。修改后需重启本地代理生效。
+                    <span data-i18n="config.blockedIpsHintBeforeSingle">封锁发往指定 IP 的流量，支持单个 IP（如 </span><code>192.168.1.100</code><span data-i18n="config.blockedIpsHintBetweenExamples">）或 CIDR 网段（如 </span><code>10.0.0.0/8</code><span data-i18n="config.blockedIpsHintAfterExamples">）。仅当目标地址为 IP 时生效，域名不影响。修改后需重启本地代理生效。</span>
                   </div>
+                  <div class="lps-blocked-controls" id="lps-blocked-controls">
                   <div class="lps-blocked-input-row">
                     <div class="input-wrap" style="flex:1">
                       <span class="icon icon-sm leading-icon">block</span>
-                      <input type="text" id="input-blocked-ip" placeholder="输入 IP 或 CIDR，如 10.0.0.0/8" autocomplete="off">
+                      <input type="text" id="input-blocked-ip" placeholder="输入 IP 或 CIDR，如 10.0.0.0/8" data-i18n-placeholder="config.blockedIpPlaceholder" autocomplete="off">
                     </div>
                     <button class="btn btn-outline" id="btn-add-blocked-ip" style="flex-shrink:0">
-                      <span class="icon icon-sm">add</span> 添加
+                      <span class="icon icon-sm">add</span> <span data-i18n="common.add">添加</span>
                     </button>
                   </div>
                   <div class="lps-blocked-list" id="lps-blocked-list">
-                    <div class="lps-blocked-empty">暂无封锁 IP</div>
+                    <div class="lps-blocked-empty" data-i18n="config.noBlockedIps">暂无封锁 IP</div>
+                  </div>
+                  </div>
+                </div>
+
+                <!-- IP Rate Limiting Section -->
+                <div class="lps-ip-rate-section" id="lps-ip-rate-section">
+                  <div class="lps-ip-rate-header">
+                    <label class="toggle-label" id="lps-rate-toggle-wrap" style="margin-left:0">
+                      <input type="checkbox" id="lps-rate-toggle">
+                      <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                    </label>
+                    <span class="icon icon-sm">speed</span>
+                    <span data-i18n="config.ipRateLimit">IP 限速</span>
+                    <span class="lps-ip-rate-count" id="lps-ip-rate-count">0</span>
+                  </div>
+                  <div class="lps-ip-rate-desc" data-i18n="config.ipRateLimitDesc">
+                    为连接到本地代理的指定客户端 IP 设置上传/下载限速。
+                  </div>
+                  <div class="lps-rate-controls" id="lps-rate-controls">
+                  <div class="lps-ip-rate-input-row">
+                    <div class="input-wrap" style="flex:1.5">
+                      <span class="icon icon-sm leading-icon">computer</span>
+                      <input type="text" id="input-rate-ip" placeholder="客户端 IP 地址" data-i18n-placeholder="config.rateIpPlaceholder" autocomplete="off">
+                    </div>
+                    <div class="input-wrap" style="flex:1">
+                      <span class="icon icon-sm leading-icon">arrow_upward</span>
+                      <input type="number" id="input-rate-upload" min="0" placeholder="上传 KB/s" data-i18n-placeholder="config.rateUploadPlaceholder" autocomplete="off">
+                    </div>
+                    <div class="input-wrap" style="flex:1">
+                      <span class="icon icon-sm leading-icon">arrow_downward</span>
+                      <input type="number" id="input-rate-download" min="0" placeholder="下载 KB/s" data-i18n-placeholder="config.rateDownloadPlaceholder" autocomplete="off">
+                    </div>
+                    <button class="btn btn-outline" id="btn-add-ip-rate" style="flex-shrink:0;white-space:nowrap">
+                      <span class="icon icon-sm">add</span> <span data-i18n="config.addRateLimit">添加</span>
+                    </button>
+                  </div>
+                  <div class="lps-ip-rate-list" id="lps-ip-rate-list">
+                    <div class="lps-ip-rate-empty" data-i18n="config.noRateLimits">暂无 IP 限速配置</div>
+                  </div>
+                  <div class="lps-ip-rate-hint" data-i18n="config.ipRateLimitHint">
+                    0 = 不限速。修改后即时生效。
+                  </div>
                   </div>
                 </div>
 
                 <div class="action-row">
                   <button class="btn btn-outline" id="btn-copy-proxy-addr" style="flex:1">
-                    <span class="icon icon-sm">content_copy</span> 复制代理地址
+                    <span class="icon icon-sm">content_copy</span> <span data-i18n="config.copyProxyAddress">复制代理地址</span>
                   </button>
                   <button class="btn btn-tonal" id="btn-restart-local-proxy" style="flex:1" disabled>
-                    <span class="icon icon-sm">refresh</span> 重启代理
+                    <span class="icon icon-sm">refresh</span> <span data-i18n="config.restartProxy">重启代理</span>
                   </button>
                   <button class="btn btn-tonal" id="btn-stop-local-proxy" style="flex:1">
-                    <span class="icon icon-sm">stop</span> 停止本地代理
+                    <span class="icon icon-sm">stop</span> <span data-i18n="config.stopLocalProxy">停止本地代理</span>
                   </button>
                 </div>
                 <div class="lps-hint" id="lps-hint">
-                  应用内部代理在本机 <code>127.0.0.1</code> 监听。
-                  将代理地址配置到需要走代理的应用中即可使用，不会修改系统代理设置。
+                  <span data-i18n="config.localProxyHintStoppedBefore">应用内部代理在本机 </span><code>127.0.0.1</code><span data-i18n="config.localProxyHintStoppedAfter"> 监听。将代理地址配置到需要走代理的应用中即可使用，不会修改系统代理设置。</span>
                 </div>
               </div>
             </div>
@@ -200,57 +280,57 @@
             <div class="pac-editor-section" id="pac-editor-section" style="display:none">
               <div class="config-card">
                 <div class="config-card-header">
-                  <span class="icon">dns</span> PAC 规则配置
+                  <span class="icon">dns</span> <span data-i18n="config.pacRulesConfig">PAC 规则配置</span>
                   <label class="toggle-label" style="margin-left:auto">
                     <input type="checkbox" id="pac-toggle">
                     <span class="toggle-track"><span class="toggle-thumb"></span></span>
-                    <span id="pac-toggle-text">启用 PAC</span>
+                    <span id="pac-toggle-text" data-i18n="config.enablePac">启用 PAC</span>
                   </label>
                 </div>
 
                 <div class="pac-rule-controls">
                   <button class="btn btn-text" id="btn-add-pac-rule">
-                    <span class="icon icon-sm">add</span> 添加规则
+                    <span class="icon icon-sm">add</span> <span data-i18n="config.addRule">添加规则</span>
                   </button>
                   <button class="btn btn-text" id="btn-preview-pac">
-                    <span class="icon icon-sm">code</span> 预览 PAC
+                    <span class="icon icon-sm">code</span> <span data-i18n="config.previewPac">预览 PAC</span>
                   </button>
                 </div>
 
                 <div class="pac-rules-list" id="pac-rules-list">
-                  <div class="pac-rules-empty">暂无规则，添加新规则或直接配置代理服务器后会自动创建默认规则</div>
+                  <div class="pac-rules-empty" data-i18n="config.noPacRules">暂无规则，添加新规则或直接配置代理服务器后会自动创建默认规则</div>
                 </div>
 
                 <!-- PAC Rule Form (hidden) -->
                 <div class="pac-rule-form" id="pac-rule-form" style="display:none">
                   <div class="pac-rule-form-row">
                     <div class="input-field" style="flex:2">
-                      <label>域名模式</label>
+                      <label data-i18n="config.domainPattern">域名模式</label>
                       <div class="input-wrap">
-                        <input type="text" id="pac-rule-domain" placeholder="*.google.com, example.com, 或 * 表示全部">
+                        <input type="text" id="pac-rule-domain" placeholder="*.google.com, example.com, 或 * 表示全部" data-i18n-placeholder="config.domainPatternPlaceholder">
                       </div>
                     </div>
                     <div class="input-field" style="flex:2">
-                      <label>代理目标</label>
+                      <label data-i18n="config.proxyTarget">代理目标</label>
                       <div class="input-wrap">
-                        <input type="text" id="pac-rule-proxy" placeholder="PROXY 127.0.0.1:7890 或 SOCKS5 ... 或 DIRECT">
+                        <input type="text" id="pac-rule-proxy" placeholder="PROXY 127.0.0.1:7890 或 SOCKS5 ... 或 DIRECT" data-i18n-placeholder="config.proxyTargetPlaceholder">
                       </div>
                     </div>
                     <div class="pac-rule-form-actions">
-                      <button class="btn btn-primary" id="btn-save-pac-rule" style="font-size:12px;padding:4px 12px">保存</button>
-                      <button class="btn btn-text" id="btn-cancel-pac-rule" style="font-size:12px">取消</button>
+                      <button class="btn btn-primary" id="btn-save-pac-rule" style="font-size:12px;padding:4px 12px" data-i18n="common.save">保存</button>
+                      <button class="btn btn-text" id="btn-cancel-pac-rule" style="font-size:12px" data-i18n="common.cancel">取消</button>
                     </div>
                   </div>
                   <div class="pac-rule-hint">
-                    提示：<code>*</code> 匹配所有域名，<code>*.example.com</code> 匹配子域名。代理格式: <code>PROXY host:port</code>、<code>SOCKS5 host:port</code> 或 <code>DIRECT</code>
+                    <span data-i18n="config.pacRuleHintPrefix">提示：</span><code>*</code><span data-i18n="config.pacRuleHintAll"> 匹配所有域名，</span><code>*.example.com</code><span data-i18n="config.pacRuleHintSubdomain"> 匹配子域名。代理格式: </span><code>PROXY host:port</code><span data-i18n="config.pacRuleHintSeparator">、</span><code>SOCKS5 host:port</code><span data-i18n="config.pacRuleHintOr"> 或 </span><code>DIRECT</code>
                   </div>
                 </div>
 
                 <!-- PAC Preview -->
                 <div class="pac-preview" id="pac-preview" style="display:none">
                   <div class="pac-preview-header">
-                    <span>PAC 脚本预览</span>
-                    <button class="btn btn-text" id="btn-close-pac-preview" style="font-size:12px">关闭</button>
+                    <span data-i18n="config.pacPreviewTitle">PAC 脚本预览</span>
+                    <button class="btn btn-text" id="btn-close-pac-preview" style="font-size:12px" data-i18n="common.close">关闭</button>
                   </div>
                   <pre class="pac-preview-content" id="pac-preview-content"></pre>
                 </div>
@@ -261,16 +341,16 @@
             <div class="local-proxy-section" id="local-proxy-section">
               <div class="recent-configs-label">
                 <div class="label-text">
-                  <span class="icon icon-sm">radar</span> 本地代理端口检测
+                  <span class="icon icon-sm">radar</span> <span data-i18n="config.localProxyDetect">本地代理端口检测</span>
                 </div>
-                <button class="btn btn-text" id="btn-refresh-local-proxy" style="font-size:12px">刷新</button>
+                <button class="btn btn-text" id="btn-refresh-local-proxy" style="font-size:12px" data-i18n="config.refreshLocal">刷新</button>
               </div>
-              <div class="local-proxy-hint">
+              <div class="local-proxy-hint" data-i18n="config.localProxyDesc">
                 自动扫描本机常见代理端口，检测正在运行的代理服务。
                 点击端口或进程名可以直接填入上方配置表单。
               </div>
               <div class="local-proxy-list" id="local-proxy-list">
-                <div class="local-proxy-empty">正在检测本地代理服务...</div>
+                <div class="local-proxy-empty" data-i18n="config.localProxyChecking">正在检测本地代理服务...</div>
               </div>
             </div>
 
@@ -278,10 +358,11 @@
             <div class="recent-configs-section" id="recent-configs-section">
               <div class="recent-configs-label">
                 <div class="label-text">
-                  <span class="icon icon-sm">history</span> 最近配置
+                  <span class="icon icon-sm">history</span> <span data-i18n="config.recentConfigs">最近配置</span>
                 </div>
-                <button class="btn btn-text" id="btn-clear-recent" style="font-size:12px">清除历史</button>
+                <button class="btn btn-text" id="btn-clear-recent" style="font-size:12px" data-i18n="config.clearHistory">清除历史</button>
               </div>
               <div class="recent-configs-grid" id="recent-configs-list"></div>
+            </div>
             </div>
           </div>

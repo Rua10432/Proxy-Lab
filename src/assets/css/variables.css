@@ -1,360 +1,387 @@
-/* ==========================================================================
-   1. Noto Sans (无衬线 - 英文 Latin)
-   ========================================================================== */
 @font-face {
   font-family: 'Noto Sans';
-  src: url('https://cdn.jsdelivr.net/npm/@fontsource/noto-sans@5.0.0/files/noto-sans-latin-400-normal.woff2') format('woff2');
+  src: url('../fonts/noto-sans-latin-400-normal.woff2') format('woff2');
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
   font-family: 'Noto Sans';
-  src: url('https://cdn.jsdelivr.net/npm/@fontsource/noto-sans@5.0.0/files/noto-sans-latin-500-normal.woff2') format('woff2');
+  src: url('../fonts/noto-sans-latin-500-normal.woff2') format('woff2');
   font-weight: 500;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
   font-family: 'Noto Sans';
-  src: url('https://cdn.jsdelivr.net/npm/@fontsource/noto-sans@5.0.0/files/noto-sans-latin-700-normal.woff2') format('woff2');
+  src: url('../fonts/noto-sans-latin-700-normal.woff2') format('woff2');
   font-weight: 700;
   font-style: normal;
   font-display: swap;
 }
-
-/* ==========================================================================
-   2. Noto Sans SC (无衬线 - 简体中文)
-   注意：中文字体必须指向官方的 subsets 切片，这里默认指向第一个核心切片 [0]，
-   浏览器会自动根据内部声明去索引其他切片，防止 404
-   ========================================================================== */
 @font-face {
   font-family: 'Noto Sans SC';
-  src: url('https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-sc@5.0.0/files/noto-sans-sc-chinese-simplified-400-normal.woff2') format('woff2');
+  src: url('../fonts/noto-sans-sc-chinese-simplified-400-normal.woff2') format('woff2');
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
   font-family: 'Noto Sans SC';
-  src: url('https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-sc@5.0.0/files/noto-sans-sc-chinese-simplified-500-normal.woff2') format('woff2');
+  src: url('../fonts/noto-sans-sc-chinese-simplified-500-normal.woff2') format('woff2');
   font-weight: 500;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
   font-family: 'Noto Sans SC';
-  src: url('https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-sc@5.0.0/files/noto-sans-sc-chinese-simplified-700-normal.woff2') format('woff2');
+  src: url('../fonts/noto-sans-sc-chinese-simplified-700-normal.woff2') format('woff2');
   font-weight: 700;
   font-style: normal;
   font-display: swap;
 }
-
-/* ==========================================================================
-   3. Noto Sans TC (无衬线 - 繁体中文)
-   ========================================================================== */
 @font-face {
   font-family: 'Noto Sans TC';
-  src: url('https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-tc@5.0.0/files/noto-sans-tc-chinese-traditional-400-normal.woff2') format('woff2');
+  src: url('../fonts/noto-sans-tc-chinese-traditional-400-normal.woff2') format('woff2');
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
   font-family: 'Noto Sans TC';
-  src: url('https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-tc@5.0.0/files/noto-sans-tc-chinese-traditional-500-normal.woff2') format('woff2');
+  src: url('../fonts/noto-sans-tc-chinese-traditional-500-normal.woff2') format('woff2');
   font-weight: 500;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
   font-family: 'Noto Sans TC';
-  src: url('https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-tc@5.0.0/files/noto-sans-tc-chinese-traditional-700-normal.woff2') format('woff2');
+  src: url('../fonts/noto-sans-tc-chinese-traditional-700-normal.woff2') format('woff2');
   font-weight: 700;
   font-style: normal;
   font-display: swap;
 }
-
-/* ==========================================================================
-   4. Noto Sans JP (无衬线 - 日文)
-   ========================================================================== */
 @font-face {
   font-family: 'Noto Sans JP';
-  src: url('https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-jp@5.0.0/files/noto-sans-jp-japanese-400-normal.woff2') format('woff2');
+  src: url('../fonts/noto-sans-jp-japanese-400-normal.woff2') format('woff2');
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
   font-family: 'Noto Sans JP';
-  src: url('https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-jp@5.0.0/files/noto-sans-jp-japanese-500-normal.woff2') format('woff2');
+  src: url('../fonts/noto-sans-jp-japanese-500-normal.woff2') format('woff2');
   font-weight: 500;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
   font-family: 'Noto Sans JP';
-  src: url('https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-jp@5.0.0/files/noto-sans-jp-japanese-700-normal.woff2') format('woff2');
+  src: url('../fonts/noto-sans-jp-japanese-700-normal.woff2') format('woff2');
   font-weight: 700;
   font-style: normal;
   font-display: swap;
 }
-
-
-/* ==========================================================================
-   5. Secondary Font: Noto Serif (衬线全家桶 - 修正了 npm 包名)
-   ========================================================================== */
-/* 英文 */
 @font-face {
   font-family: 'Noto Serif';
-  src: url('https://cdn.jsdelivr.net/npm/@fontsource/noto-serif@5.0.0/files/noto-serif-latin-400-normal.woff2') format('woff2');
+  src: url('../fonts/noto-serif-latin-400-normal.woff2') format('woff2');
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
-/* 简体中文 */
 @font-face {
-  font-family: 'Noto Serif SC';
-  src: url('https://cdn.jsdelivr.net/npm/@fontsource/noto-serif-sc@5.0.0/files/noto-serif-sc-chinese-simplified-400-normal.woff2') format('woff2');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
-/* 繁体中文 */
-@font-face {
-  font-family: 'Noto Serif TC';
-  src: url('https://cdn.jsdelivr.net/npm/@fontsource/noto-serif-tc@5.0.0/files/noto-serif-tc-chinese-traditional-500-normal.woff2') format('woff2');
+  font-family: 'Noto Serif';
+  src: url('../fonts/noto-serif-latin-500-normal.woff2') format('woff2');
   font-weight: 500;
   font-style: normal;
   font-display: swap;
 }
-
-/* 日文 */
+@font-face {
+  font-family: 'Noto Serif';
+  src: url('../fonts/noto-serif-latin-700-normal.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Noto Serif SC';
+  src: url('../fonts/noto-serif-sc-chinese-simplified-400-normal.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Noto Serif SC';
+  src: url('../fonts/noto-serif-sc-chinese-simplified-500-normal.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Noto Serif SC';
+  src: url('../fonts/noto-serif-sc-chinese-simplified-700-normal.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Noto Serif TC';
+  src: url('../fonts/noto-serif-tc-chinese-traditional-400-normal.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Noto Serif TC';
+  src: url('../fonts/noto-serif-tc-chinese-traditional-700-normal.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
 @font-face {
   font-family: 'Noto Serif JP';
-  src: url('https://cdn.jsdelivr.net/npm/@fontsource/noto-serif-jp@5.0.0/files/noto-serif-jp-japanese-400-normal.woff2') format('woff2');
+  src: url('../fonts/noto-serif-jp-japanese-400-normal.woff2') format('woff2');
   font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Noto Serif JP';
+  src: url('../fonts/noto-serif-jp-japanese-500-normal.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Noto Serif JP';
+  src: url('../fonts/noto-serif-jp-japanese-700-normal.woff2') format('woff2');
+  font-weight: 700;
   font-style: normal;
   font-display: swap;
 }
 
 :root {
-  /* ── Core Backgrounds ── */
-  --color-bg:              #1a1a1b;
-  --color-nav-bg:          #141414;
-  --color-footer-bg:       #1a1a1b;
-  --color-surface:         #000000;
-  --color-surface-elevated:#1f1f21;
-  --color-surface-warm:    #f7f4ee; /* MD: 浅色表面/背景色 */
-
-  /* ── Text Colors ── */
-  --color-text-primary:    #f7f3ee; /* 深色背景上的主文本 */
-  --color-text-heading:    #ffffff;
-  --color-text-body:       #d2d2d2;
-  --color-text-muted:      #a1a1aa;
-  --color-text-subtle:     #87878d;
-  --color-text-dim:        #71717a;
-  --color-text-ink:        #314255; /* MD: 用于浅色表面上的文本/链接 */
-  --color-text-light:      #f7f3ee;
-  --color-text-white:      #ffffff;
-
-  /* ── Accent Colors (魔法强调色) ── */
-  --color-accent:          #d2d2d2;
-  --color-accent-green:    #9eddc8;
-  --color-accent-pink:     #f4a7b9;
-  --color-accent-yellow:   #f5e9b5;
-  --color-accent-blue:     #9fd4ff;
-  --color-accent-blue-dark:#74a5ff;
-
-  /* ── Neutral / Ink Scale (精准对齐 MD 色阶) ── */
-  --color-ink-900:         #141516;
-  --color-ink-850:         #181819;
-  --color-ink-800:         #1f1f21;
-  --color-ink-700:         #29292b;
-  --color-ink-600:         #47474a; /* MD: 中性色 28% */
-  --color-ink-500:         #56575d; /* MD: 中性色 35% */
-  --color-ink-400:         #666666; /* MD: 中性色 40% */
-  --color-ink-82:          #d2d2d2;
-  --color-ink-97:          #f6f6f7;
-
-  /* ── Border Colors ── */
-  --color-border:          #d2d2d2;
-  --color-border-warm:     #d7c8b5;
-  --color-border-accent:   #f7f3ee;
-  --color-border-blue:     #9fd4ff;
-  --color-border-blue-dk:  #74a5ff;
-
-  /* ── Button Colors ── */
-  --color-btn-bg:          #000000;
-  --color-btn-text:        #ffffff;
-  --color-btn-secondary-text: #47474a; /* 对齐 MD 色阶 */
-  --color-btn-tertiary-text:  #56575d; /* 对齐 MD 色阶 */
-
-  /* ── Surface / Overlay ── */
-  --color-surface-dark:          #080b12eb;
-  --color-surface-dark-float:    #0c0e14d1;
+  --color-bg: #1a1a1b;
+  --color-bg-depth: #0f1117;
+  --color-nav-bg: #141414;
+  --color-footer-bg: #141414;
+  --color-surface: #121418;
+  --color-surface-elevated: #1d1f23f2;
+  --color-surface-raised: #24262be8;
+  --color-surface-warm: #f7f4ee;
+  --color-surface-muted: #202022;
+  --color-surface-dark: #080b12eb;
+  --color-surface-dark-float: #0c0e14d1;
   --color-surface-dark-float-strong: #0c0e14e6;
-  --color-surface-overlay:       #0c0e14c2;
-  --color-surface-panel:         #fffffff5;
+  --color-surface-overlay: #0c0e14c2;
+  --color-surface-panel: #fffffff5;
 
-  /* ── Console / Terminal ── */
-  --color-console-bg:      #0c0e14;
-  --color-console-text:    #a1a1aa;
-  --color-console-border:  #29292b;
+  --color-text-primary: #f7f3ee;
+  --color-text-heading: #ffffff;
+  --color-text-body: #d9d6d1;
+  --color-text-secondary: #c4c0ba;
+  --color-text-muted: #a8a39d;
+  --color-text-subtle: #8a8680;
+  --color-text-dim: #6f6d69;
+  --color-text-ink: #29292b;
+  --color-text-light: #f7f3ee;
+  --color-text-white: #ffffff;
 
-  /* ── Status Colors ── */
-  --color-status-ready:    #87878d;
-  --color-status-active:   #9eddc8;
-  --color-status-error:    #f4a7b9;
-  --color-status-warn:     #f5e9b5;
+  --color-ink-900: #141516;
+  --color-ink-850: #181819;
+  --color-ink-800: #1f1f21;
+  --color-ink-700: #29292b;
+  --color-ink-600: #47474a;
+  --color-ink-500: #56575d;
+  --color-ink-400: #66666b;
+  --color-ink-82: #d2d2d2;
+  --color-ink-97: #f6f6f7;
 
-  /* ── Shadows (对齐 MD 阴影系统) ── */
-  --shadow-subtle:         rgba(0, 0, 0, 0.4) 0px 1px 2px 0px;
-  --shadow-standard:       rgba(0, 0, 0, 0.6) 0px 4px 8px 0px;
+  --color-border: #3b3834;
+  --color-border-soft: rgba(215, 200, 181, 0.22);
+  --color-border-strong: rgba(247, 243, 238, 0.36);
+  --color-border-warm: #d7c8b5;
+  --color-border-accent: #f7f3ee;
+  --color-border-blue: #9fd4ff;
+  --color-border-blue-dk: #74a5ff;
 
-  /* ── Border Radius (对齐 MD 圆角规范) ── */
-  --radius-none:           0px;
-  --radius-sm:             4px;
-  --radius-md:             12px;
-  --radius-lg:             17px;
-  --radius-pill:           999px;
+  --color-accent: #e96a4f;
+  --color-accent-green: #9eddc8;
+  --color-accent-pink: #f4a7b9;
+  --color-accent-red: #f4a7b9;
+  --color-accent-yellow: #f5e9b5;
+  --color-accent-blue: #9fd4ff;
+  --color-accent-blue-dark: #74a5ff;
+  --color-accent-gold: #dfb36f;
 
-  /* ── Typography (对齐 MD 排版系统 & 多语言回退) ── */
-  /* 遵循 MD 主字体 Noto Sans TC，加入 SC, JP, Latin 确保四语正确渲染 */
-  --font-primary:          'Noto Sans TC', 'Noto Sans SC', 'Noto Sans JP', 'Noto Sans', sans-serif;
-  /* 遵循 MD 次要字体 Noto Serif TC，加入 SC, JP, Latin */
-  --font-secondary:        'Noto Serif TC', 'Noto Serif SC', 'Noto Serif JP', 'Noto Serif', serif;
-  --font-mono:             'JetBrains Mono', 'Fira Code', monospace;
-  --font-icon:             'Material Symbols Outlined';
+  --color-primary: var(--color-accent-green);
+  --color-primary-soft: color-mix(in srgb, var(--color-primary) 16%, transparent);
+  --color-primary-faint: color-mix(in srgb, var(--color-primary) 8%, transparent);
+  --color-primary-border: color-mix(in srgb, var(--color-primary) 44%, transparent);
+  --color-primary-strong: color-mix(in srgb, var(--color-primary) 84%, #ffffff 16%);
 
-  /* ── Font Sizes (对齐 MD 字号阶梯) ── */
-  --text-hero:             60px;
-  --text-section:          52px;
-  --text-title:            34px;
-  --text-subheading:       28px;
-  --text-quote:            24px;
-  --text-large:            22px;
-  --text-link:             20px;
-  --text-body-lg:          18px;
-  --text-body:             16px;
-  --text-small:            14px;
-  --text-caption:          12px;
+  --color-btn-bg: #29292b;
+  --color-btn-text: #ffffff;
+  --color-btn-secondary-text: #d7c8b5;
+  --color-btn-tertiary-text: #a8a39d;
 
-  /* ── Font Weights (MD 规定仅使用 400, 500, 600, 700) ── */
-  --weight-regular:        400;
-  --weight-medium:         500;
-  --weight-semibold:       600;
-  --weight-bold:           700;
+  --color-console-bg: #090b10;
+  --color-console-text: #c4c0ba;
+  --color-console-border: rgba(215, 200, 181, 0.26);
 
-  /* ── Line Heights ── */
-  --leading-tight:         1.2;
-  --leading-normal:        1.5;
-  --leading-relaxed:       1.65;
+  --color-status-ready: #8a8680;
+  --color-status-active: var(--color-primary);
+  --color-status-error: #f4a7b9;
+  --color-status-warn: #f5e9b5;
 
-  /* ── Spacing Scale (4px 基础单位) ── */
-  --space-1:               4px;
-  --space-2:               8px;
-  --space-3:               12px;
-  --space-4:               16px;
-  --space-5:               20px;
-  --space-6:               24px;
-  --space-7:               28px;
-  --space-8:               32px;
-  --space-10:              40px;
-  --space-12:              48px;
-  --space-15:              60px;
+  --shadow-subtle: 0 1px 2px rgba(0, 0, 0, 0.34);
+  --shadow-standard: 0 12px 30px rgba(0, 0, 0, 0.22);
+  --shadow-panel: 0 24px 60px rgba(0, 0, 0, 0.22);
+  --shadow-glow: 0 0 0 1px var(--color-primary-border), 0 0 22px var(--color-primary-faint);
 
-  /* ── Layout ── */
-  --sidebar-width:         80px;
-  --titlebar-height:       48px;
-  --statusbar-height:      36px;
-  --mobile-nav-height:     64px;
-  --content-max-width:     100%;
+  --radius-none: 0px;
+  --radius-xs: 3px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 16px;
+  --radius-xl: 0 40px 0 0;
+  --radius-feature: 0 64px 0 0;
+  --radius-pill: 999px;
 
-  /* ── Transitions ── */
-  --transition-fast:       150ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-normal:     250ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-slow:       400ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-bounce:     500ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  --font-primary: 'Noto Sans TC', 'Noto Sans SC', 'Noto Sans JP', 'Noto Sans', sans-serif;
+  --font-sans: var(--font-primary);
+  --font-secondary: 'Noto Serif TC', 'Noto Serif SC', 'Noto Serif JP', 'Noto Serif', serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  --font-icon: 'Material Symbols Outlined';
 
-  /* ── Z-Index ── */
-  --z-sidebar:             100;
-  --z-titlebar:            200;
-  --z-mobile-nav:          150;
-  --z-statusbar:           100;
-  --z-dialog:              1000;
-  --z-snackbar:            1100;
-  --z-noise:               9999;
-  --z-loading:             10000;
+  --text-hero: 60px;
+  --text-section: 52px;
+  --text-title: 34px;
+  --text-subheading: 28px;
+  --text-quote: 24px;
+  --text-large: 22px;
+  --text-link: 20px;
+  --text-body-lg: 18px;
+  --text-body: 16px;
+  --text-small: 14px;
+  --text-caption: 12px;
 
-  /* ── Hardcoded Gradient Overrides (for theme switching) ── */
-  --color-titlebar-bg:     linear-gradient(180deg, #181819 0%, #141414 100%);
-  --color-sidebar-bg:      linear-gradient(180deg, #181819 0%, #141414 50%, #121214 100%);
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  --leading-tight: 1.2;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.65;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 28px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-15: 60px;
+
+  --sidebar-width: 88px;
+  --titlebar-height: 57px;
+  --statusbar-height: 36px;
+  --mobile-nav-height: 64px;
+  --content-max-width: 100%;
+
+  --transition-fast: 140ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 280ms cubic-bezier(0.22, 1, 0.36, 1);
+  --transition-slow: 500ms cubic-bezier(0.22, 1, 0.36, 1);
+  --transition-reveal: 1500ms cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-bounce: 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --z-sidebar: 100;
+  --z-titlebar: 200;
+  --z-mobile-nav: 150;
+  --z-statusbar: 100;
+  --z-dialog: 1000;
+  --z-snackbar: 1100;
+  --z-noise: 2;
+  --z-loading: 10000;
+
+  --texture-noise: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.72' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.45'/%3E%3C/svg%3E");
+  --paper-texture: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.38' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)' opacity='.24'/%3E%3C/svg%3E");
+  --loading-bg-start: rgba(12, 14, 20, 0.96);
+  --loading-bg-end: rgba(18, 20, 24, 0.96);
+
+  --color-titlebar-bg:
+    linear-gradient(180deg, rgba(24, 24, 25, 0.98), rgba(14, 15, 18, 0.98)),
+    var(--texture-noise);
+  --color-sidebar-bg:
+    radial-gradient(circle at 50% 0%, var(--color-primary-faint), transparent 44%),
+    linear-gradient(180deg, #181819 0%, #111217 100%);
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════════
-   Light Theme – override when .dark is absent
-   ═══════════════════════════════════════════════════════════════════════════════ */
 :root:not(.dark) {
-  /* ── Core Backgrounds ── */
-  --color-bg:              #f4f4f6;
-  --color-nav-bg:          #e8e8ea;
-  --color-footer-bg:       #f4f4f6;
-  --color-surface:         #ffffff;
-  --color-surface-elevated:#eeeef0;
-  --color-surface-warm:    #f7f4ee;
+  --color-bg: #f4f2ee;
+  --color-bg-depth: #e9e5dc;
+  --color-nav-bg: #f8f6f0;
+  --color-footer-bg: #f8f6f0;
+  --color-surface: #fffaf2;
+  --color-surface-elevated: #fffffff2;
+  --color-surface-raised: #ffffff;
+  --color-surface-muted: #f7f4ee;
+  --color-surface-dark: #fffffff0;
+  --color-surface-dark-float: #ffffffe0;
+  --color-surface-dark-float-strong: #fffffff2;
+  --color-surface-overlay: #ffffffd8;
+  --color-surface-panel: #fffffff5;
 
-  /* ── Text Colors ── */
-  --color-text-primary:    #314255;
-  --color-text-heading:    #141516;
-  --color-text-body:       #29292b;
-  --color-text-muted:      #47474a;
-  --color-text-subtle:     #56575d;
-  --color-text-dim:        #666666;
-  --color-text-ink:        #314255;
-  --color-text-light:      #29292b;
-  --color-text-white:      #ffffff;
+  --color-text-primary: #29292b;
+  --color-text-heading: #141516;
+  --color-text-body: #3b3834;
+  --color-text-secondary: #56514b;
+  --color-text-muted: #716b63;
+  --color-text-subtle: #8a8178;
+  --color-text-dim: #9b9186;
+  --color-text-ink: #29292b;
+  --color-text-light: #29292b;
+  --color-text-white: #ffffff;
 
-  /* ── Ink Scale (inverted) ── */
-  --color-ink-900:         #f4f4f6;
-  --color-ink-850:         #eeeef0;
-  --color-ink-800:         #e8e8ea;
-  --color-ink-700:         #dddde0;
-  --color-ink-600:         #c0c0c4;
-  --color-ink-500:         #a0a0a5;
-  --color-ink-400:         #88888d;
-  --color-ink-82:          #4b5563;
-  --color-ink-97:          #374151;
+  --color-ink-900: #f7f4ee;
+  --color-ink-850: #f1ede5;
+  --color-ink-800: #e8e1d5;
+  --color-ink-700: #d7c8b5;
+  --color-ink-600: #a99a88;
+  --color-ink-500: #7d746b;
+  --color-ink-400: #5f5a55;
+  --color-ink-82: #47474a;
+  --color-ink-97: #29292b;
 
-  /* ── Border Colors ── */
-  --color-border:          #c0c0c4;
-  --color-border-warm:     #d7c8b5;
-  --color-border-accent:   #d8d5d0;
+  --color-border: #d7c8b5;
+  --color-border-soft: rgba(71, 71, 74, 0.16);
+  --color-border-strong: rgba(41, 41, 43, 0.28);
+  --color-border-accent: #d7c8b5;
 
-  /* ── Button Colors ── */
-  --color-btn-bg:          #1f2937;
-  --color-btn-text:        #ffffff;
+  --color-btn-bg: #29292b;
+  --color-btn-text: #ffffff;
   --color-btn-secondary-text: #47474a;
-  --color-btn-tertiary-text:  #56575d;
+  --color-btn-tertiary-text: #716b63;
 
-  /* ── Surface / Overlay ── */
-  --color-surface-dark:          #ffffffeb;
-  --color-surface-dark-float:    #ffffffd1;
-  --color-surface-dark-float-strong: #ffffffe6;
-  --color-surface-overlay:       #ffffffc2;
-  --color-surface-panel:         #fffffff5;
+  --color-console-bg: #fbf8f1;
+  --color-console-text: #47474a;
+  --color-console-border: rgba(41, 41, 43, 0.18);
 
-  /* ── Console / Terminal ── */
-  --color-console-bg:      #fafafc;
-  --color-console-text:    #56575d;
-  --color-console-border:  #dddde0;
+  --shadow-subtle: 0 1px 2px rgba(41, 41, 43, 0.08);
+  --shadow-standard: 0 14px 34px rgba(41, 41, 43, 0.12);
+  --shadow-panel: 0 22px 54px rgba(41, 41, 43, 0.14);
 
-  /* ── Shadows for light background ── */
-  --shadow-subtle:         rgba(0, 0, 0, 0.06) 0px 1px 2px 0px;
-  --shadow-standard:       rgba(0, 0, 0, 0.10) 0px 4px 8px 0px;
+  --color-titlebar-bg:
+    linear-gradient(180deg, rgba(248, 246, 240, 0.98), rgba(235, 229, 219, 0.98)),
+    var(--paper-texture);
+  --color-sidebar-bg:
+    radial-gradient(circle at 50% 0%, var(--color-primary-soft), transparent 50%),
+    linear-gradient(180deg, #fffaf2 0%, #eee8dc 100%);
 
-  /* ── Gradient Overrides ── */
-  --color-titlebar-bg:     linear-gradient(180deg, #e8e8ea 0%, #dddde0 100%);
-  --color-sidebar-bg:      linear-gradient(180deg, #e8e8ea 0%, #dddde0 50%, #d5d5d8 100%);
+  --loading-bg-start: rgba(248, 246, 240, 0.96);
+  --loading-bg-end: rgba(235, 229, 219, 0.96);
 }

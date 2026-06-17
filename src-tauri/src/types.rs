@@ -1,5 +1,5 @@
-use serde::{Serialize, Deserialize};
 use crate::config;
+use serde::{Deserialize, Serialize};
 
 // ─── Event Payloads ───────────────────────────────────────────────────────────
 
@@ -66,6 +66,12 @@ pub struct ScanProgressPayload {
 
 #[derive(Clone, Serialize)]
 pub struct ScanPortOpenPayload {
+    pub open_count: u64,
+}
+
+#[derive(Clone, Serialize)]
+pub struct ScanSynDonePayload {
+    pub total_ports: u64,
     pub open_count: u64,
 }
 

@@ -1,53 +1,120 @@
-/* ═══════════════════════════════════════════════════════════════════════════════
-   Page: Settings — Theme & Color
-   ═══════════════════════════════════════════════════════════════════════════════ */
+#page-settings {
+  gap: var(--space-4);
+}
 
 .settings-section {
-  background: var(--color-surface-elevated);
-  border: 1px solid var(--color-ink-82); /* MD: 标志性浅色边框 */
-  border-radius: 0 40px 0 0; /* MD: 注入灵魂右上大圆角 */
-  padding: var(--space-4);
+  position: relative;
+  overflow: visible;
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 0;
+  padding: var(--space-2);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent 62%),
+    var(--color-surface-elevated);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-feature);
+  box-shadow: var(--shadow-standard);
+}
+
+.settings-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 28px;
+  left: 28px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--color-primary-border), transparent);
 }
 
 .settings-card {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-4) var(--space-3);
   gap: var(--space-4);
-  border-bottom: 1px solid var(--color-ink-600); /* 内部分割线使用适中色阶 */
+  min-height: 72px;
+  padding: var(--space-4) var(--space-3);
+  border-bottom: 1px solid var(--color-border-soft);
 }
-.settings-card:last-child { border-bottom: none; }
+
+.settings-card:last-child {
+  border-bottom: 0;
+}
 
 .settings-card-label {
-  font-size: var(--text-body);
-  font-weight: var(--weight-semibold);
   color: var(--color-text-primary);
+  font-size: var(--text-body);
+  font-weight: var(--weight-bold);
 }
+
 .settings-card-desc {
-  font-size: var(--text-small);
+  max-width: 680px;
+  margin-top: 3px;
   color: var(--color-text-subtle);
-  margin-top: 2px;
+  font-size: var(--text-small);
+  line-height: 1.45;
+}
+
+.settings-card .select-field {
+  flex-shrink: 0;
+}
+
+.color-picker-wrap {
+  flex-shrink: 0;
+  padding: 4px;
+  background: var(--color-primary-faint);
+  border: 1px solid var(--color-primary-border);
+  border-radius: var(--radius-pill);
 }
 
 .export-path-row {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   gap: 8px;
-  flex-shrink: 0;
-  max-width: 420px;
+  width: min(460px, 48vw);
+  max-width: 460px;
 }
+
 .export-path-input {
   cursor: pointer;
 }
+
 .export-path-input input {
   cursor: pointer;
 }
 
-@media (max-width: 600px) {
-  .settings-card { flex-direction: column; align-items: flex-start; gap: var(--space-3); }
-  .export-path-row { max-width: 100%; width: 100%; }
+@media (max-width: 760px) {
+  .settings-card {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .settings-card .select-field {
+    width: 100% !important;
+  }
+
+  .export-path-row {
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 520px) {
+  .settings-section {
+    padding: var(--space-1);
+  }
+
+  .settings-card {
+    padding: var(--space-3);
+  }
+
+  .export-path-row {
+    flex-wrap: wrap;
+  }
+
+  .export-path-row .input-wrap {
+    flex-basis: 100%;
+  }
 }

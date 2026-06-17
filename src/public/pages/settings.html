@@ -1,166 +1,98 @@
-<!-- ═══════════════════════════════════════════════════════════════════════
-             Page: Settings
-             ═══════════════════════════════════════════════════════════════════════ -->
-          <div class="page" id="page-settings">
-            <div class="settings-section">
-              <!-- Language selector -->
-              <div class="settings-card">
-                <div>
-                  <div class="settings-card-label" data-i18n="settings.language.label">Language</div>
-                  <div class="settings-card-desc" data-i18n="settings.language.desc">Select display language for the application</div>
-                </div>
-                <div class="select-field" id="lang-select" style="width:160px">
-                  <div class="select-trigger">
-                    <span class="select-value">English</span>
-                    <span class="icon icon-sm arrow">expand_more</span>
-                  </div>
-                  <div class="select-dropdown">
-                    <div class="select-option selected" data-value="en">English</div>
-                    <div class="select-option" data-value="zh_cn">简体中文</div>
-                    <div class="select-option" data-value="zh_tw">繁體中文</div>
-                    <div class="select-option" data-value="ja">日本語</div>
-                  </div>
-                </div>
-              </div>
-              <div class="settings-card">
-                <div>
-                  <div class="settings-card-label" data-i18n="settings.theme.label">Theme</div>
-                  <div class="settings-card-desc" data-i18n="settings.theme.desc">Choose your preferred color scheme</div>
-                </div>
-                <div class="select-field" id="theme-select" style="width:140px">
-                  <div class="select-trigger">
-                    <span class="select-value">Dark</span>
-                    <span class="icon icon-sm arrow">expand_more</span>
-                  </div>
-                  <div class="select-dropdown">
-                    <div class="select-option" data-value="system" data-i18n="settings.themeSystem">System</div>
-                    <div class="select-option" data-value="light" data-i18n="settings.themeLight">Light</div>
-                    <div class="select-option selected" data-value="dark" data-i18n="settings.themeDark">Dark</div>
-                  </div>
-                </div>
-              </div>
-              <div class="settings-card">
-                <div>
-                  <div class="settings-card-label" data-i18n="settings.primaryColor.label">Primary Color</div>
-                  <div class="settings-card-desc" data-i18n="settings.primaryColor.desc">Customize the application accent color</div>
-                </div>
-                <div class="color-picker-wrap">
-                  <input type="color" class="color-picker" id="primary-color-picker" value="#9eddc8" autocomplete="off">
-                </div>
-              </div>
-            </div>
-
-            <div class="settings-section" style="margin-top: var(--space-4);">
-              <div class="settings-card">
-                <div>
-                  <div class="settings-card-label" data-i18n="settings.titleBar.label">Title Bar</div>
-                  <div class="settings-card-desc" data-i18n="settings.titleBar.desc">Choose between system native or custom title bar</div>
-                </div>
-                <div class="select-field" id="titlebar-select" style="width:140px">
-                  <div class="select-trigger">
-                    <span class="select-value">Custom</span>
-                    <span class="icon icon-sm arrow">expand_more</span>
-                  </div>
-                  <div class="select-dropdown">
-                    <div class="select-option" data-value="system" data-i18n="settings.titleSystem">System</div>
-                    <div class="select-option selected" data-value="custom" data-i18n="settings.titleCustom">Custom</div>
-                  </div>
-                </div>
-              </div>
-              <div class="settings-card" id="close-behavior-card">
-                <div>
-                  <div class="settings-card-label" data-i18n="settings.closeBehavior.label">Close Button Behavior</div>
-                  <div class="settings-card-desc" data-i18n="settings.closeBehavior.desc">When enabled, closing shows a dialog asking to minimize to tray or exit</div>
-                </div>
-                <div class="switch on" id="close-confirm-switch">
-                  <div class="thumb"></div>
-                </div>
-              </div>
-              <div class="settings-card" id="export-path-card">
-                <div>
-                  <div class="settings-card-label" data-i18n="settings.exportDir.label">Export Directory</div>
-                  <div class="settings-card-desc" data-i18n="settings.exportDir.desc">All exported files (JSON, XML, XLSX) will be saved to this folder. Leave empty to use browser default download.</div>
-                </div>
-                <div class="export-path-row">
-                  <div class="input-wrap export-path-input" style="flex:1;height:36px;overflow:hidden">
-                    <span class="icon icon-sm leading-icon">folder</span>
-                    <input type="text" id="export-directory" readonly data-i18n-placeholder="settings.exportDir.empty" placeholder="Not set — uses browser download" style="cursor:pointer;font-size:13px">
-                  </div>
-                  <button class="btn btn-tonal btn-sm" id="btn-browse-export-path" style="flex-shrink:0">
-                    <span class="icon icon-sm">folder_open</span> <span data-i18n="settings.exportDir.browse">Browse</span>
-                  </button>
-                  <button class="btn btn-text btn-sm" id="btn-clear-export-path">
-                    <span class="icon icon-sm">close</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-        </div><!-- End #pages-container -->
-      </div><!-- End #main-content -->
-    </div><!-- End #app-root -->
-
-    <!-- Mobile Navigation Bar -->
-    <nav id="mobile-nav">
-      <div class="mobile-nav-item active" data-page="test">
-        <span class="icon">bolt</span>
-        <span class="nav-label">Test</span>
+<div class="page" id="page-settings">
+  <div class="settings-section">
+    <div class="settings-card">
+      <div>
+        <div class="settings-card-label" data-i18n="settings.language.label">Language</div>
+        <div class="settings-card-desc" data-i18n="settings.language.desc">Select display language for the application</div>
       </div>
-      <div class="mobile-nav-item" data-page="scan">
-        <span class="icon">radar</span>
-        <span class="nav-label">Scan</span>
-      </div>
-      <div class="mobile-nav-item" data-page="config">
-        <span class="icon">settings_input_component</span>
-        <span class="nav-label">Config</span>
-      </div>
-      <div class="mobile-nav-item" data-page="logs">
-        <span class="icon">terminal</span>
-        <span class="nav-label">Logs</span>
-      </div>
-      <div class="mobile-nav-item" data-page="settings">
-        <span class="icon">settings</span>
-        <span class="nav-label">Settings</span>
-      </div>
-    </nav>
-
-    <!-- Status Bar (Desktop) -->
-    <footer id="status-bar">
-      <div class="status-left">
-        <span class="icon">memory</span>
-        <span class="perf-label">RAM:</span>
-        <span id="ram-text">-- MB / -- GB (0%)</span>
-        <div class="perf-bar-wrap">
-          <div class="perf-bar-fill" id="ram-bar" style="width:0%"></div>
+      <div class="select-field" id="lang-select" style="width:160px">
+        <div class="select-trigger">
+          <span class="select-value">English</span>
+          <span class="icon icon-sm arrow">expand_more</span>
         </div>
-        <canvas class="sparkline" id="ram-sparkline" width="24" height="14"></canvas>
-      </div>
-      <div class="status-right">
-        <span class="icon">sensors</span>
-        <span id="footer-stats-text">-- ms</span>
-      </div>
-    </footer>
-
-    <!-- Dialog -->
-    <div class="dialog-overlay" id="dialog-overlay">
-      <div class="dialog-backdrop" id="dialog-backdrop"></div>
-      <div class="dialog-content">
-        <div class="dialog-header">
-          <span class="icon icon-lg" id="dialog-icon" style="color:var(--color-accent-green)">info</span>
-          <span class="title" id="dialog-title">Title</span>
-          <span class="icon close-btn" id="dialog-close">close</span>
+        <div class="select-dropdown">
+          <div class="select-option selected" data-value="en">English</div>
+          <div class="select-option" data-value="zh_cn">简体中文</div>
+          <div class="select-option" data-value="zh_tw">繁體中文</div>
+          <div class="select-option" data-value="ja">日本語</div>
         </div>
-        <div class="dialog-body" id="dialog-body">Content</div>
-        <div class="dialog-actions" id="dialog-actions"></div>
       </div>
     </div>
 
-    <!-- Snackbar -->
-    <div class="snackbar" id="snackbar">
-      <span class="icon icon-sm snack-icon" id="snack-icon">info</span>
-      <span id="snack-text">Message</span>
-      <span class="icon icon-sm snack-close" id="snack-close">close</span>
+    <div class="settings-card">
+      <div>
+        <div class="settings-card-label" data-i18n="settings.theme.label">Theme</div>
+        <div class="settings-card-desc" data-i18n="settings.theme.desc">Choose your preferred color scheme</div>
+      </div>
+      <div class="select-field" id="theme-select" style="width:140px">
+        <div class="select-trigger">
+          <span class="select-value">Dark</span>
+          <span class="icon icon-sm arrow">expand_more</span>
+        </div>
+        <div class="select-dropdown">
+          <div class="select-option" data-value="system" data-i18n="settings.themeSystem">System</div>
+          <div class="select-option" data-value="light" data-i18n="settings.themeLight">Light</div>
+          <div class="select-option selected" data-value="dark" data-i18n="settings.themeDark">Dark</div>
+        </div>
+      </div>
     </div>
 
-  </div><!-- End #app-wrapper -->
+    <div class="settings-card">
+      <div>
+        <div class="settings-card-label" data-i18n="settings.primaryColor.label">Primary Color</div>
+        <div class="settings-card-desc" data-i18n="settings.primaryColor.desc">Customize the application accent color</div>
+      </div>
+      <div class="color-picker-wrap">
+        <input type="color" class="color-picker" id="primary-color-picker" value="#9eddc8" autocomplete="off">
+      </div>
+    </div>
+  </div>
+
+  <div class="settings-section" style="margin-top: var(--space-4);">
+    <div class="settings-card">
+      <div>
+        <div class="settings-card-label" data-i18n="settings.titleBar.label">Title Bar</div>
+        <div class="settings-card-desc" data-i18n="settings.titleBar.desc">Choose between system native or custom title bar</div>
+      </div>
+      <div class="select-field" id="titlebar-select" style="width:140px">
+        <div class="select-trigger">
+          <span class="select-value">Custom</span>
+          <span class="icon icon-sm arrow">expand_more</span>
+        </div>
+        <div class="select-dropdown">
+          <div class="select-option" data-value="system" data-i18n="settings.titleSystem">System</div>
+          <div class="select-option selected" data-value="custom" data-i18n="settings.titleCustom">Custom</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-card" id="close-behavior-card">
+      <div>
+        <div class="settings-card-label" data-i18n="settings.closeBehavior.label">Close Button Behavior</div>
+        <div class="settings-card-desc" data-i18n="settings.closeBehavior.desc">When enabled, closing shows a dialog asking to minimize to tray or exit</div>
+      </div>
+      <div class="switch on" id="close-confirm-switch">
+        <div class="thumb"></div>
+      </div>
+    </div>
+
+    <div class="settings-card" id="export-path-card">
+      <div>
+        <div class="settings-card-label" data-i18n="settings.exportDir.label">Export Directory</div>
+        <div class="settings-card-desc" data-i18n="settings.exportDir.desc">All exported files (JSON, XML, XLSX) will be saved to this folder. Leave empty to use browser default download.</div>
+      </div>
+      <div class="export-path-row">
+        <div class="input-wrap export-path-input" style="flex:1;height:36px;overflow:hidden">
+          <span class="icon icon-sm leading-icon">folder</span>
+          <input type="text" id="export-directory" readonly data-i18n-placeholder="settings.exportDir.empty" placeholder="Not set - uses browser download" style="cursor:pointer;font-size:13px">
+        </div>
+        <button class="btn btn-tonal btn-sm" id="btn-browse-export-path" style="flex-shrink:0">
+          <span class="icon icon-sm">folder_open</span> <span data-i18n="settings.exportDir.browse">Browse</span>
+        </button>
+        <button class="btn btn-text btn-sm" id="btn-clear-export-path">
+          <span class="icon icon-sm">close</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

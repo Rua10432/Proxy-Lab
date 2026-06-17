@@ -92,8 +92,14 @@ pub async fn config_proxy(
             // Read config for AppOnly mode
             let app_only_cfg = state.config.lock().unwrap().app_only.clone();
             let shared = app_only_cfg.shared;
-            let blocked_ips = app_only_cfg.blocked_ips;
+            let blocked_ips = app_only_cfg.blocked_ips.clone();
+            let blocked_ips_enabled = app_only_cfg.blocked_ips_enabled;
             let configured_port = app_only_cfg.listen_port;
+            let ip_rate_limits = app_only_cfg.ip_rate_limits.clone();
+            let rate_limit_enabled = app_only_cfg.rate_limit_enabled;
+            let local_auth_enabled = app_only_cfg.local_auth_enabled;
+            let local_username = app_only_cfg.local_username.clone();
+            let local_password = app_only_cfg.local_password.clone();
 
             let mut server = local_proxy::LocalProxyServer::new(
                 shared,
@@ -102,8 +108,18 @@ pub async fn config_proxy(
                 local_proxy::UpstreamProtocol::from_str(protocol),
                 username,
                 password,
+                local_auth_enabled,
+                local_username,
+                local_password,
             );
-            server.set_blocked_ips(blocked_ips);
+            if blocked_ips_enabled {
+                server.set_blocked_ips(blocked_ips);
+            }
+
+            // Apply per-IP rate limits from config
+            if rate_limit_enabled {
+                server.load_ip_rate_limits(&ip_rate_limits).await;
+            }
 
             // Set connection log directory (relative to current dir)
             let log_dir = crate::db::get_log_base_dir();

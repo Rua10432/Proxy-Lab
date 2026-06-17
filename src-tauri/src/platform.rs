@@ -132,6 +132,7 @@ const TCP_TABLE_OWNER_PID_ALL: u32 = 5;
 
 #[cfg(windows)]
 #[repr(C)]
+#[allow(non_snake_case)]
 struct MIB_TCPROW_OWNER_PID {
     dwState: u32,
     dwLocalAddr: u32,
@@ -582,6 +583,7 @@ const TOKEN_ELEVATION: u32 = 20;
 
 #[cfg(windows)]
 #[repr(C)]
+#[allow(non_snake_case)]
 struct TOKEN_ELEVATION {
     TokenIsElevated: u32,
 }

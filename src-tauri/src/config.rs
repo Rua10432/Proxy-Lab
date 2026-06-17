@@ -110,6 +110,14 @@ pub struct UwpProxyRule {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
+pub struct IpRateLimitEntry {
+    pub ip: String,
+    pub upload_limit_kbps: u64,
+    pub download_limit_kbps: u64,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct AppOnlyConfig {
     /// 是否在应用启动时自动启动本地代理
     #[serde(default)]
@@ -120,9 +128,27 @@ pub struct AppOnlyConfig {
     /// 是否允许局域网共享（绑定 0.0.0.0）
     #[serde(default)]
     pub shared: bool,
+    /// 是否启用 IP 封锁功能
+    #[serde(default)]
+    pub blocked_ips_enabled: bool,
     /// 要封锁的目标IP列表（支持具体 IP 和 CIDR 格式）
     #[serde(default)]
     pub blocked_ips: Vec<String>,
+    /// 是否启用 IP 限速功能
+    #[serde(default)]
+    pub rate_limit_enabled: bool,
+    /// 按客户端IP限速配置
+    #[serde(default)]
+    pub ip_rate_limits: Vec<IpRateLimitEntry>,
+    /// 是否启用客户端认证（连接本地代理时需要用户名密码）
+    #[serde(default)]
+    pub local_auth_enabled: bool,
+    /// 客户端认证用户名
+    #[serde(default)]
+    pub local_username: Option<String>,
+    /// 客户端认证密码
+    #[serde(default)]
+    pub local_password: Option<String>,
 }
 
 impl Default for AppOnlyConfig {
@@ -131,7 +157,13 @@ impl Default for AppOnlyConfig {
             auto_start: false,
             listen_port: 0,
             shared: false,
+            blocked_ips_enabled: false,
             blocked_ips: Vec::new(),
+            rate_limit_enabled: false,
+            ip_rate_limits: Vec::new(),
+            local_auth_enabled: false,
+            local_username: None,
+            local_password: None,
         }
     }
 }

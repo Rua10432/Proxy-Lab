@@ -31,6 +31,7 @@ function initScanPage() {
   if (isTauriAvailable()) {
     tauriListen('scan-progress', (e) => onScanProgress(e.payload));
     tauriListen('scan-port-open', (e) => onScanPortOpen(e.payload));
+    tauriListen('scan-syn-done', (e) => onScanSynDone(e.payload));
     tauriListen('scan-found', (e) => onScanFound(e.payload));
     tauriListen('scan-done', () => finishScan());
   }
@@ -82,9 +83,11 @@ function startScan() {
   AppState.scanStatus = 'scanning';
   AppState.scanResults = [];
   AppState.scanStats = { scanned: 0, total: 0, portsOpen: 0, found: 0, avgLatency: 0, speed: 0 };
+  _scanPhase = 'syn';
   _scanStartTime = Date.now();
   _scanLastSpeedSample = 0;
   $('#scan-eta').style.display = 'none';
+  renderScanProgressLabel(0, 0, true);
   updateScanStatusChip();
   updateScanStats();
 
@@ -93,7 +96,7 @@ function startScan() {
   setScanFormDisabled(true);
 
   appendLog('info', `Starting scan on ${network}...`);
-  renderLogConsole();
+  window.renderLogConsole?.();
 
   const mask = $('#scan-mask').value.trim() || '255.255.255.0';
   const concurrent = parseInt($('#scan-concurrent').value) || 250;
@@ -135,6 +138,18 @@ function startScan() {
 let _scanProgressThrottle = 0;
 let _scanStartTime = 0;
 let _scanLastSpeedSample = 0;
+let _scanPhase = 'idle';
+
+function renderScanProgressLabel(scanned, total, hideTotal) {
+  const label = $('#scan-progress-label');
+  if (!label) return;
+
+  const totalText = hideTotal
+    ? '<span class="scan-total-skeleton" aria-label="calculating total ports"></span>'
+    : String(total);
+  label.innerHTML = `Scanned: ${scanned} / ${totalText}`;
+}
+
 function onScanProgress(payload) {
   AppState.scanStats.scanned = payload.scanned;
   AppState.scanStats.total = payload.total;
@@ -144,10 +159,11 @@ function onScanProgress(payload) {
   _scanProgressThrottle = now;
 
   const total = payload.total || 1;
-  const pct = ((payload.scanned / total) * 100).toFixed(1);
-  $('#scan-progress-label').textContent = `Scanned: ${payload.scanned} / ${payload.total}`;
-  $('#scan-ring-pct').textContent = pct + '%';
-  $('#scan-progress-fill').style.width = pct + '%';
+  // 文字标签显示 Verify 进度（非 SYN 进度）
+  // SYN 阶段：分子始终为 0，分母骨架屏
+  // Verify 阶段：分子为已验证数，分母为开放端口总数
+  renderScanProgressLabel(_scanPhase === 'syn' ? 0 : payload.scanned, payload.total, _scanPhase === 'syn');
+  // SYN 阶段不更新进度条（进度条反映 verify 进度）
   $('#scan-found-label').textContent = `Open: ${payload.found}`;
 
   // ETA calculation
@@ -176,6 +192,28 @@ function onScanPortOpen(payload) {
   updateScanStats();
 }
 
+function onScanSynDone(payload) {
+  if (AppState.scanStatus !== 'scanning') return;
+
+  _scanPhase = 'verify';
+  AppState.scanStats.total = payload.total_ports || AppState.scanStats.total;
+  AppState.scanStats.portsOpen = payload.open_count || 0;
+
+  const openPorts = payload.open_count || 0;
+  AppState.scanStats.scanned = 0;
+  // SYN 完成：显示 Scanned: 0 / openCount（分子 0，表示尚未开始验证）
+  const label = $('#scan-progress-label');
+  if (label) label.innerHTML = 'Scanned: 0 / ' + openPorts;
+  // Verify 还未开始，进度条归零
+  $('#scan-ring-pct').textContent = '0%';
+  $('#scan-progress-fill').style.width = '0%';
+  $('#scan-found-label').textContent = `Open: ${AppState.scanStats.portsOpen}`;
+  updateScanStats();
+
+  appendLog('info', `SYN scan complete. Verifying ${AppState.scanStats.portsOpen} open ports...`);
+  window.renderLogConsole?.();
+}
+
 function onScanFound(payload) {
   AppState.scanResults.push({
     id: genId(),
@@ -186,48 +224,66 @@ function onScanFound(payload) {
     open: true,
   });
   AppState.scanStats.found++;
-  renderScanTable();
+  // Verify 阶段：每次确认一个代理，更新分子和进度条
+  const found = AppState.scanStats.found;
+  const openPorts = AppState.scanStats.portsOpen || 1;
+  const label = $('#scan-progress-label');
+  if (label) {
+    label.innerHTML = 'Scanned: ' + found + ' / ' + openPorts;
+  }
+  const pct = Math.min(100, Math.round((found / openPorts) * 100));
+  $('#scan-ring-pct').textContent = pct + '%';
+  $('#scan-progress-fill').style.width = pct + '%';
+  // 只追加一行，不重建整个表格（避免全部一次性出现）
+  appendScanRow(payload);
   updateScanStats();
   appendLog('ok', `Found: ${payload.ip}:${payload.port} (${payload.protocol}) — ${payload.latency_ms}ms`);
-  renderLogConsole();
+  window.renderLogConsole?.();
 
 }
 
 function finishScan() {
+  if (AppState.scanStatus !== 'scanning') return;
+
   AppState.scanStatus = 'done';
+  _scanPhase = 'done';
   updateScanStatusChip();
   $('#btn-scan-start').disabled = false;
   $('#btn-scan-stop').disabled = true;
   setScanFormDisabled(false);
   $('#scan-eta').style.display = 'none';
-  // Force progress to 100% (last throttled update may have skipped it)
-  const total = AppState.scanStats.total || 1;
-  $('#scan-progress-label').textContent = `Scanned: ${total} / ${total}`;
+  // 最终显示：Scanned: foundCount / openCount
+  const label = $('#scan-progress-label');
+  if (label) {
+    label.innerHTML = 'Scanned: ' + AppState.scanStats.found + ' / ' + (AppState.scanStats.portsOpen || 0);
+  }
   $('#scan-ring-pct').textContent = '100.0%';
   $('#scan-progress-fill').style.width = '100%';
   appendLog('ok', `Scan complete. Found ${AppState.scanStats.found} proxies.`);
-  renderLogConsole();
+  window.renderLogConsole?.();
 }
 
 function stopScan() {
   if (!isTauriAvailable()) return;
   tauriInvoke('stop_proxy_scan');
   AppState.scanStatus = 'idle';
+  _scanPhase = 'idle';
   updateScanStatusChip();
   $('#btn-scan-start').disabled = false;
   $('#btn-scan-stop').disabled = true;
   setScanFormDisabled(false);
   $('#scan-eta').style.display = 'none';
   appendLog('warn', 'Scan stopped by user');
-  renderLogConsole();
+  window.renderLogConsole?.();
 }
 
 function clearScan() {
   AppState.scanResults = [];
   AppState.scanStats = { scanned: 0, total: 0, portsOpen: 0, found: 0, avgLatency: 0, speed: 0 };
+  _scanPhase = 'idle';
   updateScanStats();
   renderScanTable();
-  $('#scan-progress-label').textContent = 'Scanned: 0 / 0';
+  renderScanProgressLabel(0, 0, false);
   $('#scan-ring-pct').textContent = '0%';
   $('#scan-progress-fill').style.width = '0%';
   $('#scan-found-label').textContent = 'Open: 0';
@@ -258,6 +314,40 @@ function updateScanStats() {
   $('#scan-count-badge').textContent = AppState.scanResults.length + ' results';
 }
 
+/* ── 生成单行 HTML ── */
+function scanRowHtml(r, index) {
+  return `<tr>
+      <td>${index}</td>
+      <td>${r.ip}</td>
+      <td>${r.port}</td>
+      <td>${protocolBadge(r.protocol)}</td>
+      <td style="color:${latencyColor(r.latency)}">${r.latency !== undefined ? r.latency + 'ms' : '--'}</td>
+      <td><div style="display:flex;gap:4px;align-items:center">
+${r.protocol.includes('(Auth)')
+  ? `<button class="btn btn-text" style="padding:4px 6px;font-size:12px;height:auto;min-width:0;color:var(--color-ink-600)" onclick="applyProxyWithAuth('${r.ip}',${r.port},'${r.protocol}')" title="使用凭据"><span class="icon icon-sm">key</span></button>`
+  : `<button class="btn btn-text" style="padding:4px 6px;font-size:12px;height:auto;min-width:0" onclick="applyProxy('${r.ip}',${r.port},'${r.protocol}')" title="直接应用"><span class="icon icon-sm">arrow_forward</span></button>`
+}
+</div></td>
+    </tr>`;
+}
+
+/* ── Verify 阶段：只追加一行到表格底部，不重建整个表格 ── */
+function appendScanRow(result) {
+  const tbody = $('#scan-table-body');
+  const emptyState = $('#scan-empty-state');
+  if (!tbody) return;
+
+  // 隐藏空状态，显示表格
+  emptyState.style.display = 'none';
+  const wrapper = $('#scan-table-container .table-wrapper');
+  if (wrapper) wrapper.style.display = '';
+
+  // 追加新行（序号为当前行数 +1）
+  tbody.insertAdjacentHTML('beforeend', scanRowHtml(result, tbody.children.length + 1));
+  updateScanExportButtons();
+}
+
+/* ── 全量渲染表格（用于筛选/排序/清除） ── */
 function renderScanTable() {
   const tbody = $('#scan-table-body');
   const emptyState = $('#scan-empty-state');
@@ -279,21 +369,7 @@ function renderScanTable() {
   const wrapper = $('#scan-table-container .table-wrapper');
   if (wrapper) wrapper.style.display = '';
 
-  tbody.innerHTML = results.map((r, i) => `
-    <tr>
-      <td>${i + 1}</td>
-      <td>${r.ip}</td>
-      <td>${r.port}</td>
-      <td>${protocolBadge(r.protocol)}</td>
-      <td style="color:${latencyColor(r.latency)}">${r.latency !== undefined ? r.latency + 'ms' : '--'}</td>
-      <td><div style="display:flex;gap:4px;align-items:center">
-${r.protocol.includes('(Auth)')
-  ? `<button class="btn btn-text" style="padding:4px 6px;font-size:12px;height:auto;min-width:0;color:var(--color-ink-600)" onclick="applyProxyWithAuth('${r.ip}',${r.port},'${r.protocol}')" title="使用凭据"><span class="icon icon-sm">key</span></button>`
-  : `<button class="btn btn-text" style="padding:4px 6px;font-size:12px;height:auto;min-width:0" onclick="applyProxy('${r.ip}',${r.port},'${r.protocol}')" title="直接应用"><span class="icon icon-sm">arrow_forward</span></button>`
-}
-</div></td>
-    </tr>
-  `).join('');
+  tbody.innerHTML = results.map((r, i) => scanRowHtml(r, i + 1)).join('');
   updateScanExportButtons();
 }
 
@@ -312,7 +388,7 @@ function applyProxy(host, port, protocol) {
   if (!isTauriAvailable()) return;
 
   appendLog('info', `Applying proxy: ${host}:${port} (${protocol})`);
-  renderLogConsole();
+  window.renderLogConsole?.();
 
   tauriInvoke('config_proxy', {
     host, port: String(port), protocol,
@@ -321,7 +397,7 @@ function applyProxy(host, port, protocol) {
   }).then((result) => {
     AppState.proxyActive = true;
     appendLog('ok', result || `Proxy configured: ${host}:${port} (${protocol})`);
-    renderLogConsole();
+    window.renderLogConsole?.();
     showSnackbar('Proxy applied successfully', 'success');
   }).catch(() => {
     showSnackbar('Failed to apply proxy', 'error');
@@ -373,7 +449,7 @@ function applyProxyWithAuth(host, port, protocol) {
           if (!isTauriAvailable()) return;
 
           appendLog('info', `Verifying proxy: ${host}:${port} (${protocol})${user ? ' with auth' : ''}`);
-          renderLogConsole();
+          window.renderLogConsole?.();
 
           try {
             await tauriInvoke('test_proxy_connectivity', {
@@ -383,13 +459,13 @@ function applyProxyWithAuth(host, port, protocol) {
             });
           } catch (e) {
             appendLog('error', `Verification failed: ${e}`);
-            renderLogConsole();
+            window.renderLogConsole?.();
             showSnackbar('代理验证失败，请检查凭据', 'error');
             return;
           }
 
           appendLog('info', `Applying proxy: ${host}:${port} (${protocol})${user ? ' with auth' : ''}`);
-          renderLogConsole();
+          window.renderLogConsole?.();
 
           try {
             const result = await tauriInvoke('config_proxy', {
@@ -399,7 +475,7 @@ function applyProxyWithAuth(host, port, protocol) {
             });
             AppState.proxyActive = true;
             appendLog('ok', result || `Proxy configured: ${host}:${port} (${protocol})`);
-            renderLogConsole();
+            window.renderLogConsole?.();
             showSnackbar('Proxy applied successfully', 'success');
           } catch (_) {
             showSnackbar('Failed to apply proxy', 'error');
@@ -460,4 +536,3 @@ window.initScanPage = initScanPage;
 window.applyProxy = applyProxy;
 window.applyProxyWithAuth = applyProxyWithAuth;
 window.exportScanData = exportScanData;
-

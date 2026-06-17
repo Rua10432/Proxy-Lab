@@ -1,72 +1,115 @@
-/* ═══════════════════════════════════════════════════════════════════════════════
-   Page: Scan — Network Scanner
-   ═══════════════════════════════════════════════════════════════════════════════ */
+#page-scan {
+  gap: var(--space-4);
+}
 
 .scan-params {
-  background: var(--color-surface-elevated);
-  border: 1px solid var(--color-ink-82); /* MD: 标志性高频浅色边框 */
-  border-radius: 0 40px 0 0; /* MD: 注入灵魂右上大圆角 */
-  padding: var(--space-4);
+  position: relative;
+  overflow: hidden;
+  padding: var(--space-5);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent 62%),
+    var(--color-surface-elevated);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-feature);
+  box-shadow: var(--shadow-standard);
+}
+
+.scan-params::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 28px;
+  left: 28px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--color-primary-border), transparent);
 }
 
 .scan-params-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-4);
   margin-bottom: var(--space-4);
 }
+
 .params-group {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  min-width: 0;
 }
+
 .params-group .group-title {
-  font-size: var(--text-small);
-  font-weight: var(--weight-semibold);
+  margin-bottom: 2px;
   color: var(--color-text-muted);
+  font-size: var(--text-small);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 4px;
 }
+
 .params-group .field-row {
   margin-bottom: 0;
 }
 
-/* Scan Table Area */
-.scan-table-toolbar {
+.action-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
   margin-top: var(--space-4);
 }
+
+.scan-table-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
 .scan-count-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--color-text-muted);
   font-size: var(--text-small);
-  color: var(--color-text-subtle);
   white-space: nowrap;
 }
-.spacer { flex: 1; }
+
+.scan-count-badge::before {
+  content: 'radar';
+  color: var(--color-primary-strong);
+  font-family: var(--font-icon);
+  font-size: 18px;
+}
+
+.spacer {
+  flex: 1;
+}
+
 .scan-export-group {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   gap: 6px;
-  flex-shrink: 0;
   margin-left: auto;
 }
 
 .scan-table-container {
-  margin-top: var(--space-3);
   flex: 1;
-  min-height: 240px;
+  min-height: 260px;
+  margin-top: var(--space-3);
   display: flex;
   flex-direction: column;
+  border-radius: var(--radius-feature);
 }
+
 .scan-table-container .table-wrapper {
   flex: 1;
   min-height: 0;
   overflow: auto;
 }
 
-/* Progress Area */
 .scan-progress-area {
   display: flex;
   align-items: center;
@@ -74,78 +117,196 @@
   gap: var(--space-4);
   margin-top: var(--space-4);
   padding: var(--space-3) var(--space-4);
-  background: var(--color-surface-elevated);
-  border: 1px solid var(--color-ink-82); /* MD: 浅色边框 */
-  border-radius: 0; /* 数据条保持直角 */
+  background:
+    linear-gradient(90deg, var(--color-primary-faint), transparent),
+    color-mix(in srgb, var(--color-surface-elevated) 90%, transparent);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-sm);
 }
+
 .progress-info {
-  flex: 1;
   display: flex;
+  flex: 1;
   flex-direction: column;
-  gap: 6px;
+  gap: 7px;
+  min-width: 0;
 }
+
 .progress-stats {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: var(--text-small);
+  gap: var(--space-3);
   color: var(--color-text-subtle);
+  font-size: var(--text-small);
 }
+
 .progress-pct {
-  font-weight: var(--weight-semibold);
-  color: var(--color-accent-green);
+  color: var(--color-primary-strong);
+  font-family: var(--font-mono);
+  font-weight: var(--weight-bold);
 }
+
+.scan-total-skeleton {
+  position: relative;
+  display: inline-flex;
+  width: 72px;
+  height: 13px;
+  overflow: hidden;
+  vertical-align: -2px;
+  background: color-mix(in srgb, var(--color-text-muted) 18%, transparent);
+  border-radius: var(--radius-xs);
+}
+
+.scan-total-skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--color-text-primary) 24%, transparent),
+    transparent
+  );
+  animation: scan-total-skeleton-shimmer 1.2s infinite;
+}
+
+@keyframes scan-total-skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scan-total-skeleton::after {
+    animation: none;
+  }
+}
+
 .found-badge {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: var(--text-small);
-  color: var(--color-accent-green);
-  font-weight: var(--weight-semibold);
   flex-shrink: 0;
+  align-items: center;
+  gap: 7px;
+  color: var(--color-primary-strong);
+  font-size: var(--text-small);
+  font-weight: var(--weight-bold);
 }
-.found-badge .icon { font-size: 20px; }
 
-/* Stats Grid */
+.found-badge .icon {
+  font-size: 20px;
+}
+
 .scan-stats-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: var(--space-3);
   margin-top: var(--space-4);
 }
+
 .scan-stat-card {
-  background: var(--color-bg);
-  border: 1px solid var(--color-ink-82); /* MD: 浅色边框 */
-  border-radius: 0; /* 统计卡片保持直角 */
-  padding: var(--space-4);
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  transition: border-color var(--transition-normal);
+  min-width: 0;
+  padding: var(--space-4);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent),
+    color-mix(in srgb, var(--color-surface-elevated) 90%, transparent);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-sm);
+  transition: border-color var(--transition-normal), background var(--transition-normal), transform var(--transition-normal);
 }
-.scan-stat-card:hover { border-color: var(--color-accent-green); } /* 悬停高亮 */
+
+.scan-stat-card:hover {
+  border-color: var(--color-primary-border);
+  background: var(--color-primary-faint);
+  transform: translateY(-2px);
+}
+
 .scan-stat-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 0;
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  color: var(--color-primary-strong);
+  background: var(--color-primary-faint);
+  border: 1px solid var(--color-primary-border);
+  border-radius: var(--radius-pill);
 }
-.scan-stat-info { display: flex; flex-direction: column; }
-.scan-stat-label { font-size: var(--text-caption); color: var(--color-text-subtle); font-weight: var(--weight-medium); }
-.scan-stat-value { font-size: 20px; font-weight: var(--weight-bold); color: var(--color-text-primary); }
 
-/* Responsive */
-@media (max-width: 960px) { /* 对齐 MD 平板断点 */
-  .scan-params-grid { grid-template-columns: 1fr 1fr; }
-  .scan-stats-grid { grid-template-columns: repeat(3, 1fr); }
+.scan-stat-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
+
+.scan-stat-label {
+  color: var(--color-text-subtle);
+  font-size: var(--text-caption);
+  font-weight: var(--weight-medium);
+}
+
+.scan-stat-value {
+  color: var(--color-text-primary);
+  font-family: var(--font-mono);
+  font-size: 20px;
+  font-weight: var(--weight-bold);
+}
+
+@media (max-width: 1100px) {
+  .scan-stats-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 960px) {
+  .scan-params {
+    padding: var(--space-4);
+  }
+
+  .scan-params-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
 @media (max-width: 768px) {
-  .scan-params-grid { grid-template-columns: 1fr; }
-  .scan-stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .scan-params-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .scan-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .scan-table-toolbar {
+    align-items: stretch;
+  }
+
+  .scan-export-group {
+    width: 100%;
+    margin-left: 0;
+  }
 }
+
+@media (max-width: 560px) {
+  .scan-progress-area {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .progress-stats {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+  }
+}
+
 @media (max-width: 480px) {
-  .scan-stats-grid { grid-template-columns: 1fr; }
+  .scan-stats-grid {
+    grid-template-columns: 1fr;
+  }
 }

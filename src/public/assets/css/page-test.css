@@ -1,290 +1,588 @@
-/* ═══════════════════════════════════════════════════════════════════════════════
-   Page: Test — Manual Probe + Proxy Pool
-   Responsive Layout — industrial, space-efficient, mobile-first
-   ═══════════════════════════════════════════════════════════════════════════════ */
+#page-test {
+  gap: var(--space-4);
+  min-width: 0;
+}
 
-/* ── Shared Card Surface ── */
+#page-test .tab-content {
+  min-height: 0;
+}
+
+#tab-manual,
+#tab-pool {
+  min-height: 0;
+}
+
 .test-params,
 .pool-controls {
-  background: var(--color-surface-elevated);
-  border: 1px solid var(--color-ink-82); /* MD: 标志性浅色边框 */
-  border-radius: 0 40px 0 0; /* MD: 注入灵魂右上大圆角 */
-  padding: var(--space-4);
-  transition: padding var(--transition-normal);
+  position: relative;
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  overflow: visible;
+  padding: var(--space-5);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent 62%),
+    var(--color-surface-elevated);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-feature);
+  box-shadow: var(--shadow-standard);
 }
 
-/* ──────────────────────────────────────────────
-   Field Rows — responsive grid with smart breakpoints
-   ────────────────────────────────────────────── */
+.test-params::before,
+.pool-controls::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 28px;
+  left: 28px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--color-primary-border), transparent);
+}
+
 .field-row {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-3);
   margin-bottom: var(--space-3);
-  flex-wrap: wrap;
 }
-/* Default: each field flexes */
-.field-row .input-field { flex: 1; min-width: 140px; }
-/* Fixed-width fields as hints (overridden at smaller breakpoints) */
-.field-row .f-port { max-width: 160px; }
-.field-row .f-count { max-width: 140px; }
-.field-row .f-ms   { max-width: 160px; }
-.field-row .f-proto { max-width: 180px; }
-.field-row .f-user,
-.field-row .f-pass { flex: 1; min-width: 160px; }
 
-/* ── Action Row ── */
+.field-row:last-child {
+  margin-bottom: 0;
+}
+
+.field-row .input-field {
+  flex: 1;
+  min-width: 150px;
+}
+
+.field-row .f-address {
+  flex: 2;
+  min-width: 240px;
+}
+
+.field-row .f-port {
+  max-width: 160px;
+}
+
+.field-row .f-count {
+  max-width: 140px;
+}
+
+.field-row .f-ms {
+  max-width: 170px;
+}
+
+.field-row .f-proto {
+  max-width: 190px;
+}
+
+.field-row .f-user,
+.field-row .f-pass {
+  flex: 1;
+  min-width: 180px;
+}
+
+.pool-subscription-row {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) max-content max-content;
+  align-items: end;
+  gap: var(--space-3);
+  margin-bottom: 0;
+}
+
+.pool-subscription-row .pool-url-field {
+  min-width: 0;
+}
+
+.pool-subscription-row .btn {
+  align-self: end;
+  min-width: 154px;
+}
+
+.pool-action-row {
+  display: grid;
+  grid-template-columns: max-content max-content 140px max-content minmax(0, 1fr) max-content;
+  align-items: end;
+  gap: var(--space-3);
+  margin-top: 0;
+  min-width: 0;
+}
+
+.pool-action-row .spacer {
+  display: block;
+  min-width: 0;
+}
+
+.pool-action-row .pool-timeout-field {
+  width: 140px;
+  margin: 0;
+}
+
+.pool-action-row .pool-timeout-field .input-wrap {
+  height: 32px;
+}
+
+.pool-action-row .pool-timeout-field input {
+  height: 32px;
+}
+
+.pool-action-row .pool-info-badge {
+  justify-self: end;
+}
+
 .action-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
-  flex-wrap: wrap;
   margin-top: var(--space-4);
 }
-.action-row .spacer { flex: 1; }
 
-/* ── Test Stats Bar ── */
+.action-row .spacer {
+  flex: 1;
+}
+
 .test-stats-bar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-4);
   margin-top: var(--space-4);
   padding: var(--space-3) var(--space-4);
-  background: var(--color-surface-elevated);
-  border: 1px solid var(--color-ink-82); /* MD: 浅色边框 */
-  border-radius: 0; /* 数据条保持直角 */
-  font-size: var(--text-small);
   color: var(--color-text-subtle);
-  flex-wrap: wrap;
+  font-size: var(--text-small);
+  background:
+    linear-gradient(90deg, var(--color-primary-faint), transparent),
+    color-mix(in srgb, var(--color-surface-elevated) 88%, transparent);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-sm);
 }
+
 .test-stats-bar .stat-item {
   display: flex;
   align-items: center;
   gap: 6px;
 }
-.test-stats-bar .stat-item .stat-label { color: var(--color-ink-500); }
-.test-stats-bar .stat-item .stat-val { font-weight: var(--weight-semibold); color: var(--color-text-primary); }
-.test-stats-bar .stat-item .stat-val.fast { color: var(--color-accent-green); }
-.test-stats-bar .stat-item .stat-val.medium { color: var(--color-accent-yellow); }
-.test-stats-bar .stat-item .stat-val.slow { color: var(--color-accent-pink); }
 
-/* ── Pool Info Badge ── */
+.test-stats-bar .stat-item .stat-label {
+  color: var(--color-text-muted);
+}
+
+.test-stats-bar .stat-item .stat-val {
+  color: var(--color-text-primary);
+  font-family: var(--font-mono);
+  font-weight: var(--weight-bold);
+}
+
+.test-stats-bar .stat-item .stat-val.fast {
+  color: var(--color-primary-strong);
+}
+
+.test-stats-bar .stat-item .stat-val.medium {
+  color: var(--color-accent-yellow);
+}
+
+.test-stats-bar .stat-item .stat-val.slow {
+  color: var(--color-accent-pink);
+}
+
 .pool-info-badge {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
+  color: var(--color-text-muted);
   font-size: var(--text-small);
-  color: var(--color-text-subtle);
   white-space: nowrap;
 }
-.pool-info-badge .icon { font-size: 18px; color: var(--color-ink-600); }
 
-/* ── Pool Tab Layout (flex chain for table fill) ── */
+.pool-info-badge .icon {
+  color: var(--color-primary-strong);
+  font-size: 18px;
+}
+
 #tab-pool {
   display: flex;
+  flex: 0 0 auto;
   flex-direction: column;
-  flex: 1;
-  min-height: 0;
+  gap: var(--space-4);
+  min-height: auto;
+  overflow: visible;
 }
 
-/* ── Pool Table Container ── */
-.pool-table-container {
+.pool-filter-row {
+  display: grid;
+  flex: 0 0 auto;
+  grid-template-columns: minmax(240px, 1fr) minmax(160px, 220px) auto;
+  align-items: flex-end;
+  gap: var(--space-3);
+  margin-top: 0;
+  min-width: 0;
+}
+
+.pool-filter-row .filter-field {
+  min-width: 0;
+  max-width: none;
+  margin-top: 0;
+}
+
+.filter-field {
+  max-width: 420px;
   margin-top: var(--space-4);
-  flex: 1;
-  min-height: 240px;
+}
+
+.filter-status-select {
+  min-width: 160px;
+}
+
+.filter-status-select .select-trigger {
+  height: 38px;
+}
+
+.config-export-section {
+  justify-self: end;
+  margin: 0;
+}
+
+.config-export-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  color: var(--color-text-muted);
+  font-size: var(--text-caption);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.config-export-header .icon {
+  color: var(--color-primary-strong);
+}
+
+.export-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  padding: 2px 8px;
+  color: var(--color-primary-strong);
+  background: var(--color-primary-faint);
+  border: 1px solid var(--color-primary-border);
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: var(--weight-bold);
+}
+
+.config-export-row {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--space-2);
+}
+
+.pool-table-container {
+  flex: 0 0 auto;
+  min-height: 260px;
+  margin-top: 0 !important;
   display: flex;
   flex-direction: column;
+  border-radius: var(--radius-feature);
 }
+
 .pool-table-container .table-wrapper {
   flex: 1;
   min-height: 0;
   overflow: auto;
 }
 
-/* ── Pool Filter Row ── */
-.pool-filter-row {
-  display: flex;
-  gap: var(--space-3);
-  margin-top: var(--space-4);
-  align-items: flex-end;
-  flex-wrap: wrap;
-}
-.pool-filter-row .filter-field {
-  margin-top: 0;
-  flex: 1;
-  min-width: 180px;
-  max-width: 360px;
-}
-.filter-status-select {
-  min-width: 150px;
-}
-.filter-status-select .select-trigger {
-  height: 36px;
-}
-
-/* ── Filter field (generic) ── */
-.filter-field {
-  margin-top: var(--space-4);
-  max-width: 360px;
-}
-
-/* ── Recent Tests History ── */
 .recent-section {
-  margin-top: var(--space-6);
   display: none;
+  margin-top: var(--space-6);
 }
-.recent-section.visible { display: block; }
+
+.recent-section.visible {
+  display: block;
+}
+
 .recent-header {
   display: flex;
-  align-items: center;
-  margin-bottom: var(--space-3);
   flex-wrap: wrap;
+  align-items: center;
   gap: var(--space-2);
+  margin-bottom: var(--space-3);
 }
+
 .recent-header .recent-label {
   display: flex;
+  flex: 1;
   align-items: center;
   gap: 8px;
-  flex: 1;
-  font-size: var(--text-small);
-  font-weight: var(--weight-semibold);
   color: var(--color-text-muted);
-  letter-spacing: 1px;
+  font-size: var(--text-small);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0;
 }
+
+.recent-header .recent-label .icon {
+  color: var(--color-primary-strong);
+}
+
 .recent-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
   gap: var(--space-3);
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   Responsive Breakpoints
-   ═══════════════════════════════════════════════════════════════ */
-
-/* ── Tablet & Below (≤960px) - 对齐 MD 断点 ── */
-@media (max-width: 960px) {
+@media (max-width: 1120px) {
   .test-params,
-  .pool-controls { padding: var(--space-3); }
+  .pool-controls {
+    padding: var(--space-4);
+  }
+
+  .pool-subscription-row {
+    grid-template-columns: minmax(0, 1fr) minmax(150px, 1fr);
+  }
+
+  .pool-subscription-row .pool-url-field {
+    grid-column: 1 / -1;
+  }
+
+  .pool-subscription-row .btn {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .pool-action-row {
+    grid-template-columns: repeat(4, max-content) minmax(0, 1fr);
+  }
+
+  .pool-action-row .pool-info-badge {
+    grid-column: 1 / -1;
+    justify-self: end;
+  }
+
+  .pool-filter-row {
+    grid-template-columns: minmax(0, 1fr) minmax(150px, 220px);
+  }
+
+  .config-export-section {
+    grid-column: 1 / -1;
+    justify-self: end;
+  }
 }
 
-/* ── Medium / Small Tablet (≤768px) ── */
 @media (max-width: 768px) {
   #page-test .field-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: var(--space-2);
   }
-  /* Full-width fields span both columns */
+
   #page-test .field-row .f-user,
   #page-test .field-row .f-pass,
   #page-test .field-row .f-address,
-  #page-test .field-row > .input-field:only-child { grid-column: 1 / -1; }
+  #page-test .field-row > .input-field:only-child {
+    grid-column: 1 / -1;
+  }
 
-  /* Pool subscription row: URL input spans full, buttons on second row */
-  .pool-controls > .field-row:first-child > .input-field { grid-column: 1 / -1; }
+  .pool-controls > .field-row:first-child > .input-field {
+    grid-column: 1 / -1;
+  }
 
-  /* Remove max-width constraints — let grid handle sizing */
+  #page-test .pool-subscription-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  #page-test .pool-action-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  #page-test .pool-action-row .pool-timeout-field,
+  #page-test .pool-action-row .pool-info-badge {
+    grid-column: 1 / -1;
+  }
+
+  #page-test .pool-action-row .spacer {
+    display: none;
+  }
+
+  #page-test .pool-action-row .btn {
+    width: 100%;
+  }
+
+  #page-test .pool-action-row .pool-timeout-field {
+    width: 100%;
+  }
+
+  #page-test .pool-action-row .pool-info-badge {
+    justify-content: flex-end;
+    justify-self: stretch;
+  }
+
+  #btn-pool-clear {
+    grid-column: 1 / -1;
+  }
+
   #page-test .field-row .f-port,
   #page-test .field-row .f-count,
   #page-test .field-row .f-ms,
-  #page-test .field-row .f-proto { max-width: none; }
+  #page-test .field-row .f-proto {
+    max-width: none;
+  }
 
-  /* Shrink input heights for denser layout */
-  #page-test .field-row .input-wrap { height: 38px; }
+  #page-test .field-row .input-wrap {
+    height: 38px;
+  }
 
-  /* Pool filter row: tighter spacing */
-  .pool-filter-row { gap: var(--space-2); }
+  .pool-filter-row {
+    gap: var(--space-2);
+  }
 
-  /* Stats bar: 2×2 grid */
+  .config-export-section {
+    width: auto;
+  }
+
   .test-stats-bar {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: var(--space-2);
     padding: var(--space-3);
   }
-  .test-stats-bar .stat-item { justify-content: center; }
+
+  .test-stats-bar .stat-item {
+    justify-content: center;
+  }
 }
 
-/* ── Mobile Landscape (≤640px) ── */
 @media (max-width: 640px) {
   .test-params,
-  .pool-controls { padding: var(--space-3); }
+  .pool-controls {
+    padding: var(--space-3);
+  }
 
-  .field-row { gap: var(--space-2); margin-bottom: var(--space-2); }
-  .field-row .input-field { min-width: 0; }
+  .field-row {
+    gap: var(--space-2);
+    margin-bottom: var(--space-2);
+  }
 
-  /* Stack action buttons */
+  .field-row .input-field {
+    min-width: 0;
+  }
+
   .action-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: var(--space-2);
   }
-  .action-row .spacer { display: none; }
-  .action-row .btn { width: 100%; }
 
-  /* Pool action row (first row of pool-controls .action-row) */
-  .pool-controls .action-row .btn { padding: 0 12px; font-size: var(--text-small); }
+  .action-row .spacer {
+    display: none;
+  }
 
-  /* Pool filter row: full stack */
+  .action-row .btn {
+    width: 100%;
+  }
+
   .pool-filter-row {
-    flex-direction: column;
+    grid-template-columns: 1fr;
     align-items: stretch;
   }
-  .pool-filter-row .filter-field { max-width: none; }
-  .filter-status-select { min-width: 0; }
 
-  /* Recent tests: single column */
-  .recent-grid { grid-template-columns: 1fr; }
+  #page-test .pool-subscription-row,
+  #page-test .pool-action-row {
+    grid-template-columns: 1fr;
+  }
 
-  /* Export section adjustments */
-  .config-export-section { width: 100%; }
-  .config-export-row { justify-content: stretch; }
-  .config-export-row .btn { flex: 1; }
+  .pool-filter-row .filter-field {
+    max-width: none;
+  }
 
-  /* Smaller table cells on mobile (scoped to test page) */
-  #page-test .data-table tbody td { padding: 6px 8px; font-size: var(--text-caption); }
-  #page-test .data-table thead th { padding: 8px; font-size: 10px; }
+  .filter-status-select {
+    min-width: 0;
+  }
+
+  .recent-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .config-export-row {
+    justify-content: stretch;
+  }
+
+  .config-export-section {
+    justify-self: stretch;
+    width: 100%;
+  }
+
+  .config-export-row .btn {
+    flex: 1;
+  }
+
+  #page-test .data-table tbody td {
+    padding: 7px 8px;
+    font-size: var(--text-caption);
+  }
+
+  #page-test .data-table thead th {
+    padding: 8px;
+    font-size: 10px;
+  }
 }
 
-/* ── Mobile Portrait (<480px) ── */
 @media (max-width: 480px) {
   #page-test .field-row {
     grid-template-columns: 1fr;
-    gap: var(--space-2);
   }
 
-  .action-row { grid-template-columns: 1fr; }
+  .action-row {
+    grid-template-columns: 1fr;
+  }
 
-  .pool-filter-row .filter-field { min-width: 0; }
+  .pool-subscription-row,
+  .pool-action-row {
+    grid-template-columns: 1fr;
+  }
 
-  /* Stats bar: single column */
+  .pool-action-row .pool-timeout-field {
+    width: 100%;
+  }
+
+  .pool-action-row .pool-info-badge {
+    justify-self: stretch;
+  }
+
   .test-stats-bar {
     grid-template-columns: 1fr;
     text-align: center;
   }
-  .test-stats-bar .stat-item { justify-content: center; }
 
-  /* Pool table container: lower min-height for mobile */
-  .pool-table-container { min-height: 180px; }
+  .pool-table-container {
+    min-height: 190px;
+  }
 
-  .recent-header { flex-direction: column; align-items: flex-start; }
+  .recent-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 
-  /* Ensure pool action buttons don't overflow */
-  .pool-controls .action-row { gap: var(--space-2); }
-
-  /* Compact status chip */
-  .status-chip { padding: 3px 10px; font-size: 11px; }
+  .status-chip {
+    justify-content: center;
+    width: 100%;
+  }
 }
 
-/* ── Extra small / narrow windows (≤360px) ── */
 @media (max-width: 360px) {
-  .pool-controls .action-row {
-    grid-template-columns: 1fr;
-  }
   .config-export-row {
     flex-direction: column;
   }
 
-  /* Minimal table (scoped to test page) */
-  #page-test .data-table tbody td { padding: 4px 6px; font-size: 10px; white-space: normal; }
-  #page-test .data-table thead th { padding: 6px; font-size: 9px; }
+  #page-test .data-table tbody td {
+    padding: 5px 6px;
+    font-size: 10px;
+    white-space: normal;
+  }
+
+  #page-test .data-table thead th {
+    padding: 6px;
+    font-size: 9px;
+  }
 }

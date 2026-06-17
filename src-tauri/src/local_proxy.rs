@@ -10,11 +10,13 @@ use std::str::FromStr;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::collections::HashMap;
+use std::time::Instant;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::time::{timeout, Duration};
 
 use chrono::Local;
+use base64::{Engine as _, engine::general_purpose};
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -29,6 +31,109 @@ const SOCKS5_REP_CONN_REFUSED: u8 = 0x05;
 const SOCKS5_REP_CMD_NOT_SUPPORTED: u8 = 0x07;
 
 const CONNECTION_TIMEOUT_SECS: u64 = 15;
+
+/// Buffer size (64 KB) for the rate-limited relay loop.
+const RELAY_BUF_SIZE: usize = 65536;
+
+// ─── Bandwidth Limiter ───────────────────────────────────────────────────────
+
+/// A token-bucket rate limiter for bandwidth control.
+/// Shared across all connections to enforce a global speed cap.
+/// Uses internal mutability so `consume` only needs `&self`.
+pub(crate) struct BandwidthLimiter {
+    inner: std::sync::Mutex<BandwidthLimiterInner>,
+}
+
+struct BandwidthLimiterInner {
+    /// Rate in bytes per second (0 = unlimited).
+    rate_bytes_per_sec: u64,
+    /// Current token balance (fractional for sub-byte precision over time).
+    bucket: f64,
+    /// Monotonic clock of the last refill.
+    last_refill: Instant,
+}
+
+impl BandwidthLimiter {
+    fn new(rate_kbps: u64) -> Self {
+        let rate_bps = rate_kbps.saturating_mul(1000); // KB/s → bytes/s
+        Self {
+            inner: std::sync::Mutex::new(BandwidthLimiterInner {
+                rate_bytes_per_sec: rate_bps,
+                bucket: rate_bps as f64,
+                last_refill: Instant::now(),
+            }),
+        }
+    }
+
+    /// Update the rate limit at runtime (0 = unlimited).
+    pub(crate) fn set_rate(&self, rate_kbps: u64) {
+        let mut inner = self.inner.lock().unwrap();
+        inner.rate_bytes_per_sec = rate_kbps.saturating_mul(1000);
+        if inner.rate_bytes_per_sec == 0 {
+            inner.bucket = f64::MAX; // effectively unlimited
+        } else if inner.bucket > inner.rate_bytes_per_sec as f64 {
+            inner.bucket = inner.rate_bytes_per_sec as f64;
+        }
+    }
+
+    /// Wait until `bytes` worth of tokens are available, then consume them.
+    /// The lock is released before any async sleep, then re-acquired on retry.
+    async fn consume(&self, bytes: u64) {
+        if bytes == 0 {
+            return;
+        }
+
+        let wait_secs = {
+            let mut inner = self.inner.lock().unwrap();
+            if inner.rate_bytes_per_sec == 0 {
+                return;
+            }
+
+            let now = Instant::now();
+            let elapsed = now.duration_since(inner.last_refill);
+            inner.last_refill = now;
+
+            inner.bucket += inner.rate_bytes_per_sec as f64 * elapsed.as_secs_f64();
+            let cap = inner.rate_bytes_per_sec as f64;
+            if inner.bucket > cap {
+                inner.bucket = cap;
+            }
+
+            inner.bucket -= bytes as f64;
+            if inner.bucket >= 0.0 {
+                0.0
+            } else {
+                -inner.bucket / inner.rate_bytes_per_sec as f64
+            }
+        };
+
+        let mut remaining = wait_secs;
+        while remaining > 0.0 {
+            let step = remaining.min(0.2);
+            tokio::time::sleep(Duration::from_secs_f64(step)).await;
+
+            if self.inner.lock().unwrap().rate_bytes_per_sec == 0 {
+                return;
+            }
+            remaining -= step;
+        }
+    }
+}
+
+/// A pair of per-IP bandwidth limiters (upload + download).
+pub(crate) struct IpRateLimiters {
+    pub upload: Arc<BandwidthLimiter>,
+    pub download: Arc<BandwidthLimiter>,
+}
+
+impl IpRateLimiters {
+    pub(crate) fn new(upload_kbps: u64, download_kbps: u64) -> Self {
+        Self {
+            upload: Arc::new(BandwidthLimiter::new(upload_kbps)),
+            download: Arc::new(BandwidthLimiter::new(download_kbps)),
+        }
+    }
+}
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -61,6 +166,8 @@ pub struct LocalProxyStatus {
     pub upstream_host: String,
     pub upstream_port: u16,
     pub upstream_protocol: String,
+    /// 是否启用客户端认证
+    pub auth_enabled: bool,
 }
 
 /// Get the machine's LAN IP via a dummy UDP "connect" (no data sent).
@@ -78,11 +185,19 @@ fn get_lan_ip() -> String {
     "127.0.0.1".to_string()
 }
 
-/// Per-IP cumulative traffic stats.
+/// Per-IP cumulative traffic stats with rate-tracking fields.
 #[derive(Debug, Clone, Default, serde::Serialize)]
 pub struct ClientStats {
     pub upload_bytes: u64,
     pub download_bytes: u64,
+    /// Snapshot from the previous `get_active_clients` call (for delta-based rate).
+    #[serde(skip)]
+    pub prev_upload_bytes: u64,
+    #[serde(skip)]
+    pub prev_download_bytes: u64,
+    /// Monotonic timestamp of the previous rate sample.
+    #[serde(skip)]
+    pub last_sample: Option<Instant>,
 }
 
 /// Active client entry exposed to the frontend.
@@ -91,6 +206,8 @@ pub struct ActiveClientEntry {
     pub client_ip: String,
     pub upload_bytes: u64,
     pub download_bytes: u64,
+    pub upload_speed_kbps: u64,
+    pub download_speed_kbps: u64,
 }
 
 // ─── Server ─────────────────────────────────────────────────────────────────
@@ -112,6 +229,14 @@ pub struct LocalProxyServer {
     pub active_ips: Arc<std::sync::Mutex<HashMap<String, usize>>>,
     /// Per-IP cumulative traffic stats.
     pub client_stats: Arc<std::sync::Mutex<HashMap<String, ClientStats>>>,
+    /// Per-IP bandwidth limiters (empty = no rate limiting).
+    pub(crate) ip_limiters: Arc<tokio::sync::Mutex<HashMap<String, IpRateLimiters>>>,
+    /// 是否启用客户端认证
+    pub auth_enabled: bool,
+    /// 本地认证用户名
+    pub local_username: Option<String>,
+    /// 本地认证密码
+    pub local_password: Option<String>,
 }
 
 impl LocalProxyServer {
@@ -123,6 +248,9 @@ impl LocalProxyServer {
         upstream_protocol: UpstreamProtocol,
         username: Option<String>,
         password: Option<String>,
+        auth_enabled: bool,
+        local_username: Option<String>,
+        local_password: Option<String>,
     ) -> Self {
         let bind_addr = if shared { "0.0.0.0" } else { "127.0.0.1" };
         Self {
@@ -140,19 +268,58 @@ impl LocalProxyServer {
             log_dir: None,
             active_ips: Arc::new(std::sync::Mutex::new(HashMap::new())),
             client_stats: Arc::new(std::sync::Mutex::new(HashMap::new())),
+            ip_limiters: Arc::new(tokio::sync::Mutex::new(HashMap::new())),
+            auth_enabled,
+            local_username,
+            local_password,
         }
+    }
+
+    /// 动态更新本地代理的客户端认证配置（运行时生效）
+    pub fn set_auth(&mut self, enabled: bool, username: Option<String>, password: Option<String>) {
+        self.auth_enabled = enabled;
+        self.local_username = username;
+        self.local_password = password;
     }
 
     /// Return a snapshot of active client IPs with their cumulative traffic stats.
     pub fn get_active_clients(&self) -> Vec<ActiveClientEntry> {
         let ips = self.active_ips.lock().unwrap();
-        let stats = self.client_stats.lock().unwrap();
+        let mut stats = self.client_stats.lock().unwrap();
+        let now = Instant::now();
         ips.iter().map(|(ip, _)| {
-            let s = stats.get(ip).cloned().unwrap_or_default();
+            let s = stats.entry(ip.clone()).or_default();
+
+            // Compute rate from delta since previous sample
+            let (up_speed, down_speed) = match s.last_sample {
+                Some(prev_time) => {
+                    let dt = now.duration_since(prev_time).as_secs_f64();
+                    if dt > 0.0 {
+                        let up_delta = s.upload_bytes.saturating_sub(s.prev_upload_bytes);
+                        let down_delta = s.download_bytes.saturating_sub(s.prev_download_bytes);
+                        // bytes/sec → KB/s
+                        (
+                            (up_delta as f64 / dt / 1000.0) as u64,
+                            (down_delta as f64 / dt / 1000.0) as u64,
+                        )
+                    } else {
+                        (0, 0)
+                    }
+                }
+                None => (0, 0),
+            };
+
+            // Save snapshot for next call
+            s.prev_upload_bytes = s.upload_bytes;
+            s.prev_download_bytes = s.download_bytes;
+            s.last_sample = Some(now);
+
             ActiveClientEntry {
                 client_ip: ip.clone(),
                 upload_bytes: s.upload_bytes,
                 download_bytes: s.download_bytes,
+                upload_speed_kbps: up_speed,
+                download_speed_kbps: down_speed,
             }
         }).collect()
     }
@@ -165,6 +332,32 @@ impl LocalProxyServer {
     /// Set the HostConnectionLog root directory for connection logging.
     pub fn set_log_dir(&mut self, dir: PathBuf) {
         self.log_dir = Some(dir);
+    }
+
+    /// Bulk-load per-IP rate limits from config entries.
+    pub async fn load_ip_rate_limits(&self, entries: &[crate::config::IpRateLimitEntry]) {
+        let mut map = self.ip_limiters.lock().await;
+        map.clear();
+        for entry in entries {
+            if entry.upload_limit_kbps == 0 && entry.download_limit_kbps == 0 {
+                continue;
+            }
+            let ip = entry
+                .ip
+                .parse::<std::net::IpAddr>()
+                .map(|ip| ip.to_string())
+                .unwrap_or_else(|_| entry.ip.clone());
+            map.insert(
+                ip,
+                IpRateLimiters::new(entry.upload_limit_kbps, entry.download_limit_kbps),
+            );
+        }
+    }
+
+    /// Clear all rate limits (used when rate limiting is disabled).
+    pub async fn clear_rate_limits(&self) {
+        let mut map = self.ip_limiters.lock().await;
+        map.clear();
     }
 
     /// Start listening on a local port and spawn the accept loop.
@@ -191,12 +384,16 @@ impl LocalProxyServer {
         let upstream_protocol = self.upstream_protocol;
         let username = self.username.clone();
         let password = self.password.clone();
+        let auth_enabled = self.auth_enabled;
+        let local_username = self.local_username.clone();
+        let local_password = self.local_password.clone();
         let active_connections = self.active_connections.clone();
         let total_connections = self.total_connections.clone();
         let blocked_ips = self.blocked_ips.clone();
         let log_dir = self.log_dir.clone();
         let active_ips = self.active_ips.clone();
         let client_stats = self.client_stats.clone();
+        let ip_limiters = self.ip_limiters.clone();
 
         tokio::spawn(async move {
             loop {
@@ -223,10 +420,14 @@ impl LocalProxyServer {
                         let log = log_dir.clone();
                         let ips = active_ips.clone();
                         let stats = client_stats.clone();
+                        let ip_lim = ip_limiters.clone();
+                        let au_enabled = auth_enabled;
+                        let loc_uname = local_username.clone();
+                        let loc_pwd = local_password.clone();
 
                         tokio::spawn(async move {
                             if let Err(e) =
-                                handle_client(stream, &up_host, up_port, up_proto, uname, pwd, &blocked, log, ips, stats).await
+                                handle_client(stream, &up_host, up_port, up_proto, uname, pwd, &blocked, log, ips, stats, ip_lim, au_enabled, loc_uname, loc_pwd).await
                             {
                                 eprintln!("[local-proxy] client {addr} error: {e}");
                             }
@@ -270,6 +471,7 @@ impl LocalProxyServer {
             upstream_host: self.upstream_host.clone(),
             upstream_port: self.upstream_port,
             upstream_protocol: format!("{:?}", self.upstream_protocol),
+            auth_enabled: self.auth_enabled,
         }
     }
 }
@@ -352,20 +554,16 @@ impl ConnLog {
     }
 }
 
-// Helper: register a client IP on creation, unregister + update stats on drop.
+// Helper: register a client IP on creation, unregister on drop.
 struct ClientConnectionTracker {
     ip: String,
     active_ips: Arc<std::sync::Mutex<HashMap<String, usize>>>,
-    client_stats: Arc<std::sync::Mutex<HashMap<String, ClientStats>>>,
-    upload: u64,
-    download: u64,
 }
 
 impl ClientConnectionTracker {
     fn new(
         ip: &str,
         active_ips: Arc<std::sync::Mutex<HashMap<String, usize>>>,
-        client_stats: Arc<std::sync::Mutex<HashMap<String, ClientStats>>>,
     ) -> Self {
         {
             let mut map = active_ips.lock().unwrap();
@@ -374,37 +572,21 @@ impl ClientConnectionTracker {
         Self {
             ip: ip.to_string(),
             active_ips,
-            client_stats,
-            upload: 0,
-            download: 0,
         }
-    }
-
-    fn add_traffic(&mut self, upload: u64, download: u64) {
-        self.upload += upload;
-        self.download += download;
     }
 }
 
 impl Drop for ClientConnectionTracker {
     fn drop(&mut self) {
         // Decrement active count for this IP.
-        {
-            let mut map = self.active_ips.lock().unwrap();
-            if let Some(count) = map.get_mut(&self.ip) {
-                *count -= 1;
-                if *count == 0 {
-                    map.remove(&self.ip);
-                }
+        let mut map = self.active_ips.lock().unwrap();
+        if let Some(count) = map.get_mut(&self.ip) {
+            *count -= 1;
+            if *count == 0 {
+                map.remove(&self.ip);
             }
         }
-        // Add traffic to cumulative stats.
-        if self.upload > 0 || self.download > 0 {
-            let mut map = self.client_stats.lock().unwrap();
-            let entry = map.entry(self.ip.clone()).or_default();
-            entry.upload_bytes += self.upload;
-            entry.download_bytes += self.download;
-        }
+        // Traffic stats are updated in the relay path.
     }
 }
 
@@ -419,6 +601,10 @@ async fn handle_client(
     log_dir: Option<PathBuf>,
     active_ips: Arc<std::sync::Mutex<HashMap<String, usize>>>,
     client_stats: Arc<std::sync::Mutex<HashMap<String, ClientStats>>>,
+    ip_limiters: Arc<tokio::sync::Mutex<HashMap<String, IpRateLimiters>>>,
+    auth_enabled: bool,
+    local_username: Option<String>,
+    local_password: Option<String>,
 ) -> Result<(), String> {
     // ══ Phase 0: Get client info ══════════════════════════════════════════
     let client_addr = client
@@ -427,11 +613,12 @@ async fn handle_client(
     let client_ip = client_addr.ip();
     let src_port = client_addr.port();
 
+    let client_ip_str = client_ip.to_string();
+
     // Track this client connection (auto-cleans on function exit via Drop).
-    let mut tracker = ClientConnectionTracker::new(
+    let _tracker = ClientConnectionTracker::new(
         &client_ip.to_string(),
         active_ips,
-        client_stats,
     );
 
     // ══ Phase 0.5: Block banned client IPs (source IP blocking) ═══════════
@@ -457,8 +644,8 @@ async fn handle_client(
     let client_is_socks5 = peek_buf[0] == SOCKS5_VERSION;
 
     if client_is_socks5 {
-        // ── SOCKS5 path (existing tunnel logic) ──────────────────────────
-        let (target_addr, target_port) = socks5_handshake(&mut client).await?;
+        // ── SOCKS5 path ─────────────────────────────────────────────────
+        let (target_addr, target_port) = socks5_handshake(&mut client, auth_enabled, &local_username, &local_password).await?;
 
         let log = ConnLog::new(log_dir, &client_ip.to_string(), &target_addr, src_port, target_port);
 
@@ -474,12 +661,13 @@ async fn handle_client(
         let result = connect_tunnel_relay(
             &mut client, upstream_host, upstream_port, upstream_protocol,
             &target_addr, target_port, &username, &password, true,
+            &ip_limiters,
+            &client_ip_str, &*client_stats,
         )
         .await;
 
         match &result {
             Ok((up, down)) => {
-                tracker.add_traffic(*up, *down);
                 log.write(*up, *down, crate::db::STATUS_OK).await;
             }
             Err(msg) => {
@@ -497,8 +685,26 @@ async fn handle_client(
         // ── HTTP path (CONNECT tunnel or regular HTTP proxy) ──────────────
         let http_req = parse_http_request(&mut client).await?;
 
+        // 客户端认证检查（HTTP Basic Auth）
+        if auth_enabled {
+            let (raw_bytes, _host, _port) = match &http_req {
+                ClientHttpRequest::Connect { raw_request, host, port } => (raw_request, host, *port),
+                ClientHttpRequest::Regular { raw_request, host, port } => (raw_request, host, *port),
+            };
+            if !check_http_auth(raw_bytes, &local_username, &local_password) {
+                let _ = client
+                    .write_all(
+                        b"HTTP/1.1 407 Proxy Authentication Required\r\n\
+                          Proxy-Authenticate: Basic realm=\"Local Proxy\"\r\n\
+                          Content-Length: 0\r\nConnection: close\r\n\r\n"
+                    )
+                    .await;
+                return Err("HTTP 407: proxy authentication required".to_string());
+            }
+        }
+
         match http_req {
-            ClientHttpRequest::Connect { host: target_addr, port: target_port } => {
+            ClientHttpRequest::Connect { raw_request: _, host: target_addr, port: target_port } => {
                 // HTTP CONNECT tunnel — same logic as SOCKS5 tunnel
                 let log = ConnLog::new(log_dir, &client_ip.to_string(), &target_addr, src_port, target_port);
 
@@ -512,14 +718,15 @@ async fn handle_client(
                 let result = connect_tunnel_relay(
                     &mut client, upstream_host, upstream_port, upstream_protocol,
                     &target_addr, target_port, &username, &password, false,
+                    &ip_limiters,
+                    &client_ip_str, &*client_stats,
                 )
                 .await;
 
                 match &result {
                     Ok((up, down)) => {
-                tracker.add_traffic(*up, *down);
-                log.write(*up, *down, crate::db::STATUS_OK).await;
-            }
+                        log.write(*up, *down, crate::db::STATUS_OK).await;
+                    }
                     Err(msg) => {
                         let code = if msg.contains("timeout") {
                             crate::db::STATUS_UPSTREAM_TIMEOUT
@@ -548,14 +755,15 @@ async fn handle_client(
                     &target_addr, target_port,
                     upstream_host, upstream_port, upstream_protocol,
                     &username, &password,
+                    &ip_limiters,
+                    &client_ip_str, &*client_stats,
                 )
                 .await;
 
                 match &result {
                     Ok((up, down)) => {
-                tracker.add_traffic(*up, *down);
-                log.write(*up, *down, crate::db::STATUS_OK).await;
-            }
+                        log.write(*up, *down, crate::db::STATUS_OK).await;
+                    }
                     Err(msg) => {
                         let code = if msg.contains("timeout") {
                             crate::db::STATUS_UPSTREAM_TIMEOUT
@@ -584,6 +792,9 @@ async fn connect_tunnel_relay(
     username: &Option<String>,
     password: &Option<String>,
     client_is_socks5: bool,
+    ip_limiters: &Arc<tokio::sync::Mutex<HashMap<String, IpRateLimiters>>>,
+    client_ip: &str,
+    client_stats: &std::sync::Mutex<HashMap<String, ClientStats>>,
 ) -> Result<(u64, u64), String> {
     let up_addr = format_upstream_addr(upstream_host, upstream_port);
 
@@ -613,7 +824,8 @@ async fn connect_tunnel_relay(
     }
 
     // Relay data bidirectionally and return byte counts
-    let (to_upstream, from_upstream) = relay_data(client, &mut upstream).await?;
+    let (to_upstream, from_upstream) =
+        rate_limited_relay(client, &mut upstream, ip_limiters, client_ip, client_stats).await?;
     Ok((to_upstream, from_upstream))
 }
 
@@ -630,7 +842,13 @@ fn format_upstream_addr(host: &str, port: u16) -> String {
 /// Read SOCKS5 greeting + connect request from the client and return the
 /// target (host, port).  Does NOT yet send the success response — that must
 /// happen after the upstream tunnel is established.
-async fn socks5_handshake(client: &mut TcpStream) -> Result<(String, u16), String> {
+/// When auth_enabled, performs username/password authentication.
+async fn socks5_handshake(
+    client: &mut TcpStream,
+    auth_enabled: bool,
+    local_username: &Option<String>,
+    local_password: &Option<String>,
+) -> Result<(String, u16), String> {
     // ── Greeting ──────────────────────────────────────────────────────
     let mut ver_nmethods = [0u8; 2];
     client
@@ -654,13 +872,69 @@ async fn socks5_handshake(client: &mut TcpStream) -> Result<(String, u16), Strin
             .map_err(|_| "failed to read SOCKS5 methods".to_string())?;
     }
 
-    // Respond: we accept NO AUTH (0x00). If the client *only* offered
-    // username/password (0x02), we could respond with that, but for
-    // the local proxy we keep it simple.
-    client
-        .write_all(&[SOCKS5_VERSION, 0x00])
-        .await
-        .map_err(|e| format!("failed to send SOCKS5 greeting response: {e}"))?;
+    if auth_enabled {
+        // 要求用户名密码认证
+        client
+            .write_all(&[SOCKS5_VERSION, 0x02])
+            .await
+            .map_err(|e| format!("failed to send SOCKS5 auth request: {e}"))?;
+
+        // ── Username/Password sub-negotiation ─────────────────────────
+        let mut auth_hdr = [0u8; 2];
+        client
+            .read_exact(&mut auth_hdr)
+            .await
+            .map_err(|_| "failed to read SOCKS5 auth header".to_string())?;
+
+        if auth_hdr[0] != 0x01 {
+            // 不支持的认证版本
+            let _ = client.write_all(&[0x01, 0x01]).await;
+            return Err("unsupported SOCKS5 auth sub-negotiation version".to_string());
+        }
+
+        let ulen = auth_hdr[1] as usize;
+        let mut uname_bytes = vec![0u8; ulen];
+        client
+            .read_exact(&mut uname_bytes)
+            .await
+            .map_err(|_| "failed to read SOCKS5 auth username".to_string())?;
+
+        let mut plen_buf = [0u8; 1];
+        client
+            .read_exact(&mut plen_buf)
+            .await
+            .map_err(|_| "failed to read SOCKS5 auth password length".to_string())?;
+        let plen = plen_buf[0] as usize;
+        let mut pass_bytes = vec![0u8; plen];
+        client
+            .read_exact(&mut pass_bytes)
+            .await
+            .map_err(|_| "failed to read SOCKS5 auth password".to_string())?;
+
+        let client_user = String::from_utf8_lossy(&uname_bytes);
+        let client_pass = String::from_utf8_lossy(&pass_bytes);
+
+        let expected_user = local_username.as_deref().unwrap_or("");
+        let expected_pass = local_password.as_deref().unwrap_or("");
+
+        if client_user == expected_user && client_pass == expected_pass {
+            // 认证成功
+            client
+                .write_all(&[0x01, 0x00])
+                .await
+                .map_err(|e| format!("failed to send SOCKS5 auth success: {e}"))?;
+        } else {
+            // 认证失败
+            let _ = client.write_all(&[0x01, 0x01]).await;
+            return Err("SOCKS5 authentication failed: invalid credentials".to_string());
+        }
+    } else {
+        // 免认证
+        client
+            .write_all(&[SOCKS5_VERSION, 0x00])
+            .await
+            .map_err(|e| format!("failed to send SOCKS5 greeting response: {e}"))?;
+    }
 
     // ── Connect request ──────────────────────────────────────────────
     let mut header = [0u8; 4];
@@ -756,7 +1030,7 @@ async fn socks5_send_success(client: &mut TcpStream) -> Result<(), String> {
 /// Represents a parsed HTTP request from the client.
 enum ClientHttpRequest {
     /// HTTP CONNECT tunnel request (for HTTPS).
-    Connect { host: String, port: u16 },
+    Connect { raw_request: Vec<u8>, host: String, port: u16 },
     /// Regular HTTP proxy request (GET, POST, etc.) — contains the raw request
     /// bytes plus the extracted target host/port for logging and filtering.
     Regular {
@@ -821,16 +1095,21 @@ async fn parse_http_request(client: &mut TcpStream) -> Result<ClientHttpRequest,
     };
 
     let raw_request = buf[..total_with_body].to_vec();
-    let request_str = String::from_utf8_lossy(&raw_request);
-    let first_line = request_str.lines().next().ok_or("empty HTTP request")?;
+
+    // Parse first line from raw bytes without borrowing raw_request
+    let first_line_end = raw_request.iter().position(|&b| b == b'\r')
+        .unwrap_or(raw_request.len());
+    let first_line_bytes = &raw_request[..first_line_end];
+    let first_line_str = String::from_utf8_lossy(first_line_bytes);
+    let first_line = first_line_str;
     let parts: Vec<&str> = first_line.split_whitespace().collect();
 
     if parts.len() < 2 {
         return Err(format!("malformed HTTP request line: {first_line}"));
     }
 
-    let method = parts[0];
-    let uri = parts[1];
+    let method = parts[0].to_string();
+    let uri = parts[1].to_string();
 
     if method == "CONNECT" {
         // CONNECT host:port  —  HTTPS tunnel
@@ -840,6 +1119,7 @@ async fn parse_http_request(client: &mut TcpStream) -> Result<ClientHttpRequest,
                 .parse()
                 .map_err(|_| format!("invalid port in CONNECT: {uri}"))?;
             Ok(ClientHttpRequest::Connect {
+                raw_request,
                 host: host.to_string(),
                 port,
             })
@@ -848,7 +1128,7 @@ async fn parse_http_request(client: &mut TcpStream) -> Result<ClientHttpRequest,
         }
     } else {
         // Regular HTTP proxy request — extract target host from the absolute URL.
-        let (host, port) = parse_proxy_url(uri).map_err(|e| {
+        let (host, port) = parse_proxy_url(&uri).map_err(|e| {
             format!("failed to parse proxy URL in {method} request: {e}")
         })?;
         Ok(ClientHttpRequest::Regular {
@@ -949,6 +1229,9 @@ async fn forward_http_request(
     upstream_protocol: UpstreamProtocol,
     username: &Option<String>,
     password: &Option<String>,
+    ip_limiters: &Arc<tokio::sync::Mutex<HashMap<String, IpRateLimiters>>>,
+    client_ip: &str,
+    client_stats: &std::sync::Mutex<HashMap<String, ClientStats>>,
 ) -> Result<(u64, u64), String> {
     let up_addr = format_upstream_addr(upstream_host, upstream_port);
 
@@ -960,33 +1243,46 @@ async fn forward_http_request(
     .map_err(|_| "upstream connection timeout".to_string())?
     .map_err(|e| format!("upstream connection failed: {e}"))?;
 
-    match upstream_protocol {
+    let initial_upload = match upstream_protocol {
         UpstreamProtocol::Socks5 => {
             // Create a SOCKS5 tunnel to the *target* server (not the upstream proxy),
             // then send a path-only HTTP request through the tunnel.
             tunnel_via_socks5(&mut upstream, target_host, target_port, username, password).await?;
             let modified = strip_proxy_url_to_path(raw_request);
-            upstream
-                .write_all(&modified)
-                .await
-                .map_err(|e| format!("write to upstream failed: {e}"))?;
+            write_limited(
+                &mut upstream,
+                &modified,
+                ip_limiters,
+                client_ip,
+                client_stats,
+                TrafficDirection::Upload,
+                "upstream",
+            )
+            .await?
         }
         UpstreamProtocol::Http => {
             // Send the raw request as-is — HTTP upstream proxies understand
             // the absolute-URL format.
-            upstream
-                .write_all(raw_request)
-                .await
-                .map_err(|e| format!("write to upstream failed: {e}"))?;
+            write_limited(
+                &mut upstream,
+                raw_request,
+                ip_limiters,
+                client_ip,
+                client_stats,
+                TrafficDirection::Upload,
+                "upstream",
+            )
+            .await?
         }
-    }
+    };
 
-    // Relay response data bidirectionally (supports HTTP/1.1 keep-alive).
-    let (to_upstream, from_upstream) = tokio::io::copy_bidirectional(client, &mut upstream)
+    // Relay response data bidirectionally with rate limiting.
+    let (to_upstream, from_upstream) =
+        rate_limited_relay(client, &mut upstream, ip_limiters, client_ip, client_stats)
         .await
         .map_err(|e| format!("relay error: {e}"))?;
 
-    Ok((to_upstream, from_upstream))
+    Ok((initial_upload + to_upstream, from_upstream))
 }
 
 /// Send an HTTP 200 Connection established response.
@@ -1179,8 +1475,6 @@ async fn tunnel_via_http(
     username: &Option<String>,
     password: &Option<String>,
 ) -> Result<(), String> {
-    use base64::{Engine as _, engine::general_purpose};
-
     let auth_header = match (username.as_deref(), password.as_deref()) {
         (Some(u), Some(p)) if !u.is_empty() => {
             let auth = general_purpose::STANDARD.encode(format!("{u}:{p}"));
@@ -1340,6 +1634,38 @@ fn cidr_matches(ip: IpAddr, base: IpAddr, prefix_len: u8) -> bool {
     }
 }
 
+/// Check HTTP Basic auth header against stored credentials.
+fn check_http_auth(
+    raw_request: &[u8],
+    expected_user: &Option<String>,
+    expected_pass: &Option<String>,
+) -> bool {
+    let request_str = String::from_utf8_lossy(raw_request);
+    for line in request_str.lines() {
+        if line.to_lowercase().starts_with("proxy-authorization:") {
+            if let Some(value) = line.splitn(2, ':').nth(1) {
+                let value = value.trim();
+                if let Some(b64) = value.strip_prefix("Basic ") {
+                    if let Ok(decoded) = general_purpose::STANDARD.decode(b64.trim()) {
+                        if let Ok(cred) = String::from_utf8(decoded) {
+                            let expected = format!(
+                                "{}:{}",
+                                expected_user.as_deref().unwrap_or(""),
+                                expected_pass.as_deref().unwrap_or("")
+                            );
+                            return cred == expected;
+                        }
+                    }
+                }
+            }
+            // Header found but validation failed
+            return false;
+        }
+    }
+    // No auth header at all
+    false
+}
+
 /// Send a SOCKS5 failure response with the given error code.
 async fn socks5_send_failure(client: &mut TcpStream, rep: u8) -> Result<(), String> {
     let response = [
@@ -1367,13 +1693,142 @@ async fn http_send_403(client: &mut TcpStream) -> Result<(), String> {
 
 // ─── Bidirectional Relay ───────────────────────────────────────────────────
 
-/// Relay data in both directions until one side closes.
+/// Relay data in both directions with optional per-IP throttling.
 /// Returns (bytes_to_upstream, bytes_from_upstream) — i.e. (upload, download).
-async fn relay_data(
+async fn rate_limited_relay(
     client: &mut TcpStream,
     upstream: &mut TcpStream,
+    ip_limiters: &Arc<tokio::sync::Mutex<HashMap<String, IpRateLimiters>>>,
+    client_ip: &str,
+    client_stats: &std::sync::Mutex<HashMap<String, ClientStats>>,
 ) -> Result<(u64, u64), String> {
-    tokio::io::copy_bidirectional(client, upstream)
-        .await
-        .map_err(|e| format!("relay error: {e}"))
+    let (mut client_read, mut client_write) = client.split();
+    let (mut upstream_read, mut upstream_write) = upstream.split();
+
+    let upload = relay_one_way(
+        &mut client_read,
+        &mut upstream_write,
+        ip_limiters,
+        client_ip,
+        client_stats,
+        TrafficDirection::Upload,
+        "client",
+        "upstream",
+    );
+    let download = relay_one_way(
+        &mut upstream_read,
+        &mut client_write,
+        ip_limiters,
+        client_ip,
+        client_stats,
+        TrafficDirection::Download,
+        "upstream",
+        "client",
+    );
+
+    tokio::try_join!(upload, download)
+}
+
+#[derive(Clone, Copy)]
+enum TrafficDirection {
+    Upload,
+    Download,
+}
+
+async fn relay_one_way<R, W>(
+    reader: &mut R,
+    writer: &mut W,
+    ip_limiters: &Arc<tokio::sync::Mutex<HashMap<String, IpRateLimiters>>>,
+    client_ip: &str,
+    client_stats: &std::sync::Mutex<HashMap<String, ClientStats>>,
+    direction: TrafficDirection,
+    read_label: &str,
+    write_label: &str,
+) -> Result<u64, String>
+where
+    R: tokio::io::AsyncRead + Unpin,
+    W: tokio::io::AsyncWrite + Unpin,
+{
+    let mut total = 0u64;
+    let mut buf = vec![0u8; RELAY_BUF_SIZE];
+
+    loop {
+        let n = reader
+            .read(&mut buf)
+            .await
+            .map_err(|e| format!("read from {read_label}: {e}"))?;
+        if n == 0 {
+            let _ = writer.shutdown().await;
+            return Ok(total);
+        }
+
+        write_limited(
+            writer,
+            &buf[..n],
+            ip_limiters,
+            client_ip,
+            client_stats,
+            direction,
+            write_label,
+        )
+        .await?;
+        total += n as u64;
+    }
+}
+
+async fn write_limited<W>(
+    writer: &mut W,
+    data: &[u8],
+    ip_limiters: &Arc<tokio::sync::Mutex<HashMap<String, IpRateLimiters>>>,
+    client_ip: &str,
+    client_stats: &std::sync::Mutex<HashMap<String, ClientStats>>,
+    direction: TrafficDirection,
+    write_label: &str,
+) -> Result<u64, String>
+where
+    W: tokio::io::AsyncWrite + Unpin,
+{
+    let mut total = 0u64;
+
+    for chunk in data.chunks(RELAY_BUF_SIZE) {
+        if let Some(limiter) = current_limiter(ip_limiters, client_ip, direction).await {
+            limiter.consume(chunk.len() as u64).await;
+        }
+
+        writer
+            .write_all(chunk)
+            .await
+            .map_err(|e| format!("write to {write_label}: {e}"))?;
+        total += chunk.len() as u64;
+        add_client_traffic(client_stats, client_ip, direction, chunk.len() as u64);
+    }
+
+    Ok(total)
+}
+
+async fn current_limiter(
+    ip_limiters: &Arc<tokio::sync::Mutex<HashMap<String, IpRateLimiters>>>,
+    client_ip: &str,
+    direction: TrafficDirection,
+) -> Option<Arc<BandwidthLimiter>> {
+    let map = ip_limiters.lock().await;
+    map.get(client_ip).map(|limiters| match direction {
+        TrafficDirection::Upload => limiters.upload.clone(),
+        TrafficDirection::Download => limiters.download.clone(),
+    })
+}
+
+fn add_client_traffic(
+    client_stats: &std::sync::Mutex<HashMap<String, ClientStats>>,
+    client_ip: &str,
+    direction: TrafficDirection,
+    bytes: u64,
+) {
+    if let Ok(mut stats) = client_stats.lock() {
+        let s = stats.entry(client_ip.to_string()).or_default();
+        match direction {
+            TrafficDirection::Upload => s.upload_bytes += bytes,
+            TrafficDirection::Download => s.download_bytes += bytes,
+        }
+    }
 }

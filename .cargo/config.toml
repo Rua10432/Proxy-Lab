@@ -5,4 +5,4 @@ rustflags = ["-C", "link-arg=-L", "-C", "link-arg=C:\\Windows\\System32"]
 [build]
 rustc-wrapper = "sccache"
 incremental = true
-jobs=6
+jobs=3

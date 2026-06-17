@@ -189,6 +189,7 @@ pub fn get_local_proxy_status(state: tauri::State<'_, AppState>) -> LocalProxySt
             upstream_host: String::new(),
             upstream_port: 0,
             upstream_protocol: String::new(),
+            auth_enabled: false,
         },
     }
 }
@@ -249,15 +250,78 @@ pub fn set_local_proxy_listen_port(
     if port > 0 && port < 1024 {
         return Err("Ports below 1024 require administrator privileges".to_string());
     }
-    if port > 65535 {
-        return Err("Port must be between 0 and 65535".to_string());
-    }
     let mut cfg = state.config.lock().unwrap();
     cfg.app_only.listen_port = port;
     crate::config::save_config(&app, &cfg)
 }
 
+// ─── Local Proxy Auth ────────────────────────────────────────────────────
+
+#[tauri::command]
+pub fn set_local_proxy_auth(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, AppState>,
+    enabled: bool,
+    username: Option<String>,
+    password: Option<String>,
+) -> Result<(), String> {
+    // 保存到配置
+    {
+        let mut cfg = state.config.lock().unwrap();
+        cfg.app_only.local_auth_enabled = enabled;
+        cfg.app_only.local_username = username.clone();
+        cfg.app_only.local_password = password.clone();
+        crate::config::save_config(&app, &cfg)?;
+    }
+
+    // 如果本地代理正在运行，动态更新认证配置（无需重启）
+    if let Some(srv) = state.local_proxy.lock().unwrap().as_mut() {
+        srv.set_auth(enabled, username, password);
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn get_local_proxy_auth(state: tauri::State<'_, AppState>) -> serde_json::Value {
+    let cfg = state.config.lock().unwrap();
+    serde_json::json!({
+        "enabled": cfg.app_only.local_auth_enabled,
+        "username": cfg.app_only.local_username,
+        "password": cfg.app_only.local_password,
+    })
+}
+
 // ─── Blocked IP Management ────────────────────────────────────────────────
+
+#[tauri::command]
+pub fn get_blocked_ips_enabled(state: tauri::State<'_, AppState>) -> bool {
+    state.config.lock().unwrap().app_only.blocked_ips_enabled
+}
+
+#[tauri::command]
+pub fn set_blocked_ips_enabled(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, AppState>,
+    enabled: bool,
+) -> Result<(), String> {
+    let ips = {
+        let mut cfg = state.config.lock().unwrap();
+        cfg.app_only.blocked_ips_enabled = enabled;
+        let ips = cfg.app_only.blocked_ips.clone();
+        crate::config::save_config(&app, &cfg)?;
+        ips
+    };
+
+    // Apply dynamically to running server
+    if let Some(srv) = state.local_proxy.lock().unwrap().as_mut() {
+        if enabled {
+            srv.set_blocked_ips(ips);
+        } else {
+            srv.set_blocked_ips(Vec::new());
+        }
+    }
+    Ok(())
+}
 
 #[tauri::command]
 pub fn get_blocked_ips(state: tauri::State<'_, AppState>) -> Vec<String> {
@@ -298,7 +362,7 @@ pub fn add_blocked_ip(
     cfg.app_only.blocked_ips.push(ip.clone());
 
     // Update running local proxy if active
-    if let Some(server) = state.local_proxy.lock().unwrap().as_ref() {
+    if let Some(_server) = state.local_proxy.lock().unwrap().as_ref() {
         // We can't modify blocked_ips on a running server without restarting,
         // so we update the config and it will take effect on next restart.
         // For now, just save.
@@ -334,4 +398,170 @@ pub fn clear_blocked_ips(
     let mut cfg = state.config.lock().unwrap();
     cfg.app_only.blocked_ips.clear();
     crate::config::save_config(&app, &cfg)
+}
+
+// ─── IP Rate Limit (AppOnly) ──────────────────────────────────────────────
+
+#[tauri::command]
+pub fn get_rate_limit_enabled(state: tauri::State<'_, AppState>) -> bool {
+    state.config.lock().unwrap().app_only.rate_limit_enabled
+}
+
+#[tauri::command]
+pub async fn set_rate_limit_enabled(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, AppState>,
+    enabled: bool,
+) -> Result<(), String> {
+    let entries = {
+        let mut cfg = state.config.lock().unwrap();
+        cfg.app_only.rate_limit_enabled = enabled;
+        let entries = cfg.app_only.ip_rate_limits.clone();
+        crate::config::save_config(&app, &cfg)?;
+        entries
+    };
+
+    // Apply dynamically to running server (clone Arc to avoid holding std MutexGuard across await)
+    let ip_limiters = state.local_proxy.lock().unwrap().as_ref()
+        .map(|s| s.ip_limiters.clone());
+    if let Some(limiters) = ip_limiters {
+        let mut map = limiters.lock().await;
+        map.clear();
+        if enabled {
+            for entry in &entries {
+                if entry.upload_limit_kbps == 0 && entry.download_limit_kbps == 0 {
+                    continue;
+                }
+                let ip = entry.ip.parse::<std::net::IpAddr>()
+                    .map(|ip| ip.to_string())
+                    .unwrap_or_else(|_| entry.ip.clone());
+                map.insert(ip, crate::local_proxy::IpRateLimiters::new(
+                    entry.upload_limit_kbps, entry.download_limit_kbps,
+                ));
+            }
+        }
+    }
+    Ok(())
+}
+
+#[derive(serde::Serialize)]
+pub struct IpRateLimitView {
+    pub ip: String,
+    pub upload_limit_kbps: u64,
+    pub download_limit_kbps: u64,
+}
+
+fn normalize_ip_for_rate_limit(ip: &str) -> Option<String> {
+    ip.trim()
+        .parse::<std::net::IpAddr>()
+        .map(|ip| ip.to_string())
+        .ok()
+}
+
+#[tauri::command]
+pub fn get_ip_rate_limits(state: tauri::State<'_, AppState>) -> Vec<IpRateLimitView> {
+    let cfg = state.config.lock().unwrap();
+    cfg.app_only.ip_rate_limits.iter().map(|e| IpRateLimitView {
+        ip: e.ip.clone(),
+        upload_limit_kbps: e.upload_limit_kbps,
+        download_limit_kbps: e.download_limit_kbps,
+    }).collect()
+}
+
+#[tauri::command]
+pub async fn set_ip_rate_limit(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, AppState>,
+    ip: String,
+    upload_limit_kbps: u64,
+    download_limit_kbps: u64,
+) -> Result<(), String> {
+    // Validate IP
+    let trimmed = ip.trim();
+    if trimmed.is_empty() {
+        return Err("IP address cannot be empty".to_string());
+    }
+    let normalized_ip = normalize_ip_for_rate_limit(trimmed)
+        .ok_or_else(|| format!("Invalid IP address: {trimmed}"))?;
+
+    // Save to config
+    {
+        let mut cfg = state.config.lock().unwrap();
+        if let Some(existing) = cfg.app_only.ip_rate_limits.iter_mut().find(|e| {
+            normalize_ip_for_rate_limit(&e.ip).as_deref() == Some(normalized_ip.as_str())
+        }) {
+            existing.upload_limit_kbps = upload_limit_kbps;
+            existing.download_limit_kbps = download_limit_kbps;
+            existing.ip = normalized_ip.clone();
+        } else {
+            cfg.app_only.ip_rate_limits.push(crate::config::IpRateLimitEntry {
+                ip: normalized_ip.clone(),
+                upload_limit_kbps,
+                download_limit_kbps,
+            });
+        }
+        crate::config::save_config(&app, &cfg)?;
+    }
+
+    // Apply to running local proxy server if active
+    let ip_limiters = state.local_proxy.lock().unwrap().as_ref().map(|s| s.ip_limiters.clone());
+    if let Some(limiters) = ip_limiters {
+        let mut map = limiters.lock().await;
+        if upload_limit_kbps == 0 && download_limit_kbps == 0 {
+            if let Some(existing) = map.remove(&normalized_ip) {
+                existing.upload.set_rate(0);
+                existing.download.set_rate(0);
+            }
+            return Ok(());
+        }
+
+        match map.get_mut(&normalized_ip) {
+            Some(existing) => {
+                existing.upload.set_rate(upload_limit_kbps);
+                existing.download.set_rate(download_limit_kbps);
+            }
+            None => {
+                map.insert(normalized_ip.clone(),
+                    crate::local_proxy::IpRateLimiters::new(upload_limit_kbps, download_limit_kbps));
+            }
+        }
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn remove_ip_rate_limit(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, AppState>,
+    ip: String,
+) -> Result<(), String> {
+    let trimmed = ip.trim();
+    if trimmed.is_empty() {
+        return Err("IP address cannot be empty".to_string());
+    }
+    let normalized_ip =
+        normalize_ip_for_rate_limit(trimmed).unwrap_or_else(|| trimmed.to_string());
+
+    // Remove from config
+    {
+        let mut cfg = state.config.lock().unwrap();
+        cfg.app_only.ip_rate_limits.retain(|e| {
+            normalize_ip_for_rate_limit(&e.ip).as_deref() != Some(normalized_ip.as_str())
+                && e.ip != trimmed
+        });
+        crate::config::save_config(&app, &cfg)?;
+    }
+
+    // Remove from running server
+    let ip_limiters = state.local_proxy.lock().unwrap().as_ref().map(|s| s.ip_limiters.clone());
+    if let Some(limiters) = ip_limiters {
+        let mut map = limiters.lock().await;
+        if let Some(existing) = map.remove(&normalized_ip) {
+            existing.upload.set_rate(0);
+            existing.download.set_rate(0);
+        }
+    }
+
+    Ok(())
 }

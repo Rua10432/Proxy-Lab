@@ -194,11 +194,20 @@ pub fn run() {
             commands::remove_pac_rule,
             commands::get_pac_content,
             commands::get_blocked_ips,
+            commands::get_blocked_ips_enabled,
+            commands::set_blocked_ips_enabled,
             commands::add_blocked_ip,
             commands::remove_blocked_ip,
             commands::clear_blocked_ips,
             commands::get_local_proxy_listen_port,
             commands::set_local_proxy_listen_port,
+            commands::set_local_proxy_auth,
+            commands::get_local_proxy_auth,
+            commands::get_ip_rate_limits,
+            commands::set_ip_rate_limit,
+            commands::remove_ip_rate_limit,
+            commands::get_rate_limit_enabled,
+            commands::set_rate_limit_enabled,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

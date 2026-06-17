@@ -21,6 +21,8 @@ const PAGE_MODULES = {
 /* Pages with tables also get column resizer */
 const TABLE_PAGES = new Set(['test', 'scan', 'monitor']);
 let _colResizeLoaded = false;
+const _initializedPages = new Set();
+let _renderSeq = 0;
 
 // Lazy load page-specific CSS (returns promise that resolves when loaded)
 const _loadedCSS = new Set();
@@ -38,14 +40,26 @@ function loadPageCSS(pageName) {
 }
 
 async function renderPageFromHash() {
+  const renderSeq = ++_renderSeq;
   let hash = window.location.hash.substring(1);
   if (!hash) {
     window.location.hash = '#test';
     return;
   }
 
+  if (!PAGE_MODULES[hash]) {
+    window.location.hash = '#test';
+    return;
+  }
+
   const container = $('#pages-container');
   if (!container) return;
+
+  const existingPage = $('#page-' + hash);
+  if (LoadedPages.has(hash) && !existingPage) {
+    LoadedPages.delete(hash);
+    _initializedPages.delete(hash);
+  }
 
   if (!LoadedPages.has(hash)) {
     try {
@@ -62,9 +76,14 @@ async function renderPageFromHash() {
       // We must explicitly extract the actual .page container.
       const pageEl = temp.querySelector('.page');
       if (!pageEl) throw new Error(`Valid page structure not found in ${hash}.html`);
+      pageEl.id = pageEl.id || `page-${hash}`;
+      pageEl.classList.remove('active');
 
       container.appendChild(pageEl);
       LoadedPages.add(hash);
+      if (renderSeq === _renderSeq && window.location.hash.substring(1) === hash) {
+        activatePage(hash, pageEl);
+      }
 
       // 页面 HTML 已渲染，立即隐藏加载屏幕
       if (_resolveFirstPage) {
@@ -73,65 +92,139 @@ async function renderPageFromHash() {
       }
 
       // 以下初始化在后台继续执行，不阻塞用户看到界面
-      if (PAGE_MODULES[hash]) {
-        await PAGE_MODULES[hash]();
-      }
-      if (TABLE_PAGES.has(hash) && !_colResizeLoaded) {
-        await import('./col-resize.js');
-        _colResizeLoaded = true;
-      }
-
-      await new Promise(resolve => requestAnimationFrame(resolve));
-      await new Promise(resolve => setTimeout(resolve, 0));
-
-      initSelects(pageEl);
-      initSwitches(pageEl);
-
-      const PAGE_INIT_MAP = {
-        test: typeof window.initTestPage !== 'undefined' ? window.initTestPage : null,
-        scan: typeof window.initScanPage !== 'undefined' ? window.initScanPage : null,
-        config: typeof window.initConfigPage !== 'undefined' ? window.initConfigPage : null,
-        logs: typeof window.initLogsPage !== 'undefined' ? window.initLogsPage : null,
-        monitor: typeof window.initMonitorPage !== 'undefined' ? window.initMonitorPage : null,
-        settings: typeof window.initSettingsPage !== 'undefined' ? window.initSettingsPage : null,
-      };
-
-      const initFn = PAGE_INIT_MAP[hash];
-      if (initFn) initFn();
-
-      if (typeof applyLanguage !== 'undefined') applyLanguage();
+      await initializeLoadedPage(hash, pageEl);
     } catch (err) {
       console.error(err);
       if (typeof showSnackbar !== 'undefined') showSnackbar(`Navigation error: ${err.message}`, 'error');
+      const failedPage = $('#page-' + hash);
+      if (failedPage) {
+        LoadedPages.add(hash);
+        if (renderSeq === _renderSeq && window.location.hash.substring(1) === hash) {
+          activatePage(hash, failedPage);
+          queueRouteVisibilityCheck();
+        }
+      } else {
+        LoadedPages.delete(hash);
+      }
+      _initializedPages.delete(hash);
       return;
     }
   }
 
-  AppState.currentPage = hash;
+  if (renderSeq !== _renderSeq || window.location.hash.substring(1) !== hash) {
+    return;
+  }
 
-  // Update pages
-  $$('.page').forEach(p => p.classList.remove('active'));
   const targetPage = $('#page-' + hash);
-  if (targetPage) targetPage.classList.add('active');
+  if (!activatePage(hash, targetPage)) {
+    LoadedPages.delete(hash);
+    _initializedPages.delete(hash);
+    renderPageFromHash();
+    return;
+  }
 
-  // Update sidebar nav items
-  $$('.sidebar-nav .nav-item').forEach(item => {
-    item.classList.toggle('active', item.dataset.page === hash);
-  });
-
-  // Update mobile nav items
-  $$('#mobile-nav .mobile-nav-item').forEach(item => {
-    item.classList.toggle('active', item.dataset.page === hash);
-  });
+  if (!_initializedPages.has(hash)) {
+    try {
+      await initializeLoadedPage(hash, targetPage);
+    } catch (err) {
+      console.error(err);
+      if (typeof showSnackbar !== 'undefined') showSnackbar(`Navigation error: ${err.message}`, 'error');
+      _initializedPages.delete(hash);
+    }
+  }
 
   // Page-specific hooks
   if (hash === 'logs') {
     if (typeof window.renderLogConsole === 'function') window.renderLogConsole();
   }
+
+  queueRouteVisibilityCheck();
+}
+
+function activatePage(hash, targetPage) {
+  if (!targetPage) return false;
+
+  AppState.currentPage = hash;
+
+  $$('.page').forEach(p => p.classList.remove('active'));
+  targetPage.classList.add('active');
+
+  $$('.sidebar-nav .nav-item').forEach(item => {
+    item.classList.toggle('active', item.dataset.page === hash);
+  });
+
+  $$('#mobile-nav .mobile-nav-item').forEach(item => {
+    item.classList.toggle('active', item.dataset.page === hash);
+  });
+
+  return true;
+}
+
+async function initializeLoadedPage(hash, pageEl) {
+  if (_initializedPages.has(hash)) return;
+
+  await PAGE_MODULES[hash]();
+
+  if (TABLE_PAGES.has(hash) && !_colResizeLoaded) {
+    await import('./col-resize.js');
+    _colResizeLoaded = true;
+  }
+
+  await new Promise(resolve => requestAnimationFrame(resolve));
+  await new Promise(resolve => setTimeout(resolve, 0));
+
+  initSelects(pageEl);
+  initSwitches(pageEl);
+
+  const PAGE_INIT_MAP = {
+    test: typeof window.initTestPage !== 'undefined' ? window.initTestPage : null,
+    scan: typeof window.initScanPage !== 'undefined' ? window.initScanPage : null,
+    config: typeof window.initConfigPage !== 'undefined' ? window.initConfigPage : null,
+    logs: typeof window.initLogsPage !== 'undefined' ? window.initLogsPage : null,
+    monitor: typeof window.initMonitorPage !== 'undefined' ? window.initMonitorPage : null,
+    settings: typeof window.initSettingsPage !== 'undefined' ? window.initSettingsPage : null,
+  };
+
+  const initFn = PAGE_INIT_MAP[hash];
+  if (initFn) initFn();
+
+  _initializedPages.add(hash);
+
+  if (typeof applyLanguage !== 'undefined') applyLanguage();
+}
+
+function queueRouteVisibilityCheck() {
+  requestAnimationFrame(ensureRouteVisible);
+  setTimeout(ensureRouteVisible, 0);
+  setTimeout(ensureRouteVisible, 100);
+}
+
+function ensureRouteVisible() {
+  const hash = window.location.hash.substring(1) || 'test';
+  if (!PAGE_MODULES[hash]) return;
+
+  const targetPage = $('#page-' + hash);
+  if (targetPage) {
+    if (!targetPage.classList.contains('active')) {
+      activatePage(hash, targetPage);
+    }
+    return;
+  }
+
+  if (LoadedPages.has(hash)) {
+    LoadedPages.delete(hash);
+    _initializedPages.delete(hash);
+    renderPageFromHash();
+  }
 }
 
 function switchPage(pageId) {
-  window.location.hash = '#' + pageId;
+  const nextHash = '#' + pageId;
+  if (window.location.hash === nextHash) {
+    renderPageFromHash();
+    return;
+  }
+  window.location.hash = nextHash;
 }
 
 export function initNavigation() {
@@ -306,4 +399,3 @@ window.closeDialog = closeDialog;
 window.showSnackbar = showSnackbar;
 window.initSnackbar = initSnackbar;
 window.switchPage = switchPage;
-
