@@ -686,7 +686,9 @@ async fn handle_client(
         let http_req = parse_http_request(&mut client).await?;
 
         // 客户端认证检查（HTTP Basic Auth）
-        if auth_enabled {
+        let has_local_creds = local_username.as_ref().map_or(false, |u| !u.is_empty())
+            || local_password.as_ref().map_or(false, |p| !p.is_empty());
+        if auth_enabled && has_local_creds {
             let (raw_bytes, _host, _port) = match &http_req {
                 ClientHttpRequest::Connect { raw_request, host, port } => (raw_request, host, *port),
                 ClientHttpRequest::Regular { raw_request, host, port } => (raw_request, host, *port),
@@ -872,7 +874,10 @@ async fn socks5_handshake(
             .map_err(|_| "failed to read SOCKS5 methods".to_string())?;
     }
 
-    if auth_enabled {
+    let has_local_creds = local_username.as_ref().map_or(false, |u| !u.is_empty())
+        || local_password.as_ref().map_or(false, |p| !p.is_empty());
+
+    if auth_enabled && has_local_creds {
         // 要求用户名密码认证
         client
             .write_all(&[SOCKS5_VERSION, 0x02])
