@@ -223,7 +223,9 @@ pub struct LocalProxyServer {
     password: Option<String>,
     pub active_connections: Arc<AtomicUsize>,
     pub total_connections: Arc<AtomicUsize>,
-    blocked_ips: Arc<Vec<String>>,
+    blocked_ips: Arc<std::sync::Mutex<Vec<String>>>,
+    allowed_ips_enabled: Arc<AtomicBool>,
+    allowed_ips: Arc<std::sync::Mutex<Vec<String>>>,
     log_dir: Option<PathBuf>,
     /// Per-IP concurrent connection count (for tracking "currently active" clients).
     pub active_ips: Arc<std::sync::Mutex<HashMap<String, usize>>>,
@@ -264,7 +266,9 @@ impl LocalProxyServer {
             password,
             active_connections: Arc::new(AtomicUsize::new(0)),
             total_connections: Arc::new(AtomicUsize::new(0)),
-            blocked_ips: Arc::new(Vec::new()),
+            blocked_ips: Arc::new(std::sync::Mutex::new(Vec::new())),
+            allowed_ips_enabled: Arc::new(AtomicBool::new(false)),
+            allowed_ips: Arc::new(std::sync::Mutex::new(Vec::new())),
             log_dir: None,
             active_ips: Arc::new(std::sync::Mutex::new(HashMap::new())),
             client_stats: Arc::new(std::sync::Mutex::new(HashMap::new())),
@@ -325,8 +329,14 @@ impl LocalProxyServer {
     }
 
     /// Set the list of blocked target IP addresses (exact IP or CIDR notation).
-    pub fn set_blocked_ips(&mut self, ips: Vec<String>) {
-        self.blocked_ips = Arc::new(ips);
+    pub fn set_blocked_ips(&self, ips: Vec<String>) {
+        *self.blocked_ips.lock().unwrap() = ips;
+    }
+
+    /// Set the allowed IP access list state (exact IP or CIDR notation).
+    pub fn set_allowed_ips(&self, enabled: bool, ips: Vec<String>) {
+        self.allowed_ips_enabled.store(enabled, Ordering::SeqCst);
+        *self.allowed_ips.lock().unwrap() = ips;
     }
 
     /// Set the HostConnectionLog root directory for connection logging.
@@ -390,6 +400,8 @@ impl LocalProxyServer {
         let active_connections = self.active_connections.clone();
         let total_connections = self.total_connections.clone();
         let blocked_ips = self.blocked_ips.clone();
+        let allowed_ips_enabled = self.allowed_ips_enabled.clone();
+        let allowed_ips = self.allowed_ips.clone();
         let log_dir = self.log_dir.clone();
         let active_ips = self.active_ips.clone();
         let client_stats = self.client_stats.clone();
@@ -417,6 +429,8 @@ impl LocalProxyServer {
                         let _stop = stop_flag.clone();
                         let conn_count = active_connections.clone();
                         let blocked = blocked_ips.clone();
+                        let allowed_enabled = allowed_ips_enabled.clone();
+                        let allowed = allowed_ips.clone();
                         let log = log_dir.clone();
                         let ips = active_ips.clone();
                         let stats = client_stats.clone();
@@ -427,7 +441,7 @@ impl LocalProxyServer {
 
                         tokio::spawn(async move {
                             if let Err(e) =
-                                handle_client(stream, &up_host, up_port, up_proto, uname, pwd, &blocked, log, ips, stats, ip_lim, au_enabled, loc_uname, loc_pwd).await
+                                handle_client(stream, &up_host, up_port, up_proto, uname, pwd, blocked, allowed_enabled, allowed, log, ips, stats, ip_lim, au_enabled, loc_uname, loc_pwd).await
                             {
                                 eprintln!("[local-proxy] client {addr} error: {e}");
                             }
@@ -597,7 +611,9 @@ async fn handle_client(
     upstream_protocol: UpstreamProtocol,
     username: Option<String>,
     password: Option<String>,
-    blocked_ips: &[String],
+    blocked_ips: Arc<std::sync::Mutex<Vec<String>>>,
+    allowed_ips_enabled: Arc<AtomicBool>,
+    allowed_ips: Arc<std::sync::Mutex<Vec<String>>>,
     log_dir: Option<PathBuf>,
     active_ips: Arc<std::sync::Mutex<HashMap<String, usize>>>,
     client_stats: Arc<std::sync::Mutex<HashMap<String, ClientStats>>>,
@@ -621,8 +637,18 @@ async fn handle_client(
         active_ips,
     );
 
-    // ══ Phase 0.5: Block banned client IPs (source IP blocking) ═══════════
-    if is_client_blocked(&client_ip, blocked_ips) {
+    // ══ Phase 0.5: Enforce client IP access lists (source IP) ════════════
+    if allowed_ips_enabled.load(Ordering::SeqCst)
+        && !is_client_allowed(&client_ip, &allowed_ips.lock().unwrap())
+    {
+        eprintln!("[local-proxy] rejected client {client_ip}:{src_port} — source IP not in allowlist");
+        let _ = client
+            .write_all(b"HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
+            .await;
+        return Err(format!("client IP not in allowlist: {client_ip}"));
+    }
+
+    if is_client_blocked(&client_ip, &blocked_ips.lock().unwrap()) {
         eprintln!("[local-proxy] blocked client {client_ip}:{src_port} — source IP in blocklist");
         // Send HTTP 403 so the client gets feedback instead of a silent hang
         let _ = client
@@ -649,8 +675,17 @@ async fn handle_client(
 
         let log = ConnLog::new(log_dir, &client_ip.to_string(), &target_addr, src_port, target_port);
 
-        // Phase 1.5: blocked check
-        if is_target_blocked(&target_addr, target_port, blocked_ips) {
+        // Phase 1.5: target allow/block check
+        if allowed_ips_enabled.load(Ordering::SeqCst)
+            && !is_target_allowed(&target_addr, target_port, &allowed_ips.lock().unwrap())
+        {
+            eprintln!("[local-proxy] rejected: {target_addr}:{target_port} — target not in allowlist");
+            let _ = socks5_send_failure(&mut client, SOCKS5_REP_CONN_REFUSED).await;
+            log.write(0, 0, crate::db::STATUS_BLOCKED).await;
+            return Err(format!("target not in allowlist: {target_addr}:{target_port}"));
+        }
+
+        if is_target_blocked(&target_addr, target_port, &blocked_ips.lock().unwrap()) {
             eprintln!("[local-proxy] blocked: {target_addr}:{target_port}");
             let _ = socks5_send_failure(&mut client, SOCKS5_REP_CONN_REFUSED).await;
             log.write(0, 0, crate::db::STATUS_BLOCKED).await;
@@ -710,7 +745,16 @@ async fn handle_client(
                 // HTTP CONNECT tunnel — same logic as SOCKS5 tunnel
                 let log = ConnLog::new(log_dir, &client_ip.to_string(), &target_addr, src_port, target_port);
 
-                if is_target_blocked(&target_addr, target_port, blocked_ips) {
+                if allowed_ips_enabled.load(Ordering::SeqCst)
+                    && !is_target_allowed(&target_addr, target_port, &allowed_ips.lock().unwrap())
+                {
+                    eprintln!("[local-proxy] rejected: {target_addr}:{target_port} — target not in allowlist");
+                    let _ = http_send_403(&mut client).await;
+                    log.write(0, 0, crate::db::STATUS_BLOCKED).await;
+                    return Err(format!("target not in allowlist: {target_addr}:{target_port}"));
+                }
+
+                if is_target_blocked(&target_addr, target_port, &blocked_ips.lock().unwrap()) {
                     eprintln!("[local-proxy] blocked: {target_addr}:{target_port}");
                     let _ = http_send_403(&mut client).await;
                     log.write(0, 0, crate::db::STATUS_BLOCKED).await;
@@ -745,7 +789,16 @@ async fn handle_client(
                 // Regular HTTP proxy request (GET, POST, etc.) — forward to upstream
                 let log = ConnLog::new(log_dir, &client_ip.to_string(), &target_addr, src_port, target_port);
 
-                if is_target_blocked(&target_addr, target_port, blocked_ips) {
+                if allowed_ips_enabled.load(Ordering::SeqCst)
+                    && !is_target_allowed(&target_addr, target_port, &allowed_ips.lock().unwrap())
+                {
+                    eprintln!("[local-proxy] rejected: {target_addr}:{target_port} — target not in allowlist");
+                    let _ = http_send_403(&mut client).await;
+                    log.write(0, 0, crate::db::STATUS_BLOCKED).await;
+                    return Err(format!("target not in allowlist: {target_addr}:{target_port}"));
+                }
+
+                if is_target_blocked(&target_addr, target_port, &blocked_ips.lock().unwrap()) {
                     eprintln!("[local-proxy] blocked: {target_addr}:{target_port}");
                     let _ = http_send_403(&mut client).await;
                     log.write(0, 0, crate::db::STATUS_BLOCKED).await;
@@ -1540,6 +1593,48 @@ async fn tunnel_via_http(
 
 // ─── IP Blocking Helpers ────────────────────────────────────────────────────
 
+fn ip_matches_entries(ip: IpAddr, entries: &[String]) -> bool {
+    for entry in entries {
+        let entry = entry.trim();
+        if entry.is_empty() {
+            continue;
+        }
+
+        if let Some(slash_pos) = entry.find('/') {
+            let base = &entry[..slash_pos];
+            let bits_str = &entry[slash_pos + 1..];
+            if let (Ok(base_ip), Ok(bits)) = (IpAddr::from_str(base), bits_str.parse::<u8>()) {
+                if cidr_matches(ip, base_ip, bits) {
+                    return true;
+                }
+            }
+        } else if let Ok(entry_ip) = IpAddr::from_str(entry) {
+            if ip == entry_ip {
+                return true;
+            }
+        }
+    }
+
+    false
+}
+
+/// Check whether the connecting *client* IP is allowed to use this proxy.
+/// Supports exact IP addresses and CIDR notation.
+fn is_client_allowed(client_ip: &IpAddr, allowed_ips: &[String]) -> bool {
+    ip_matches_entries(*client_ip, allowed_ips)
+}
+
+/// Check whether the target (IP or hostname) is in the allowed list.
+/// Hostnames that are not valid IPs are not matched.
+fn is_target_allowed(target_addr: &str, _port: u16, allowed_ips: &[String]) -> bool {
+    let target_ip = match IpAddr::from_str(target_addr) {
+        Ok(ip) => ip,
+        Err(_) => return false,
+    };
+
+    ip_matches_entries(target_ip, allowed_ips)
+}
+
 /// Check whether the connecting *client* IP is banned from using this proxy.
 /// Supports exact IP addresses and CIDR notation.
 fn is_client_blocked(client_ip: &std::net::IpAddr, blocked_ips: &[String]) -> bool {
@@ -1547,31 +1642,7 @@ fn is_client_blocked(client_ip: &std::net::IpAddr, blocked_ips: &[String]) -> bo
         return false;
     }
 
-    for entry in blocked_ips {
-        let entry = entry.trim();
-        if entry.is_empty() {
-            continue;
-        }
-
-        // CIDR notation: "192.168.1.0/24"
-        if let Some(slash_pos) = entry.find('/') {
-            let base = &entry[..slash_pos];
-            let bits_str = &entry[slash_pos + 1..];
-            if let (Ok(base_ip), Ok(bits)) = (std::net::IpAddr::from_str(base), bits_str.parse::<u8>()) {
-                if cidr_matches(*client_ip, base_ip, bits) {
-                    return true;
-                }
-            }
-        }
-        // Exact IP match
-        else if let Ok(block_ip) = std::net::IpAddr::from_str(entry) {
-            if *client_ip == block_ip {
-                return true;
-            }
-        }
-    }
-
-    false
+    ip_matches_entries(*client_ip, blocked_ips)
 }
 
 /// Check whether the target (IP or hostname) is in the blocked list.
@@ -1588,31 +1659,7 @@ fn is_target_blocked(target_addr: &str, _port: u16, blocked_ips: &[String]) -> b
         Err(_) => return false, // hostname — cannot block by name, only by IP
     };
 
-    for entry in blocked_ips {
-        let entry = entry.trim();
-        if entry.is_empty() {
-            continue;
-        }
-
-        // Try CIDR notation: "192.168.0.0/16"
-        if let Some(slash_pos) = entry.find('/') {
-            let base = &entry[..slash_pos];
-            let bits_str = &entry[slash_pos + 1..];
-            if let (Ok(base_ip), Ok(bits)) = (IpAddr::from_str(base), bits_str.parse::<u8>()) {
-                if cidr_matches(target_ip, base_ip, bits) {
-                    return true;
-                }
-            }
-        }
-        // Exact IP match
-        else if let Ok(block_ip) = IpAddr::from_str(entry) {
-            if target_ip == block_ip {
-                return true;
-            }
-        }
-    }
-
-    false
+    ip_matches_entries(target_ip, blocked_ips)
 }
 
 /// Check if `ip` falls within the CIDR range defined by `base` + `prefix_len`.

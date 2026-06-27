@@ -23,6 +23,7 @@ const TABLE_PAGES = new Set(['test', 'scan', 'monitor']);
 let _colResizeLoaded = false;
 const _initializedPages = new Set();
 let _renderSeq = 0;
+let _activePage = null;
 
 // Lazy load page-specific CSS (returns promise that resolves when loaded)
 const _loadedCSS = new Set();
@@ -144,6 +145,14 @@ async function renderPageFromHash() {
 function activatePage(hash, targetPage) {
   if (!targetPage) return false;
 
+  if (_activePage && _activePage !== hash) {
+    const cleanupName = `cleanup${_activePage.charAt(0).toUpperCase()}${_activePage.slice(1)}Page`;
+    const cleanupFn = window[cleanupName];
+    if (typeof cleanupFn === 'function') {
+      try { cleanupFn(); } catch (err) { console.warn(`Page cleanup failed: ${_activePage}`, err); }
+    }
+  }
+  _activePage = hash;
   AppState.currentPage = hash;
 
   $$('.page').forEach(p => p.classList.remove('active'));

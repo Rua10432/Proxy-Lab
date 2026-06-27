@@ -9,6 +9,7 @@ mod config_cmd;
 mod version_cmd;
 mod export;
 mod uwp;
+mod validation;
 
 pub use ping::*;
 pub use scan::*;

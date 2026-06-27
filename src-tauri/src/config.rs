@@ -62,7 +62,7 @@ impl Default for ScanPreferences {
             default_mask: "255.255.255.0".into(),
             default_start_port: 1,
             default_end_port: 65535,
-            default_concurrent: 250,
+            default_concurrent: 80,
             timeout_ms: 1500,
             syn_timeout_ms: 500,
             verify_concurrent: 50,
@@ -134,6 +134,12 @@ pub struct AppOnlyConfig {
     /// 要封锁的目标IP列表（支持具体 IP 和 CIDR 格式）
     #[serde(default)]
     pub blocked_ips: Vec<String>,
+    /// 是否启用 IP 白名单功能
+    #[serde(default)]
+    pub allowed_ips_enabled: bool,
+    /// 允许访问本地代理或目标地址的 IP 列表（支持具体 IP 和 CIDR 格式）
+    #[serde(default)]
+    pub allowed_ips: Vec<String>,
     /// 是否启用 IP 限速功能
     #[serde(default)]
     pub rate_limit_enabled: bool,
@@ -159,6 +165,8 @@ impl Default for AppOnlyConfig {
             shared: false,
             blocked_ips_enabled: false,
             blocked_ips: Vec::new(),
+            allowed_ips_enabled: false,
+            allowed_ips: Vec::new(),
             rate_limit_enabled: false,
             ip_rate_limits: Vec::new(),
             local_auth_enabled: false,

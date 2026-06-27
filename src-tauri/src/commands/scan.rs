@@ -3,6 +3,7 @@
 
 use crate::service;
 use crate::AppState;
+use super::validation;
 
 #[tauri::command]
 pub async fn start_proxy_scan(
@@ -16,6 +17,15 @@ pub async fn start_proxy_scan(
     syn_timeout_ms: u64,
     verify_concurrent: usize,
 ) -> Result<(), String> {
+    validation::validate_scan_request(
+        &network,
+        &mask,
+        start_port,
+        end_port,
+        concurrent,
+        syn_timeout_ms,
+        verify_concurrent,
+    )?;
     service::start_proxy_scan(
         &app, &state, network, mask, start_port, end_port,
         concurrent, syn_timeout_ms, verify_concurrent,

@@ -62,7 +62,7 @@ fn main() {
     "defaultMask": "255.255.255.0",
     "defaultStartPort": 1,
     "defaultEndPort": 65535,
-    "defaultConcurrent": 250,
+    "defaultConcurrent": 80,
     "timeoutMs": 1500,
     "synTimeoutMs": 500,
     "verifyConcurrent": 50,

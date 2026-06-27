@@ -99,7 +99,7 @@ function startScan() {
   window.renderLogConsole?.();
 
   const mask = $('#scan-mask').value.trim() || '255.255.255.0';
-  const concurrent = parseInt($('#scan-concurrent').value) || 250;
+  const concurrent = parseInt($('#scan-concurrent').value) || 80;
   const synTimeout = parseInt($('#scan-syn-timeout').value) || 500;
   const verifyConcurrent = parseInt($('#scan-verify-concurrent').value) || 50;
 

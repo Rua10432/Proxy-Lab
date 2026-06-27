@@ -2,17 +2,54 @@ import { initNavigation,initSelects,initSwitches,initSnackbar, showDialog, first
 import { appendLog,$, $$  } from "./utils.js";
 import { AppState } from "./state.js";
 import { initClickEffect } from "./click-effect.js";
+
+const APP_CLEANUPS = [];
+const TAURI_INVOKE_TIMEOUT_MS = 15000;
+
+function registerCleanup(cleanup) {
+  if (typeof cleanup === 'function') APP_CLEANUPS.push(cleanup);
+  return cleanup;
+}
+
+function runAppCleanups() {
+  while (APP_CLEANUPS.length) {
+    const cleanup = APP_CLEANUPS.pop();
+    try { cleanup(); } catch (err) { console.warn('Cleanup failed:', err); }
+  }
+}
+
+function addManagedListener(target, type, handler, options) {
+  if (!target?.addEventListener) return () => {};
+  target.addEventListener(type, handler, options);
+  return registerCleanup(() => target.removeEventListener(type, handler, options));
+}
+
+function setManagedInterval(handler, delay) {
+  const id = window.setInterval(handler, delay);
+  registerCleanup(() => window.clearInterval(id));
+  return id;
+}
+
+function setManagedTimeout(handler, delay) {
+  const id = window.setTimeout(handler, delay);
+  registerCleanup(() => window.clearTimeout(id));
+  return id;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   /* ── Block Browser Context Menu (dev mode: right-click to inspect) ── */
-  const isDev = window.location.port === '5173' || window.location.port === '1420';
-  if (!isDev) {
-    document.addEventListener('contextmenu', (e) => e.preventDefault());
+  const isDesktop = isTauriAvailable();
+  const isDev = import.meta.env?.DEV === true || ['5173', '1420'].includes(window.location.port);
+  if (isDesktop && !isDev) {
+    addManagedListener(document, 'contextmenu', (e) => e.preventDefault());
   }
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'F5' || (e.ctrlKey && e.key === 'r') || (e.ctrlKey && e.key === 'R')) {
+  addManagedListener(document, 'keydown', (e) => {
+    if (!isDesktop || isDev) return;
+    if (e.key === 'F5' || (e.ctrlKey && e.key.toLowerCase() === 'r')) {
       e.preventDefault();
     }
   });
+  addManagedListener(window, 'beforeunload', runAppCleanups);
 
   /* ── Restore persisted data before pages load ── */
   // Use an IIFE so we await disk I/O before triggering page init
@@ -49,13 +86,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // 安全兜底：5秒后强制隐藏，防止初始化卡死导致白屏
-    setTimeout(hideLoadingScreen, 5000);
+    setManagedTimeout(hideLoadingScreen, 5000);
 
     function hideLoadingScreen() {
       const loadingScreen = $('#loading-screen');
       if (!loadingScreen || loadingScreen.style.display === 'none') return;
       loadingScreen.classList.add('fade-out');
-      setTimeout(() => {
+      setManagedTimeout(() => {
         loadingScreen.style.display = 'none';
       }, 200);
       AppState.isLoading = false;
@@ -77,16 +114,16 @@ document.addEventListener('DOMContentLoaded', () => {
   initWindowControls();
 
   // Auto-init validation for data-validate inputs
-  document.addEventListener('input', (e) => {
+  addManagedListener(document, 'input', (e) => {
     if (e.target.dataset.validate) validateAndStyle(e.target);
   });
-  document.addEventListener('blur', (e) => {
+  addManagedListener(document, 'blur', (e) => {
     if (e.target.dataset.validate) validateAndStyle(e.target);
   });
 
   // Intercept native close (system title bar / Alt+F4) to minimize to tray
   if (window.__TAURI__?.window?.getCurrentWindow) {
-    window.__TAURI__.window.getCurrentWindow().onCloseRequested((event) => {
+    Promise.resolve(window.__TAURI__.window.getCurrentWindow().onCloseRequested((event) => {
       event.preventDefault();
       const closeConfirm = loadFromStorage('closeConfirm', true);
       const dontAskDate = loadFromStorage('dontAskDate', '');
@@ -95,7 +132,9 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
       showCloseDialog();
-    });
+    })).then((unlisten) => {
+      if (typeof unlisten === 'function') registerCleanup(unlisten);
+    }).catch((err) => appendLog('error', `Failed to bind close handler: ${err}`));
   }
 
   // Welcome log
@@ -104,22 +143,41 @@ document.addEventListener('DOMContentLoaded', () => {
 
 /* ── Tauri Helpers ── */
 async function tauriInvoke(cmd, args = {}) {
-  if (window.__TAURI__) {
-    try {
-      const fn = window.__TAURI__.core?.invoke ?? window.__TAURI__.invoke;
-      return await fn(cmd, args);
-    } catch (e) {
-      appendLog('error', `Tauri command failed: ${cmd} - ${e}`);
-      throw e;
-    }
-  } else {
+  if (!window.__TAURI__) {
     appendLog('info', `[Tauri] ${cmd} (not in Tauri environment)`);
+    return undefined;
+  }
+
+  const fn = window.__TAURI__.core?.invoke ?? window.__TAURI__.invoke;
+  if (typeof fn !== 'function') {
+    const err = new Error('Tauri invoke API is unavailable');
+    appendLog('error', `Tauri command unavailable: ${cmd}`);
+    throw err;
+  }
+
+  let timer = null;
+  try {
+    return await Promise.race([
+      fn(cmd, args),
+      new Promise((_, reject) => {
+        timer = window.setTimeout(() => {
+          reject(new Error(`Tauri command timed out after ${TAURI_INVOKE_TIMEOUT_MS}ms: ${cmd}`));
+        }, TAURI_INVOKE_TIMEOUT_MS);
+      }),
+    ]);
+  } catch (e) {
+    appendLog('error', `Tauri command failed: ${cmd} - ${e?.message || e}`);
+    throw e;
+  } finally {
+    if (timer) window.clearTimeout(timer);
   }
 }
 
 async function tauriListen(event, handler) {
   if (window.__TAURI__?.event?.listen) {
-    return window.__TAURI__.event.listen(event, handler);
+    const unlisten = await window.__TAURI__.event.listen(event, handler);
+    if (typeof unlisten === 'function') registerCleanup(unlisten);
+    return unlisten;
   }
 }
 
@@ -137,7 +195,7 @@ function initPerfMonitor() {
   async function update() {
     if (!isTauriAvailable()) return;
     try {
-      const mem = await tauriInvoke('shittim_mem_task');
+      const mem = await tauriInvoke('get_memory_info');
       if (mem) {
         const pct = mem.percent;
         if (ramText) ramText.textContent = `${mem.used_mb} MB / ${mem.total_gb} GB (${pct.toFixed(1)}%)`;
@@ -164,13 +222,14 @@ function initPerfMonitor() {
     ctx.stroke();
   }
 
-  setInterval(update, 2000);
+  update();
+  setManagedInterval(update, 2000);
 }
 
 export function initWindowControls() {
   const titlebar = $('#titlebar');
   if (titlebar) {
-    titlebar.addEventListener('mousedown', (e) => {
+    addManagedListener(titlebar, 'mousedown', (e) => {
       if (e.target.closest('.win-btn')) return;
       if (e.detail > 1) return; // double-click — let dblclick handle maximize
 
@@ -179,19 +238,19 @@ export function initWindowControls() {
     });
 
     // Double-click titlebar to toggle maximize (standard Windows behavior)
-    titlebar.addEventListener('dblclick', (e) => {
+    addManagedListener(titlebar, 'dblclick', (e) => {
       if (e.target.closest('.win-btn')) return;
       tauriInvoke('win_toggle_maximize');
     });
   }
 
-  $('#win-minimize')?.addEventListener('click', () => {
+  addManagedListener($('#win-minimize'), 'click', () => {
     tauriInvoke('win_minimize');
   });
-  $('#win-maximize')?.addEventListener('click', () => {
+  addManagedListener($('#win-maximize'), 'click', () => {
     tauriInvoke('win_toggle_maximize');
   });
-  $('#win-close')?.addEventListener('click', handleCloseClick);
+  addManagedListener($('#win-close'), 'click', handleCloseClick);
 
   // Sync maximize/restore button icon with window state
   updateMaximizeIcon();
@@ -202,9 +261,17 @@ export function initWindowControls() {
       if (win) {
         const onResize = () => updateMaximizeIcon();
         if (win.onResized) {
-          win.onResized(onResize);
+          Promise.resolve(win.onResized(onResize))
+            .then((unlisten) => {
+              if (typeof unlisten === 'function') registerCleanup(unlisten);
+            })
+            .catch(() => {});
         } else if (win.listen) {
-          win.listen('tauri://resize', onResize);
+          Promise.resolve(win.listen('tauri://resize', onResize))
+            .then((unlisten) => {
+              if (typeof unlisten === 'function') registerCleanup(unlisten);
+            })
+            .catch(() => {});
         }
       }
     } catch (_) { /* ignore */ }
@@ -312,7 +379,7 @@ function applyTheme(theme) {
     root.classList.toggle('dark', mq.matches);
     window._themeMq = mq;
     window._themeHandler = (e) => root.classList.toggle('dark', e.matches);
-    mq.addEventListener('change', window._themeHandler);
+    addManagedListener(mq, 'change', window._themeHandler);
   }
 }
 
@@ -324,6 +391,10 @@ function applyPrimaryColor(color) {
 window.tauriInvoke = tauriInvoke;
 window.tauriListen = tauriListen;
 window.isTauriAvailable = isTauriAvailable;
+window.registerAppCleanup = registerCleanup;
+window.addManagedListener = addManagedListener;
+window.setManagedInterval = setManagedInterval;
+window.setManagedTimeout = setManagedTimeout;
 window.applyTheme = applyTheme;
 window.applyPrimaryColor = applyPrimaryColor;
 

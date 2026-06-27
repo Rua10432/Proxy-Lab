@@ -490,9 +490,13 @@ function stopMonitorAutoRefresh() {
   }
 }
 
+function cleanupMonitorPage() {
+  stopMonitorAutoRefresh();
+}
+
 function escapeAttr(str) {
   return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 window.initMonitorPage = initMonitorPage;
-
+window.cleanupMonitorPage = cleanupMonitorPage;

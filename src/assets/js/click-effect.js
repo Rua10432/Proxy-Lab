@@ -12,6 +12,8 @@ let canvas = null;
 let ctx = null;
 let particles = [];
 let rafId = null;
+let resizeCleanup = null;
+let clickCleanup = null;
 
 function ensureCanvas() {
   if (canvas) return;
@@ -23,10 +25,16 @@ function ensureCanvas() {
   ctx = canvas.getContext('2d');
   document.body.appendChild(canvas);
 
-  window.addEventListener('resize', () => {
+  const onResize = () => {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
-  });
+  };
+  if (typeof window.addManagedListener === 'function') {
+    resizeCleanup = window.addManagedListener(window, 'resize', onResize);
+  } else {
+    window.addEventListener('resize', onResize);
+    resizeCleanup = () => window.removeEventListener('resize', onResize);
+  }
 }
 
 class Particle {
@@ -135,9 +143,32 @@ function tick(time) {
 
 /* ── Install ──────────────────────────────────────────────────────────── */
 export function initClickEffect() {
-  document.addEventListener('click', (e) => {
+  if (clickCleanup) return;
+  const onClick = (e) => {
     // Only left button, ignore modifier keys
     if (e.button !== 0) return;
     spawnBurst(e.clientX, e.clientY);
-  });
+  };
+
+  if (typeof window.addManagedListener === 'function') {
+    clickCleanup = window.addManagedListener(document, 'click', onClick);
+  } else {
+    document.addEventListener('click', onClick);
+    clickCleanup = () => document.removeEventListener('click', onClick);
+  }
+
+  if (typeof window.registerAppCleanup === 'function') {
+    window.registerAppCleanup(() => {
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = null;
+      particles = [];
+      if (resizeCleanup) resizeCleanup();
+      if (clickCleanup) clickCleanup();
+      resizeCleanup = null;
+      clickCleanup = null;
+      canvas?.remove();
+      canvas = null;
+      ctx = null;
+    });
+  }
 }

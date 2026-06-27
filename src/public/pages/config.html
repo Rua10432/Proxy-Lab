@@ -200,7 +200,7 @@
                     <span class="lps-blocked-count" id="lps-blocked-count">0</span>
                   </div>
                   <div class="lps-blocked-hint">
-                    <span data-i18n="config.blockedIpsHintBeforeSingle">封锁发往指定 IP 的流量，支持单个 IP（如 </span><code>192.168.1.100</code><span data-i18n="config.blockedIpsHintBetweenExamples">）或 CIDR 网段（如 </span><code>10.0.0.0/8</code><span data-i18n="config.blockedIpsHintAfterExamples">）。仅当目标地址为 IP 时生效，域名不影响。修改后需重启本地代理生效。</span>
+                    <span data-i18n="config.blockedIpsHintBeforeSingle">封锁发往指定 IP 的流量，支持单个 IP（如 </span><code>192.168.1.100</code><span data-i18n="config.blockedIpsHintBetweenExamples">）或 CIDR 网段（如 </span><code>10.0.0.0/8</code><span data-i18n="config.blockedIpsHintAfterExamples">）。仅当目标地址为 IP 时生效，域名不影响。修改后即时生效。</span>
                   </div>
                   <div class="lps-blocked-controls" id="lps-blocked-controls">
                   <div class="lps-blocked-input-row">
@@ -214,6 +214,36 @@
                   </div>
                   <div class="lps-blocked-list" id="lps-blocked-list">
                     <div class="lps-blocked-empty" data-i18n="config.noBlockedIps">暂无封锁 IP</div>
+                  </div>
+                  </div>
+                </div>
+
+                <!-- Allowed IPs Section -->
+                <div class="lps-blocked-ips-section" id="lps-allowed-ips-section">
+                  <div class="lps-blocked-header">
+                    <label class="toggle-label" id="lps-allowed-toggle-wrap" style="margin-left:0">
+                      <input type="checkbox" id="lps-allowed-toggle">
+                      <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                    </label>
+                    <span class="icon icon-sm">verified_user</span>
+                    <span data-i18n="config.allowedIps">中转代理白名单</span>
+                    <span class="lps-blocked-count" id="lps-allowed-count">0</span>
+                  </div>
+                  <div class="lps-blocked-hint">
+                    <span data-i18n="config.allowedIpsHintBeforeSingle">仅允许指定 IP 使用或访问本地中转代理，支持单个 IP（如 </span><code>192.168.1.100</code><span data-i18n="config.allowedIpsHintBetweenExamples">）或 CIDR 网段（如 </span><code>10.0.0.0/8</code><span data-i18n="config.allowedIpsHintAfterExamples">）。不能与黑名单同时启用；开启但列表为空时会拒绝所有连接。</span>
+                  </div>
+                  <div class="lps-blocked-controls" id="lps-allowed-controls">
+                  <div class="lps-blocked-input-row">
+                    <div class="input-wrap" style="flex:1">
+                      <span class="icon icon-sm leading-icon">verified_user</span>
+                      <input type="text" id="input-allowed-ip" placeholder="输入 IP 或 CIDR，如 192.168.1.0/24" data-i18n-placeholder="config.allowedIpPlaceholder" autocomplete="off">
+                    </div>
+                    <button class="btn btn-outline" id="btn-add-allowed-ip" style="flex-shrink:0">
+                      <span class="icon icon-sm">add</span> <span data-i18n="common.add">添加</span>
+                    </button>
+                  </div>
+                  <div class="lps-blocked-list" id="lps-allowed-list">
+                    <div class="lps-blocked-empty" data-i18n="config.noAllowedIps">暂无白名单 IP</div>
                   </div>
                   </div>
                 </div>

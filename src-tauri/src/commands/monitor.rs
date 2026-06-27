@@ -17,8 +17,13 @@ pub fn get_local_proxy_ports(state: tauri::State<'_, AppState>) -> Vec<LocalProx
 }
 
 #[tauri::command]
-pub fn shittim_mem_task() -> MemoryInfo {
+pub fn get_memory_info() -> MemoryInfo {
     service::get_memory_info()
+}
+
+#[tauri::command]
+pub fn shittim_mem_task() -> MemoryInfo {
+    get_memory_info()
 }
 
 #[tauri::command]

@@ -4,6 +4,7 @@
 use crate::service;
 use crate::types::BatchProxy;
 use crate::AppState;
+use super::validation;
 
 #[tauri::command]
 pub async fn start_ping_test(
@@ -19,6 +20,16 @@ pub async fn start_ping_test(
     password: Option<String>,
     request_id: Option<String>,
 ) -> Result<(), String> {
+    validation::validate_ping_request(
+        &host,
+        port,
+        &protocol,
+        count,
+        timeout_ms,
+        interval_ms,
+        &username,
+        &password,
+    )?;
     service::start_ping_test(
         &app, &state, host, port, protocol, count, timeout_ms, interval_ms,
         username, password, request_id,
@@ -39,6 +50,7 @@ pub async fn start_batch_ping_test(
     timeout_ms: u64,
     request_id: Option<String>,
 ) -> Result<(), String> {
+    validation::validate_batch_ping(&proxies, timeout_ms)?;
     service::start_batch_ping_test(&app, &state, proxies, timeout_ms, request_id);
     Ok(())
 }

@@ -66,7 +66,7 @@ function formatTime(date) {
 function protocolBadge(protocol) {
   if (protocol === 'HTTP') return '<span class="proto-badge proto-http">HTTP</span>';
   if (protocol === 'SOCKS5') return '<span class="proto-badge proto-socks5">SOCKS5</span>';
-  return protocol;
+  return escapeHtml(protocol);
 }
 
 function statusBadge(status) {
@@ -75,7 +75,7 @@ function statusBadge(status) {
     ok: '<span class="badge badge-green">OK</span>',
     fail: '<span class="badge badge-pink">Fail</span>',
   };
-  return map[status] || status;
+  return map[status] || escapeHtml(status);
 }
 
 /* ── Log Helpers ── */
@@ -280,7 +280,7 @@ const _configCache = {
     defaultMask: '255.255.255.0',
     defaultStartPort: 1,
     defaultEndPort: 65535,
-    defaultConcurrent: 250,
+    defaultConcurrent: 80,
     timeoutMs: 1500,
     synTimeoutMs: 500,
     verifyConcurrent: 50,
@@ -405,11 +405,11 @@ async function exportAsXLSX(data, fields, filename) {
  * @param {Array} data        - Data array (may be null/undefined/empty)
  * @param {HTMLElement} tbody - <tbody> element to populate
  * @param {HTMLElement} emptyState - .empty-state / .table-empty element
- * @param {Function} renderRowFn - (item, index) => HTML string for one <tr>
+ * @param {Function} renderRowFn - (item, index) => HTMLTableRowElement | DocumentFragment | HTML string for one <tr>
  * @param {Function} [onAfterRender] - Optional callback after data rendered
  */
 function renderTable(data, tbody, emptyState, renderRowFn, onAfterRender) {
-  tbody.innerHTML = '';
+  tbody.replaceChildren();
   const table = tbody.closest('table');
 
   if (!data || data.length === 0) {
@@ -420,7 +420,36 @@ function renderTable(data, tbody, emptyState, renderRowFn, onAfterRender) {
 
   if (table) table.classList.remove('hidden');
   emptyState.classList.add('hidden');
-  tbody.innerHTML = data.map(renderRowFn).join('');
+
+  const fragment = document.createDocumentFragment();
+  data.forEach((item, index) => {
+    const rendered = renderRowFn(item, index);
+    if (!rendered) return;
+    if (rendered instanceof HTMLTableRowElement || rendered instanceof DocumentFragment) {
+      fragment.appendChild(rendered);
+      return;
+    }
+    if (rendered instanceof HTMLElement) {
+      const tr = document.createElement('tr');
+      tr.appendChild(rendered);
+      fragment.appendChild(tr);
+      return;
+    }
+    if (typeof rendered === 'string') {
+      const template = document.createElement('template');
+      template.innerHTML = rendered.trim();
+      template.content.querySelectorAll('script').forEach(el => el.remove());
+      template.content.querySelectorAll('*').forEach(el => {
+        [...el.attributes].forEach(attr => {
+          if (/^on/i.test(attr.name) || /^javascript:/i.test(attr.value.trim())) {
+            el.removeAttribute(attr.name);
+          }
+        });
+      });
+      fragment.appendChild(template.content);
+    }
+  });
+  tbody.appendChild(fragment);
 
   if (typeof onAfterRender === 'function') onAfterRender(tbody);
 }
@@ -455,4 +484,3 @@ window.exportAsJSON = exportAsJSON;
 window.exportAsXML = exportAsXML;
 window.exportAsXLSX = exportAsXLSX;
 window.renderTable = renderTable;
-

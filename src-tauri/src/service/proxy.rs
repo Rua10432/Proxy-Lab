@@ -94,6 +94,8 @@ pub async fn config_proxy(
             let shared = app_only_cfg.shared;
             let blocked_ips = app_only_cfg.blocked_ips.clone();
             let blocked_ips_enabled = app_only_cfg.blocked_ips_enabled;
+            let allowed_ips = app_only_cfg.allowed_ips.clone();
+            let allowed_ips_enabled = app_only_cfg.allowed_ips_enabled;
             let configured_port = app_only_cfg.listen_port;
             let ip_rate_limits = app_only_cfg.ip_rate_limits.clone();
             let rate_limit_enabled = app_only_cfg.rate_limit_enabled;
@@ -115,6 +117,7 @@ pub async fn config_proxy(
             if blocked_ips_enabled {
                 server.set_blocked_ips(blocked_ips);
             }
+            server.set_allowed_ips(allowed_ips_enabled, allowed_ips);
 
             // Apply per-IP rate limits from config
             if rate_limit_enabled {

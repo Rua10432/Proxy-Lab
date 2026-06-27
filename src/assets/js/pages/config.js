@@ -105,6 +105,11 @@ function initConfigPage() {
   initBlockedIpControls();
   loadBlockedIps();
 
+  // Allowed IP management (AppOnly)
+  initAllowedIpToggle();
+  initAllowedIpControls();
+  loadAllowedIps();
+
   // Listen port config (AppOnly)
   initListenPortControls();
   loadListenPort();
@@ -125,6 +130,7 @@ function initConfigPage() {
       applyModeUI(_currentMode);
       renderConfigHistory();
       loadBlockedIps();
+      loadAllowedIps();
       loadIpRateLimits();
       if (_currentMode === 'Pac') loadPacRules();
       if (_currentMode === 'AppOnly') updateLocalProxyUI();
@@ -416,6 +422,17 @@ function startActiveClientsPolling() {
   if (_activeClientsTimer) clearInterval(_activeClientsTimer);
   pollActiveClients(); // immediate
   _activeClientsTimer = setInterval(pollActiveClients, 3000);
+}
+
+function cleanupConfigPage() {
+  if (_lpsTimer) {
+    clearInterval(_lpsTimer);
+    _lpsTimer = null;
+  }
+  if (_activeClientsTimer) {
+    clearInterval(_activeClientsTimer);
+    _activeClientsTimer = null;
+  }
 }
 
 // ─── PAC Rules ───────────────────────────────────────────────────────────
@@ -1042,6 +1059,11 @@ async function initBlockedIpToggle() {
     setBlockedControlsEnabled(enabled);
     try {
       await tauriInvoke('set_blocked_ips_enabled', { enabled });
+      if (enabled) {
+        const allowedToggle = $('#lps-allowed-toggle');
+        if (allowedToggle) allowedToggle.checked = false;
+        setAllowedControlsEnabled(false);
+      }
       showSnackbar(
         enabled ? tr('config.blockedIpsEnabled') : tr('config.blockedIpsDisabled'),
         'info'
@@ -1056,6 +1078,46 @@ async function initBlockedIpToggle() {
 
 function setBlockedControlsEnabled(enabled) {
   const controls = $('#lps-blocked-controls');
+  if (controls) {
+    controls.style.opacity = enabled ? '1' : '0.4';
+    controls.style.pointerEvents = enabled ? '' : 'none';
+  }
+}
+
+async function initAllowedIpToggle() {
+  const toggle = $('#lps-allowed-toggle');
+  if (!toggle || !isTauriAvailable()) return;
+
+  try {
+    const enabled = await tauriInvoke('get_allowed_ips_enabled');
+    toggle.checked = enabled;
+    setAllowedControlsEnabled(enabled);
+  } catch (_) {}
+
+  toggle.addEventListener('change', async () => {
+    const enabled = toggle.checked;
+    setAllowedControlsEnabled(enabled);
+    try {
+      await tauriInvoke('set_allowed_ips_enabled', { enabled });
+      if (enabled) {
+        const blockedToggle = $('#lps-blocked-toggle');
+        if (blockedToggle) blockedToggle.checked = false;
+        setBlockedControlsEnabled(false);
+      }
+      showSnackbar(
+        enabled ? tr('config.allowedIpsEnabled') : tr('config.allowedIpsDisabled'),
+        'info'
+      );
+    } catch (err) {
+      showSnackbar(tr('config.saveFailed', err), 'error');
+      toggle.checked = !enabled;
+      setAllowedControlsEnabled(!enabled);
+    }
+  });
+}
+
+function setAllowedControlsEnabled(enabled) {
+  const controls = $('#lps-allowed-controls');
   if (controls) {
     controls.style.opacity = enabled ? '1' : '0.4';
     controls.style.pointerEvents = enabled ? '' : 'none';
@@ -1152,6 +1214,102 @@ function initBlockedIpControls() {
     if (e.key === 'Enter') {
       e.preventDefault();
       addBlockedIp();
+    }
+    clearError();
+  });
+}
+
+async function loadAllowedIps() {
+  if (!isTauriAvailable()) return;
+  try {
+    const ips = await tauriInvoke('get_allowed_ips');
+    renderAllowedIps(ips);
+  } catch (_) {}
+}
+
+function renderAllowedIps(ips) {
+  const list = $('#lps-allowed-list');
+  const count = $('#lps-allowed-count');
+  if (!list) return;
+
+  count.textContent = ips.length;
+
+  if (!ips || ips.length === 0) {
+    list.innerHTML = `<div class="lps-blocked-empty" data-i18n="config.noAllowedIps">${escText(tr('config.noAllowedIps'))}</div>`;
+    return;
+  }
+
+  list.innerHTML = '<div class="lps-blocked-table-header">' +
+    '<span class="col-id">#</span>' +
+    '<span class="col-ip">' + escText(tr('config.allowedHeaderIp')) + '</span>' +
+    '<span class="col-action">' + escText(tr('config.blockedHeaderAction')) + '</span>' +
+    '</div>';
+
+  ips.forEach((ip, idx) => {
+    const item = createElement('div', { className: 'lps-blocked-item' });
+    item.innerHTML = `
+      <span class="col-id">${idx + 1}</span>
+      <span class="col-ip"><span class="ip-value">${escapeHtml(ip)}</span></span>
+      <span class="col-action">
+        <button class="btn-remove-ip" title="${escText(tr('config.removeAllowedTitle'))}" data-ip="${escapeHtml(ip)}">
+          <span class="icon icon-sm">close</span>
+        </button>
+      </span>
+    `;
+    item.querySelector('.btn-remove-ip').addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const targetIp = e.currentTarget.dataset.ip;
+      try {
+        await tauriInvoke('remove_allowed_ip', { ip: targetIp });
+        showSnackbar(tr('config.allowedRemoved', targetIp), 'success');
+        loadAllowedIps();
+      } catch (err) {
+        showSnackbar(tr('config.removeFailed', err), 'error');
+      }
+    });
+    list.appendChild(item);
+  });
+}
+
+function initAllowedIpControls() {
+  const input = $('#input-allowed-ip');
+  const addBtn = $('#btn-add-allowed-ip');
+  if (!input || !addBtn) return;
+  const errorEl = createElement('div', { className: 'lps-blocked-error', id: 'lps-allowed-error' });
+
+  function showError(msg) {
+    errorEl.textContent = msg;
+    if (!errorEl.parentNode) {
+      input.closest('.lps-blocked-input-row').after(errorEl);
+    }
+  }
+
+  function clearError() {
+    errorEl.textContent = '';
+  }
+
+  async function addAllowedIp() {
+    const ip = input.value.trim();
+    if (!ip) {
+      showError(tr('config.allowedIpRequired'));
+      return;
+    }
+    clearError();
+    try {
+      await tauriInvoke('add_allowed_ip', { ip });
+      showSnackbar(tr('config.allowedAdded', ip), 'success');
+      input.value = '';
+      loadAllowedIps();
+    } catch (err) {
+      showError(typeof err === 'string' ? err : tr('config.addFailed'));
+    }
+  }
+
+  addBtn.addEventListener('click', addAllowedIp);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addAllowedIp();
     }
     clearError();
   });
@@ -1448,4 +1606,5 @@ async function saveLocalAuth() {
 }
 
 window.initConfigPage = initConfigPage;
+window.cleanupConfigPage = cleanupConfigPage;
 window.exportPoolData = exportPoolData;

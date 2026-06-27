@@ -7,6 +7,7 @@ use crate::service;
 use crate::types::ProxyStatus;
 use crate::AppState;
 use crate::config;
+use super::validation;
 
 #[tauri::command]
 pub fn is_admin() -> bool {
@@ -23,6 +24,7 @@ pub async fn config_proxy(
     username: Option<String>,
     password: Option<String>,
 ) -> Result<String, String> {
+    validation::validate_proxy_target_str_port(&host, &port, &protocol, &username, &password)?;
     service::config_proxy(&app, &state, &host, &port, &protocol, username, password).await
 }
 
@@ -44,6 +46,7 @@ pub async fn test_proxy_connectivity(
     username: Option<String>,
     password: Option<String>,
 ) -> Result<u128, String> {
+    validation::validate_proxy_target(&host, port, &protocol, &username, &password)?;
     let addr = if host.contains(':') && !host.starts_with('[') {
         format!("[{}]:{}", host, port)
     } else {
@@ -61,6 +64,7 @@ pub async fn test_proxy_connectivity(
 
 #[tauri::command]
 pub async fn fetch_proxies_from_url(url: String) -> Result<Vec<ProxyEntry>, String> {
+    validation::validate_fetch_url(&url)?;
     service::fetch_proxies_from_url(&url).await
 }
 
@@ -121,6 +125,9 @@ pub fn update_pac_rules(
     state: tauri::State<'_, AppState>,
     rules: Vec<PacRule>,
 ) -> Result<(), String> {
+    for rule in &rules {
+        validation::validate_pac_rule(rule)?;
+    }
     service::update_pac_rules(&app, &state, rules)
 }
 
@@ -130,6 +137,7 @@ pub fn add_pac_rule(
     state: tauri::State<'_, AppState>,
     rule: PacRule,
 ) -> Result<(), String> {
+    validation::validate_pac_rule(&rule)?;
     service::add_pac_rule(&app, &state, rule)
 }
 
@@ -247,9 +255,7 @@ pub fn set_local_proxy_listen_port(
     state: tauri::State<'_, AppState>,
     port: u16,
 ) -> Result<(), String> {
-    if port > 0 && port < 1024 {
-        return Err("Ports below 1024 require administrator privileges".to_string());
-    }
+    validation::validate_local_proxy_listen_port(port)?;
     let mut cfg = state.config.lock().unwrap();
     cfg.app_only.listen_port = port;
     crate::config::save_config(&app, &cfg)
@@ -265,6 +271,7 @@ pub fn set_local_proxy_auth(
     username: Option<String>,
     password: Option<String>,
 ) -> Result<(), String> {
+    validation::validate_local_proxy_auth(enabled, &username, &password)?;
     // 保存到配置
     {
         let mut cfg = state.config.lock().unwrap();
@@ -291,6 +298,28 @@ pub fn get_local_proxy_auth(state: tauri::State<'_, AppState>) -> serde_json::Va
     })
 }
 
+fn validate_ip_or_cidr(ip: &str) -> Result<(), String> {
+    if let Some(slash_pos) = ip.find('/') {
+        let base = ip[..slash_pos].trim();
+        let bits = ip[slash_pos + 1..].trim();
+        let base_ip = base
+            .parse::<std::net::IpAddr>()
+            .map_err(|_| format!("Invalid IP address in CIDR: {base}"))?;
+        let bits_num: u8 = bits
+            .parse()
+            .map_err(|_| format!("Invalid CIDR prefix length: {bits}"))?;
+        let max_bits = if base_ip.is_ipv4() { 32 } else { 128 };
+        if bits_num > max_bits {
+            return Err(format!("CIDR prefix length must be <= {max_bits}"));
+        }
+    } else {
+        ip.parse::<std::net::IpAddr>()
+            .map_err(|_| format!("Invalid IP address: {ip}"))?;
+    }
+
+    Ok(())
+}
+
 // ─── Blocked IP Management ────────────────────────────────────────────────
 
 #[tauri::command]
@@ -307,6 +336,9 @@ pub fn set_blocked_ips_enabled(
     let ips = {
         let mut cfg = state.config.lock().unwrap();
         cfg.app_only.blocked_ips_enabled = enabled;
+        if enabled {
+            cfg.app_only.allowed_ips_enabled = false;
+        }
         let ips = cfg.app_only.blocked_ips.clone();
         crate::config::save_config(&app, &cfg)?;
         ips
@@ -316,6 +348,7 @@ pub fn set_blocked_ips_enabled(
     if let Some(srv) = state.local_proxy.lock().unwrap().as_mut() {
         if enabled {
             srv.set_blocked_ips(ips);
+            srv.set_allowed_ips(false, Vec::new());
         } else {
             srv.set_blocked_ips(Vec::new());
         }
@@ -339,36 +372,23 @@ pub fn add_blocked_ip(
         return Err("IP address cannot be empty".to_string());
     }
 
-    // Validate: must be a valid IP or CIDR
-    if let Some(slash_pos) = ip.find('/') {
-        let base = ip[..slash_pos].trim();
-        let bits = ip[slash_pos + 1..].trim();
-        base.parse::<std::net::IpAddr>()
-            .map_err(|_| format!("Invalid IP address in CIDR: {base}"))?;
-        let bits_num: u8 = bits.parse()
-            .map_err(|_| format!("Invalid CIDR prefix length: {bits}"))?;
-        if bits_num > 128 {
-            return Err("CIDR prefix length must be <= 128".to_string());
+    validate_ip_or_cidr(&ip)?;
+
+    let (enabled, ips) = {
+        let mut cfg = state.config.lock().unwrap();
+        if cfg.app_only.blocked_ips.contains(&ip) {
+            return Err("IP already in blocked list".to_string());
         }
-    } else {
-        ip.parse::<std::net::IpAddr>()
-            .map_err(|_| format!("Invalid IP address: {ip}"))?;
-    }
+        cfg.app_only.blocked_ips.push(ip.clone());
+        let enabled = cfg.app_only.blocked_ips_enabled;
+        let ips = cfg.app_only.blocked_ips.clone();
+        crate::config::save_config(&app, &cfg)?;
+        (enabled, ips)
+    };
 
-    let mut cfg = state.config.lock().unwrap();
-    if cfg.app_only.blocked_ips.contains(&ip) {
-        return Err("IP already in blocked list".to_string());
+    if let Some(server) = state.local_proxy.lock().unwrap().as_ref() {
+        server.set_blocked_ips(if enabled { ips } else { Vec::new() });
     }
-    cfg.app_only.blocked_ips.push(ip.clone());
-
-    // Update running local proxy if active
-    if let Some(_server) = state.local_proxy.lock().unwrap().as_ref() {
-        // We can't modify blocked_ips on a running server without restarting,
-        // so we update the config and it will take effect on next restart.
-        // For now, just save.
-    }
-
-    crate::config::save_config(&app, &cfg)?;
     Ok(())
 }
 
@@ -378,16 +398,25 @@ pub fn remove_blocked_ip(
     state: tauri::State<'_, AppState>,
     ip: String,
 ) -> Result<(), String> {
-    let mut cfg = state.config.lock().unwrap();
-    let idx = cfg.app_only.blocked_ips.iter().position(|x| x == &ip);
-    match idx {
-        Some(i) => {
-            cfg.app_only.blocked_ips.remove(i);
-            crate::config::save_config(&app, &cfg)?;
-            Ok(())
+    let (enabled, ips) = {
+        let mut cfg = state.config.lock().unwrap();
+        let idx = cfg.app_only.blocked_ips.iter().position(|x| x == &ip);
+        match idx {
+            Some(i) => {
+                cfg.app_only.blocked_ips.remove(i);
+                let enabled = cfg.app_only.blocked_ips_enabled;
+                let ips = cfg.app_only.blocked_ips.clone();
+                crate::config::save_config(&app, &cfg)?;
+                (enabled, ips)
+            }
+            None => return Err("IP not found in blocked list".to_string()),
         }
-        None => Err("IP not found in blocked list".to_string()),
+    };
+
+    if let Some(server) = state.local_proxy.lock().unwrap().as_ref() {
+        server.set_blocked_ips(if enabled { ips } else { Vec::new() });
     }
+    Ok(())
 }
 
 #[tauri::command]
@@ -397,7 +426,128 @@ pub fn clear_blocked_ips(
 ) -> Result<(), String> {
     let mut cfg = state.config.lock().unwrap();
     cfg.app_only.blocked_ips.clear();
-    crate::config::save_config(&app, &cfg)
+    crate::config::save_config(&app, &cfg)?;
+    drop(cfg);
+
+    if let Some(server) = state.local_proxy.lock().unwrap().as_ref() {
+        server.set_blocked_ips(Vec::new());
+    }
+    Ok(())
+}
+
+// ─── Allowed IP Management ────────────────────────────────────────────────
+
+#[tauri::command]
+pub fn get_allowed_ips_enabled(state: tauri::State<'_, AppState>) -> bool {
+    state.config.lock().unwrap().app_only.allowed_ips_enabled
+}
+
+#[tauri::command]
+pub fn set_allowed_ips_enabled(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, AppState>,
+    enabled: bool,
+) -> Result<(), String> {
+    let ips = {
+        let mut cfg = state.config.lock().unwrap();
+        cfg.app_only.allowed_ips_enabled = enabled;
+        if enabled {
+            cfg.app_only.blocked_ips_enabled = false;
+        }
+        let ips = cfg.app_only.allowed_ips.clone();
+        crate::config::save_config(&app, &cfg)?;
+        ips
+    };
+
+    if let Some(srv) = state.local_proxy.lock().unwrap().as_ref() {
+        srv.set_allowed_ips(enabled, if enabled { ips } else { Vec::new() });
+        if enabled {
+            srv.set_blocked_ips(Vec::new());
+        }
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn get_allowed_ips(state: tauri::State<'_, AppState>) -> Vec<String> {
+    state.config.lock().unwrap().app_only.allowed_ips.clone()
+}
+
+#[tauri::command]
+pub fn add_allowed_ip(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, AppState>,
+    ip: String,
+) -> Result<(), String> {
+    let ip = ip.trim().to_string();
+    if ip.is_empty() {
+        return Err("IP address cannot be empty".to_string());
+    }
+
+    validate_ip_or_cidr(&ip)?;
+
+    let (enabled, ips) = {
+        let mut cfg = state.config.lock().unwrap();
+        if cfg.app_only.allowed_ips.contains(&ip) {
+            return Err("IP already in allowed list".to_string());
+        }
+        cfg.app_only.allowed_ips.push(ip.clone());
+        let enabled = cfg.app_only.allowed_ips_enabled;
+        let ips = cfg.app_only.allowed_ips.clone();
+        crate::config::save_config(&app, &cfg)?;
+        (enabled, ips)
+    };
+
+    if let Some(server) = state.local_proxy.lock().unwrap().as_ref() {
+        server.set_allowed_ips(enabled, if enabled { ips } else { Vec::new() });
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn remove_allowed_ip(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, AppState>,
+    ip: String,
+) -> Result<(), String> {
+    let (enabled, ips) = {
+        let mut cfg = state.config.lock().unwrap();
+        let idx = cfg.app_only.allowed_ips.iter().position(|x| x == &ip);
+        match idx {
+            Some(i) => {
+                cfg.app_only.allowed_ips.remove(i);
+                let enabled = cfg.app_only.allowed_ips_enabled;
+                let ips = cfg.app_only.allowed_ips.clone();
+                crate::config::save_config(&app, &cfg)?;
+                (enabled, ips)
+            }
+            None => return Err("IP not found in allowed list".to_string()),
+        }
+    };
+
+    if let Some(server) = state.local_proxy.lock().unwrap().as_ref() {
+        server.set_allowed_ips(enabled, if enabled { ips } else { Vec::new() });
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn clear_allowed_ips(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, AppState>,
+) -> Result<(), String> {
+    let enabled = {
+        let mut cfg = state.config.lock().unwrap();
+        cfg.app_only.allowed_ips.clear();
+        let enabled = cfg.app_only.allowed_ips_enabled;
+        crate::config::save_config(&app, &cfg)?;
+        enabled
+    };
+
+    if let Some(server) = state.local_proxy.lock().unwrap().as_ref() {
+        server.set_allowed_ips(enabled, Vec::new());
+    }
+    Ok(())
 }
 
 // ─── IP Rate Limit (AppOnly) ──────────────────────────────────────────────
@@ -476,6 +626,7 @@ pub async fn set_ip_rate_limit(
     upload_limit_kbps: u64,
     download_limit_kbps: u64,
 ) -> Result<(), String> {
+    validation::validate_rate_limit(upload_limit_kbps, download_limit_kbps)?;
     // Validate IP
     let trimmed = ip.trim();
     if trimmed.is_empty() {
